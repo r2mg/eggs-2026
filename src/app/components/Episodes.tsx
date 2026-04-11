@@ -4,10 +4,9 @@ import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { ARCHIVE_INITIAL_PAGE_SIZE, ARCHIVE_LOAD_MORE_SIZE } from '../config/archiveUi';
 import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
+import { useYoutubeArchiveBatchOverlays } from '../hooks/useYoutubeArchiveBatchOverlays';
 import { useYoutubeArchiveLiteChannelData } from '../hooks/useYoutubeArchiveLiteChannelData';
 import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
-import { useYoutubeOverlaysProgressive } from '../hooks/useYoutubeOverlaysProgressive';
-import { buildYoutubeOverlaysForEpisodes } from '../lib/computeEpisodeYoutubeOverlay';
 import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
 import { episodePathFromSlug } from '../episodePaths';
 import { resolvePodcastRssUrl, stripHtmlTags } from '../lib/rss';
@@ -33,35 +32,24 @@ function formatDurationLabel(raw: string | undefined): string {
 
 export default function Episodes() {
   /**
-   * RSS rows stay stable (`useRssEpisodes`). YouTube thumbnails / “featured” / topic tags
-   * arrive in overlay maps so the grid is not replaced wholesale when the API returns.
+   * RSS rows stay stable (`useRssEpisodes`). YouTube is merged **per slug** only for batches
+   * of rows you actually see (see `useYoutubeArchiveBatchOverlays`) — no whole-archive overlay pass.
    */
   const { data: episodes, loading, error, retry: retryRss } = useRssEpisodes();
-  /**
-   * **Full** YouTube merge (slow) — used for topic pills, featured sort, and text/metadata
-   * enrichment across the whole RSS list. Card **images** do not wait on this.
-   */
+  /** Full channel (slow) — used as the catalog for matching once it exists; until then we use lite. */
   const { data: fullChannelData, retry: retryFullChannel } = useYoutubeChannelData();
-  /**
-   * **Lite** snapshot (fast, same network payload as the homepage) — used only to match
-   * the **currently visible** episode rows to YouTube thumbnails so the first grid paints quickly.
-   */
-  const {
-    data: liteChannelData,
-    loading: liteChannelLoading,
-    hasApiKey,
-    retry: retryLiteChannel,
-  } = useYoutubeArchiveLiteChannelData();
-
-  const { overlays: progressiveOverlays } = useYoutubeOverlaysProgressive(
-    episodes.length ? episodes : null,
-    fullChannelData,
-  );
+  /** Lite snapshot (fast) — lets the first visible batch match YouTube before the full merge finishes. */
+  const { data: liteChannelData, hasApiKey, retry: retryLiteChannel } = useYoutubeArchiveLiteChannelData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('All Episodes');
   const [sortBy, setSortBy] = useState('newest');
   const [visibleCount, setVisibleCount] = useState(ARCHIVE_INITIAL_PAGE_SIZE);
+  /**
+   * Bumping this clears the in-memory YouTube map (used after “Try again” together with
+   * clearing the network cache).
+   */
+  const [youtubeOverlayResetToken, setYoutubeOverlayResetToken] = useState(0);
 
   /** Reset paging when the user changes search / topic / sort (new result set). */
   useEffect(() => {
@@ -71,43 +59,34 @@ export default function Episodes() {
   const retryAll = () => {
     clearYoutubeChannelCache();
     clearRssEpisodesCache();
+    setYoutubeOverlayResetToken((t) => t + 1);
     retryRss();
     retryLiteChannel();
     retryFullChannel();
   };
 
-  // Topic pills: “All Episodes” plus whatever topics appear once YouTube overlays fill in
-  const topicFilters = useMemo(() => {
-    const unique = new Set<string>();
-    for (const ep of episodes) {
-      unique.add(ep.topic ?? FALLBACK_TOPIC);
-      const merged = mergeEpisodeForDisplay(ep, progressiveOverlays[ep.slug] ?? null);
-      for (const c of merged.collections ?? []) unique.add(c);
-    }
-    return ['All Episodes', ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
-  }, [episodes, progressiveOverlays]);
+  /** Prefer the richer catalog when the slow fetch completes; otherwise the lite snapshot is enough to start. */
+  const youtubeCatalog = fullChannelData ?? liteChannelData ?? null;
 
-  // Sort RSS rows (featured order uses progressive overlays when present)
-  const sortedEpisodes = useMemo(() => {
+  /**
+   * Step 1 — sort without waiting on YouTube (featured starts as “newest” order, then we re-order below
+   * once batch overlays exist so we never create a dependency cycle with the hook).
+   */
+  const sortedRssOnly = useMemo(() => {
     const list = [...episodes];
     if (sortBy === 'oldest') {
       list.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
-    } else if (sortBy === 'featured') {
-      list.sort((a, b) => {
-        const fa = !!mergeEpisodeForDisplay(a, progressiveOverlays[a.slug] ?? null).featured;
-        const fb = !!mergeEpisodeForDisplay(b, progressiveOverlays[b.slug] ?? null).featured;
-        return Number(fb) - Number(fa) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
-      });
     } else {
       list.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
     }
     return list;
-  }, [episodes, sortBy, progressiveOverlays]);
+  }, [episodes, sortBy]);
 
-  const filteredEpisodes = useMemo(() => {
+  /** Step 2 — text search only (topic uses overlays in the next step so it stays honest with batched data). */
+  const searchFiltered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return sortedEpisodes.filter((episode) => {
-      const topic = episode.topic ?? FALLBACK_TOPIC;
+    if (!q) return sortedRssOnly;
+    return sortedRssOnly.filter((episode) => {
       const haystack = [
         episode.title,
         episode.guest ?? '',
@@ -116,38 +95,77 @@ export default function Episodes() {
       ]
         .join(' ')
         .toLowerCase();
-      const matchesSearch = !q || haystack.includes(q);
-      const merged = mergeEpisodeForDisplay(episode, progressiveOverlays[episode.slug] ?? null);
-      const matchesTopic =
-        selectedTopic === 'All Episodes' ||
-        topic === selectedTopic ||
-        (merged.collections?.includes(selectedTopic) ?? false);
-      return matchesSearch && matchesTopic;
+      return haystack.includes(q);
     });
-  }, [sortedEpisodes, searchQuery, selectedTopic, progressiveOverlays]);
-
-  const displayedEpisodes = useMemo(
-    () => filteredEpisodes.slice(0, visibleCount),
-    [filteredEpisodes, visibleCount],
-  );
+  }, [sortedRssOnly, searchQuery]);
 
   /**
-   * YouTube overlays for the **visible grid only**, using the **lite** channel catalog.
-   * Recomputed when you change filters/sort or click “Load more” — only that slice is matched.
+   * Step 3 — YouTube match **only** for the first `visibleCount` rows of **search order**
+   * (not the re-ordered “featured” view). That keeps work predictable and avoids a dependency cycle:
+   * we enrich in search-result order first, then re-sort for display.
    */
-  const sliceLiteOverlays = useMemo(() => {
-    if (!liteChannelData || displayedEpisodes.length === 0) return {};
-    return buildYoutubeOverlaysForEpisodes(displayedEpisodes, liteChannelData);
-  }, [liteChannelData, displayedEpisodes]);
+  const { overlayBySlug } = useYoutubeArchiveBatchOverlays({
+    filteredEpisodes: searchFiltered,
+    visibleCount,
+    catalog: youtubeCatalog,
+    resetToken: youtubeOverlayResetToken,
+  });
 
-  /** Same visible slice, but against the **full** catalog — better for featured/topic fields once loaded */
-  const visibleFullOverlays = useMemo(() => {
-    if (!fullChannelData || displayedEpisodes.length === 0) return {};
-    return buildYoutubeOverlaysForEpisodes(displayedEpisodes, fullChannelData);
-  }, [fullChannelData, displayedEpisodes]);
+  /** Step 4 — “Featured” re-orders the search list using batch overlays (runs after step 3). */
+  const sortedDisplay = useMemo(() => {
+    if (sortBy !== 'featured') return searchFiltered;
+    const list = [...searchFiltered];
+    list.sort((a, b) => {
+      const fa = !!mergeEpisodeForDisplay(a, overlayBySlug[a.slug] ?? null).featured;
+      const fb = !!mergeEpisodeForDisplay(b, overlayBySlug[b.slug] ?? null).featured;
+      return Number(fb) - Number(fa) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
+    });
+    return list;
+  }, [searchFiltered, sortBy, overlayBySlug]);
 
-  /** Shimmer in the image box only until the **lite** snapshot returns — not the full channel */
-  const awaitCardYoutubeFromLite = hasApiKey && liteChannelLoading;
+  /** Step 5 — topic pill filter (YouTube collections only count after that slug has been batch-enriched). */
+  const topicFiltered = useMemo(() => {
+    if (selectedTopic === 'All Episodes') return sortedDisplay;
+    return sortedDisplay.filter((episode) => {
+      const rssTopic = episode.topic ?? FALLBACK_TOPIC;
+      if (rssTopic === selectedTopic) return true;
+      if (!Object.prototype.hasOwnProperty.call(overlayBySlug, episode.slug)) return false;
+      const merged = mergeEpisodeForDisplay(episode, overlayBySlug[episode.slug] ?? null);
+      return merged.collections?.includes(selectedTopic) ?? false;
+    });
+  }, [sortedDisplay, selectedTopic, overlayBySlug]);
+
+  const displayedEpisodes = useMemo(
+    () => topicFiltered.slice(0, visibleCount),
+    [topicFiltered, visibleCount],
+  );
+
+  /** Pills = RSS topics + any playlist names we have seen on enriched overlays (grows as you scroll / load more). */
+  const topicFiltersWithYoutube = useMemo(() => {
+    const unique = new Set<string>(['All Episodes']);
+    for (const ep of episodes) {
+      unique.add(ep.topic ?? FALLBACK_TOPIC);
+    }
+    for (const o of Object.values(overlayBySlug)) {
+      if (!o?.collections) continue;
+      for (const c of o.collections) unique.add(c);
+    }
+    return Array.from(unique).sort((a, b) => {
+      if (a === 'All Episodes') return -1;
+      if (b === 'All Episodes') return 1;
+      return a.localeCompare(b);
+    });
+  }, [episodes, overlayBySlug]);
+
+  /**
+   * Shimmer until we have a catalog **and** this slug has been through batch matching
+   * (`null` = tried, no YouTube — show RSS art).
+   */
+  function cardAwaitingYoutube(episodeSlug: string): boolean {
+    if (!hasApiKey) return false;
+    if (!youtubeCatalog) return true;
+    return !Object.prototype.hasOwnProperty.call(overlayBySlug, episodeSlug);
+  }
 
   // --- Loading / error: same shell as the archive (header band + grid width), clearer feedback ---
   if (loading) {
@@ -268,7 +286,7 @@ export default function Episodes() {
             </select>
 
             <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {filteredEpisodes.length} {filteredEpisodes.length === 1 ? 'episode' : 'episodes'}
+              {topicFiltered.length} {topicFiltered.length === 1 ? 'episode' : 'episodes'}
             </span>
           </div>
         </div>
@@ -278,7 +296,7 @@ export default function Episodes() {
       <section className="py-8 border-b border-border">
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="flex items-center gap-3 overflow-x-auto">
-            {topicFilters.map((topic) => (
+            {topicFiltersWithYoutube.map((topic) => (
               <button
                 key={topic}
                 type="button"
@@ -301,12 +319,7 @@ export default function Episodes() {
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="grid grid-cols-2 gap-12">
             {displayedEpisodes.map((episode, index) => {
-              const displayEp = mergeEpisodeForDisplay(
-                episode,
-                visibleFullOverlays[episode.slug] ?? progressiveOverlays[episode.slug] ?? null,
-              );
-              /** Thumbnails use the lite catalog only so they are not blocked by the heavy full fetch */
-              const imageEp = mergeEpisodeForDisplay(episode, sliceLiteOverlays[episode.slug] ?? null);
+              const displayEp = mergeEpisodeForDisplay(episode, overlayBySlug[episode.slug] ?? null);
               const topic = displayEp.topic ?? FALLBACK_TOPIC;
               const featured = displayEp.featured ?? false;
               const cardSummary = displayEp.summary?.trim() || 'Show notes are available on the episode page.';
@@ -331,9 +344,9 @@ export default function Episodes() {
                         key={displayEp.slug}
                         resetKey={displayEp.slug}
                         rssImage={episode.image}
-                        youtubeVideoId={imageEp.youtubeVideoId}
-                        youtubeThumbnailPreferred={imageEp.youtubeThumbnail}
-                        awaitYoutubeOverlay={awaitCardYoutubeFromLite}
+                        youtubeVideoId={displayEp.youtubeVideoId}
+                        youtubeThumbnailPreferred={displayEp.youtubeThumbnail}
+                        awaitYoutubeOverlay={cardAwaitingYoutube(episode.slug)}
                         imageClassName="group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
@@ -385,7 +398,7 @@ export default function Episodes() {
             })}
           </div>
 
-          {filteredEpisodes.length > 0 && visibleCount < filteredEpisodes.length && (
+          {topicFiltered.length > 0 && visibleCount < topicFiltered.length && (
             <motion.div
               className="text-center mt-16"
               initial={{ opacity: 0 }}
@@ -400,12 +413,12 @@ export default function Episodes() {
                 Load more episodes
               </button>
               <p className="text-sm text-muted-foreground mt-3">
-                Showing {displayedEpisodes.length} of {filteredEpisodes.length} matching episodes
+                Showing {displayedEpisodes.length} of {topicFiltered.length} matching episodes
               </p>
             </motion.div>
           )}
 
-          {filteredEpisodes.length === 0 && (
+          {topicFiltered.length === 0 && (
             <div className="text-center py-20">
               <p className="text-2xl text-muted-foreground mb-4">No episodes found</p>
               <p className="text-lg text-muted-foreground">Try adjusting your search or filters</p>
