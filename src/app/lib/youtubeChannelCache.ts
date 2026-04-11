@@ -1,9 +1,17 @@
 /**
  * One shared in-flight request for `fetchYouTubeChannelData()` so every hook that needs
  * YouTube hits the network **once**, then reuses the result.
+ *
+ * The homepage uses a **separate** lighter cache (`getYoutubeChannelHomeLiteCached`) so
+ * first paint does not wait on the full channel merge used by the archive.
  */
 
-import { fetchYouTubeChannelData, getYouTubeApiKey, type YouTubeChannelData } from './youtube';
+import {
+  fetchYouTubeChannelData,
+  fetchYouTubeChannelHomeLite,
+  getYouTubeApiKey,
+  type YouTubeChannelData,
+} from './youtube';
 
 const empty: YouTubeChannelData = {
   uploadsPlaylistId: null,
@@ -13,10 +21,12 @@ const empty: YouTubeChannelData = {
 };
 
 let inflight: Promise<YouTubeChannelData> | null = null;
+let inflightHomeLite: Promise<YouTubeChannelData> | null = null;
 
-/** Clears the memo so the next caller fetches again (used by “retry” in dev). */
+/** Clears both memos so the next caller fetches again (used by “retry” in dev). */
 export function clearYoutubeChannelCache(): void {
   inflight = null;
+  inflightHomeLite = null;
 }
 
 /**
@@ -34,4 +44,21 @@ export function getYoutubeChannelDataCached(): Promise<YouTubeChannelData> {
     });
   }
   return inflight;
+}
+
+/**
+ * Smaller YouTube payload for the **homepage only** (see `fetchYouTubeChannelHomeLite` in `youtube.ts`).
+ * Archive pages should keep using `getYoutubeChannelDataCached()`.
+ */
+export function getYoutubeChannelHomeLiteCached(): Promise<YouTubeChannelData> {
+  if (!getYouTubeApiKey()) {
+    return Promise.resolve(empty);
+  }
+  if (!inflightHomeLite) {
+    inflightHomeLite = fetchYouTubeChannelHomeLite().catch((err) => {
+      inflightHomeLite = null;
+      throw err;
+    });
+  }
+  return inflightHomeLite;
 }

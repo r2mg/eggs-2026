@@ -2,3 +2,13 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+/* Shimmer sweep used by `PreferredYoutubeImageSlot` while episode art is loading */
+@keyframes eggs-media-shimmer {
+  0% {
+    transform: translateX(-120%) skewX(-14deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-14deg);
+  }
+}

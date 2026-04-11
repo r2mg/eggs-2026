@@ -40,6 +40,16 @@ const YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS = 450;
 const YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS = 200;
 /** Scan excluded lists (e.g. “Audio Edition”) this deep to learn which video ids to ban */
 const YOUTUBE_EXCLUDED_PLAYLIST_MAX_ITEMS = 6000;
+
+// ---------------------------------------------------------------------------
+// Homepage “lite” fetch — much smaller than `fetchYouTubeChannelData` (see bottom of file)
+// ---------------------------------------------------------------------------
+/** Newest uploads merged into the homepage catalog (enough for latest + typical matches). */
+const YOUTUBE_HOME_LITE_UPLOADS_MAX_ITEMS = 180;
+/** Featured / Start Here playlist rows to pull (only these editorial lists, not every EGGS topic list). */
+const YOUTUBE_HOME_LITE_EDITORIAL_PLAYLIST_MAX_ITEMS = 80;
+/** Still learn “blocked” ids from excluded playlists, but do not scan thousands of rows on first paint. */
+const YOUTUBE_HOME_LITE_EXCLUDED_PLAYLIST_MAX_ITEMS = 300;
 /** How many playlistItem requests run at once (each playlist still pages sequentially) */
 const YOUTUBE_PLAYLIST_FETCH_CONCURRENCY = 5;
 
@@ -429,6 +439,147 @@ export async function fetchYouTubeChannelData(
 
   console.log(
     `[EGGS YouTube API] Playlist fetch caps: uploads ≤${YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS} items, other lists ≤${YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS} items each (${YOUTUBE_PLAYLIST_FETCH_CONCURRENCY} playlists in parallel per batch).`,
+  );
+
+  return {
+    uploadsPlaylistId,
+    playlists,
+    videosById,
+    blockedVideoIds,
+  };
+}
+
+/**
+ * **Homepage-only** YouTube snapshot — same `YouTubeChannelData` shape, far less network + CPU.
+ *
+ * What we skip compared to `fetchYouTubeChannelData`:
+ * - We do **not** download every “EGGS …” topic playlist’s videos (those lists can be huge).
+ * - We only merge **uploads + Featured + Start Here** (plus a capped scan of excluded lists for blocked ids).
+ * - Uploads and excluded scans use **smaller caps** so first paint wins.
+ *
+ * The archive (`/episodes`) still uses the full fetch so matching older episodes stays reliable.
+ */
+export async function fetchYouTubeChannelHomeLite(
+  channelId: string = YOUTUBE_CHANNEL_ID,
+): Promise<YouTubeChannelData> {
+  const empty: YouTubeChannelData = {
+    uploadsPlaylistId: null,
+    playlists: [],
+    videosById: new Map(),
+    blockedVideoIds: new Set(),
+  };
+
+  if (!getYouTubeApiKey()) return empty;
+
+  let uploadsPlaylistId =
+    KNOWN_PLAYLIST_IDS.uploads ?? (await fetchChannelUploadsPlaylistId(channelId));
+
+  const playlists = await fetchPlaylistsForChannel(channelId);
+
+  const excludedPlaylists = playlists.filter((p) => isPlaylistExcludedFromYouTubeMerge(p.title));
+  const blockedVideoIds = new Set<string>();
+  await Promise.all(
+    excludedPlaylists.map(async (p) => {
+      const items = await fetchPlaylistItemsUpTo(p.id, YOUTUBE_HOME_LITE_EXCLUDED_PLAYLIST_MAX_ITEMS);
+      for (const row of items) {
+        const vid = row.snippet?.resourceId?.videoId;
+        if (vid && vid.length === 11) blockedVideoIds.add(vid);
+      }
+    }),
+  );
+
+  const { featuredId, startHereId } = resolveEditorialPlaylistIds(playlists);
+
+  const playlistIdsToLoad = new Set<string>();
+  if (uploadsPlaylistId) playlistIdsToLoad.add(uploadsPlaylistId);
+  if (featuredId) playlistIdsToLoad.add(featuredId);
+  if (startHereId) playlistIdsToLoad.add(startHereId);
+
+  const videosById = new Map<string, YouTubeVideo>();
+
+  const mergeItem = (
+    videoId: string,
+    snippet: PlaylistItemRow['snippet'],
+    playlist: { id: string; title: string },
+    position: number,
+    videoPublishedAt?: string,
+  ) => {
+    const title = snippet?.title?.trim() || '(untitled)';
+    const description = snippet?.description?.trim();
+    const publishedAt = videoPublishedAt || snippet?.publishedAt;
+    const thumbnails = mapThumbnails(snippet?.thumbnails);
+
+    const existing = videosById.get(videoId);
+    if (!existing) {
+      videosById.set(videoId, {
+        videoId,
+        title,
+        description,
+        publishedAt,
+        thumbnails,
+        playlistIds: [playlist.id],
+        playlistTitles: [playlist.title],
+        positionsByPlaylist: { [playlist.id]: position },
+        youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        embedUrl: `https://www.youtube.com/embed/${videoId}`,
+      });
+      return;
+    }
+
+    const ids = new Set(existing.playlistIds ?? []);
+    const titles = new Set(existing.playlistTitles ?? []);
+    ids.add(playlist.id);
+    titles.add(playlist.title);
+    existing.playlistIds = [...ids];
+    existing.playlistTitles = [...titles];
+    existing.positionsByPlaylist = {
+      ...(existing.positionsByPlaylist ?? {}),
+      [playlist.id]: position,
+    };
+    if (!existing.description && description) existing.description = description;
+    if (!existing.publishedAt && publishedAt) existing.publishedAt = publishedAt;
+    if (!pickBestThumbnailUrl(existing.thumbnails) && thumbnails) existing.thumbnails = thumbnails;
+    if (title && title !== '(untitled)') existing.title = title;
+  };
+
+  const playlistLoadList = [...playlistIdsToLoad];
+  for (let i = 0; i < playlistLoadList.length; i += YOUTUBE_PLAYLIST_FETCH_CONCURRENCY) {
+    const batch = playlistLoadList.slice(i, i + YOUTUBE_PLAYLIST_FETCH_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (pid) => {
+        const meta = playlists.find((p) => p.id === pid);
+        const playlistTitle = meta?.title ?? '(playlist)';
+        const maxItems =
+          uploadsPlaylistId && pid === uploadsPlaylistId
+            ? YOUTUBE_HOME_LITE_UPLOADS_MAX_ITEMS
+            : YOUTUBE_HOME_LITE_EDITORIAL_PLAYLIST_MAX_ITEMS;
+        const items = await fetchPlaylistItemsUpTo(pid, maxItems);
+        return { pid, playlistTitle, items };
+      }),
+    );
+    for (const { pid, playlistTitle, items } of results) {
+      for (const row of items) {
+        const vid = row.snippet?.resourceId?.videoId;
+        if (!vid || vid.length !== 11) continue;
+        const pos = row.snippet?.position ?? 0;
+        const published = row.contentDetails?.videoPublishedAt;
+        mergeItem(vid, row.snippet, { id: pid, title: playlistTitle }, pos, published);
+      }
+    }
+  }
+
+  let removedBlocked = 0;
+  for (const vid of blockedVideoIds) {
+    if (videosById.delete(vid)) removedBlocked += 1;
+  }
+  if (removedBlocked > 0) {
+    console.log(
+      `[EGGS YouTube API] Home lite: removed ${removedBlocked} blocked video(s) from the small merge catalog.`,
+    );
+  }
+
+  console.log(
+    `[EGGS YouTube API] Home lite snapshot: uploads ≤${YOUTUBE_HOME_LITE_UPLOADS_MAX_ITEMS}, editorial lists ≤${YOUTUBE_HOME_LITE_EDITORIAL_PLAYLIST_MAX_ITEMS}, excluded scan ≤${YOUTUBE_HOME_LITE_EXCLUDED_PLAYLIST_MAX_ITEMS} per excluded playlist.`,
   );
 
   return {

@@ -1,21 +1,22 @@
 /**
- * Home page — RSS list from `useRssEpisodes()` (stable). YouTube thumbnails / featured order
- * are layered on via small overlay maps so the page does not “swap” the whole feed when
- * the YouTube API finishes.
+ * Home page — RSS list from `useRssEpisodes()` (stable). YouTube is a **small** enrichment
+ * layer (`useYoutubeHomeChannelData`): thumbnails + featured order from a lite channel
+ * snapshot, and topic row counts from playlist metadata — not the full archive merge.
  */
 import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { expectedTopicPlaylistTitles } from '../lib/youtube';
+import { titleMatchesPlaylist } from '../config/youtubeChannel';
 import { useRssEpisodes } from '../hooks/useRssEpisodes';
-import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
-import { useYoutubeOverlaysProgressive } from '../hooks/useYoutubeOverlaysProgressive';
+import { useYoutubeHomeChannelData } from '../hooks/useYoutubeHomeChannelData';
 import { buildYoutubeOverlaysForEpisodes } from '../lib/computeEpisodeYoutubeOverlay';
 import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import YouTubePosterImage from './YouTubePosterImage';
+import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 
 const FALLBACK_TOPIC = 'Episodes';
 
@@ -42,9 +43,13 @@ function orderedSlugKey(slugs: string[]): string {
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
   const { data: rssData, loading, error } = useRssEpisodes();
-  const { data: channelData } = useYoutubeChannelData();
-  /** Fills topic counts in the background without touching the RSS array in React state */
-  const { overlays: topicOverlays } = useYoutubeOverlaysProgressive(rssData.length ? rssData : null, channelData);
+  /**
+   * Homepage uses a **small** YouTube snapshot only (uploads + Featured + Start Here).
+   * The full channel merge runs on the archive page — not here — so this route stays fast.
+   */
+  const { data: channelData, loading: youtubeLoading, hasApiKey } = useYoutubeHomeChannelData();
+  /** When an API key exists, wait for the home YouTube fetch before picking RSS vs YouTube art (see `PreferredYoutubeImageSlot`). */
+  const awaitYoutubeOverlay = hasApiKey && youtubeLoading;
 
   const latestBase = useMemo(() => {
     if (loading || error || rssData.length === 0) return null;
@@ -89,15 +94,20 @@ export default function Home() {
     [featuredBase, heroOverlays],
   );
 
-  /** Topic counts use the progressive overlay map so labels fill in without re-fetching RSS */
+  /**
+   * Topic row numbers come straight from each playlist’s `itemCount` on YouTube (no RSS
+   * walk, no per-episode overlay work on the homepage).
+   */
   const topicRows = useMemo(() => {
-    return expectedTopicPlaylistTitles().map((title) => ({
-      name: title.replace(/^EGGS\s+/i, '').trim(),
-      count: rssData.filter((e) =>
-        mergeEpisodeForDisplay(e, topicOverlays[e.slug] ?? null).collections?.includes(title),
-      ).length,
-    }));
-  }, [rssData, topicOverlays]);
+    const lists = channelData?.playlists ?? [];
+    return expectedTopicPlaylistTitles().map((title) => {
+      const p = lists.find((pl) => titleMatchesPlaylist(title, pl.title));
+      return {
+        name: title.replace(/^EGGS\s+/i, '').trim(),
+        count: p?.itemCount ?? 0,
+      };
+    });
+  }, [channelData?.playlists]);
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -247,11 +257,15 @@ export default function Home() {
                     whileHover={{ scale: 1.01 }}
                     transition={{ duration: 0.3 }}
                   >
-                    {latest.youtubeThumbnail || latest.image ? (
-                      <img src={latest.youtubeThumbnail ?? latest.image} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-muted" aria-hidden />
-                    )}
+                    <PreferredYoutubeImageSlot
+                      key={latest.slug}
+                      resetKey={latest.slug}
+                      rssImage={latest.image}
+                      youtubeVideoId={latest.youtubeVideoId}
+                      youtubeThumbnailPreferred={latest.youtubeThumbnail}
+                      awaitYoutubeOverlay={awaitYoutubeOverlay}
+                      imageClassName=""
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="w-20 h-20 bg-accent rounded-full flex items-center justify-center">
@@ -355,15 +369,15 @@ export default function Home() {
                     viewport={{ once: true, margin: '-100px' }}
                   >
                     <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-5 relative overflow-hidden">
-                    {ep.youtubeThumbnail || ep.image ? (
-                      <img
-                        src={ep.youtubeThumbnail ?? ep.image}
-                        alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                        <div className="w-full h-full bg-muted" aria-hidden />
-                      )}
+                    <PreferredYoutubeImageSlot
+                      key={ep.slug}
+                      resetKey={ep.slug}
+                      rssImage={ep.image}
+                      youtubeVideoId={ep.youtubeVideoId}
+                      youtubeThumbnailPreferred={ep.youtubeThumbnail}
+                      awaitYoutubeOverlay={awaitYoutubeOverlay}
+                      imageClassName="group-hover:scale-105 transition-transform duration-500"
+                    />
                       <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end justify-between">
                         <div className="w-12 h-12 bg-accent/0 group-hover:bg-accent rounded-full flex items-center justify-center transition-all duration-300">
