@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 
 type FormType = 'apply' | 'nominate' | 'publicist';
@@ -7,7 +7,7 @@ export default function BeAGuest() {
   const [activeForm, setActiveForm] = useState<FormType>('apply');
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });

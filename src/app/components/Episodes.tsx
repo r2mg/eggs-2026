@@ -1,115 +1,161 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
 import { motion } from 'motion/react';
+import { useEpisodes } from '../hooks/useEpisodes';
+import { episodePathFromSlug } from '../episodePaths';
+import { resolvePodcastRssUrl, stripHtmlTags } from '../lib/rss';
 
-const TOPICS = ['All Episodes', 'Entrepreneurship', 'Branding', 'Creativity', 'Business Growth', 'Technology', 'Culture', 'Leadership', 'Expertise'];
+/** RSS items do not include iTunes-style topics yet — used for filters and labels */
+const FALLBACK_TOPIC = 'Episodes';
 
-const EPISODES = [
-  {
-    id: 42,
-    title: 'Building Creative Businesses in the Age of AI',
-    guest: 'Sarah Chen',
-    date: 'March 28, 2026',
-    duration: '58 min',
-    summary: 'A conversation about the intersection of creativity, technology, and entrepreneurship. We explore how founders are building businesses that balance automation with human craft.',
-    topic: 'Technology',
-    featured: true,
-    img: 'https://images.unsplash.com/photo-1758876019290-be620a8971f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 41,
-    title: 'The Future of Brand Identity',
-    guest: 'Marcus Rodriguez',
-    date: 'March 21, 2026',
-    duration: '52 min',
-    summary: 'Exploring how brand identity is evolving in a world where AI can generate logos and visual systems in seconds.',
-    topic: 'Branding',
-    featured: true,
-    img: 'https://images.unsplash.com/photo-1733159038814-0c9915bf5142?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 40,
-    title: 'Creativity as a Business Model',
-    guest: 'Jane Park',
-    date: 'March 14, 2026',
-    duration: '61 min',
-    summary: 'How do you turn creative work into a sustainable business? Jane shares her journey from freelancer to agency owner.',
-    topic: 'Entrepreneurship',
-    featured: false,
-    img: 'https://images.unsplash.com/photo-1769636929131-56dd60238266?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 39,
-    title: 'Building Tools for Creators',
-    guest: 'Dev Patel',
-    date: 'March 7, 2026',
-    duration: '55 min',
-    summary: 'Dev discusses the technical and philosophical challenges of building products that empower creative professionals.',
-    topic: 'Technology',
-    featured: false,
-    img: 'https://images.unsplash.com/photo-1737574821698-862e77f044c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 38,
-    title: 'The Art of Storytelling',
-    guest: 'Emma Wilson',
-    date: 'February 28, 2026',
-    duration: '49 min',
-    summary: 'Stories are the foundation of culture and business. Emma breaks down what makes a story stick.',
-    topic: 'Culture',
-    featured: false,
-    img: 'https://images.unsplash.com/photo-1769636929132-e4e7b50cfac0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 37,
-    title: 'From Side Project to Startup',
-    guest: 'Alex Kim',
-    date: 'February 21, 2026',
-    duration: '57 min',
-    summary: 'Alex shares the journey of taking a weekend project to a funded startup with millions of users.',
-    topic: 'Entrepreneurship',
-    featured: false,
-    img: 'https://images.unsplash.com/photo-1758876019290-be620a8971f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 36,
-    title: 'Design Leadership in 2026',
-    guest: 'Olivia Martinez',
-    date: 'February 14, 2026',
-    duration: '53 min',
-    summary: 'What does it mean to lead design teams in an era of rapid technological change?',
-    topic: 'Leadership',
-    featured: true,
-    img: 'https://images.unsplash.com/photo-1733159038814-0c9915bf5142?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-  {
-    id: 35,
-    title: 'Building a Creative Practice',
-    guest: 'Jordan Lee',
-    date: 'February 7, 2026',
-    duration: '46 min',
-    summary: 'Jordan discusses the discipline and systems required to maintain a creative practice over decades.',
-    topic: 'Creativity',
-    featured: false,
-    img: 'https://images.unsplash.com/photo-1769636929131-56dd60238266?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800'
-  },
-];
-
-interface EpisodesProps {
-  onEpisodeClick: (episodeId: number) => void;
+/** Turn `<itunes:duration>` like `01:04:14` into a short human-readable label. */
+function formatDurationLabel(raw: string | undefined): string {
+  if (!raw?.trim()) return '—';
+  const parts = raw.trim().split(':').map((p) => Number.parseInt(p, 10));
+  if (parts.some((n) => Number.isNaN(n))) return raw.trim();
+  if (parts.length === 3) {
+    const [h, m] = parts;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m} min`;
+  }
+  if (parts.length === 2) return `${parts[0]} min`;
+  return raw.trim();
 }
 
-export default function Episodes({ onEpisodeClick }: EpisodesProps) {
+export default function Episodes() {
+  /**
+   * Episode rows come from the shared RSS cache (`useEpisodes` → `fetchRssEpisodes` in `rss.ts`).
+   * See that hook’s file comment for the full data flow.
+   */
+  const { data: episodes, loading, error, retry } = useEpisodes();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('All Episodes');
   const [sortBy, setSortBy] = useState('newest');
 
-  const filteredEpisodes = EPISODES.filter(episode => {
-    const matchesSearch = episode.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         episode.guest.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         episode.summary.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTopic = selectedTopic === 'All Episodes' || episode.topic === selectedTopic;
-    return matchesSearch && matchesTopic;
-  });
+  // Topic pills: “All Episodes” plus whatever topics appear on episodes (today mostly “Episodes”)
+  const topicFilters = useMemo(() => {
+    const unique = new Set<string>();
+    for (const ep of episodes) {
+      unique.add(ep.topic ?? FALLBACK_TOPIC);
+      for (const c of ep.collections ?? []) unique.add(c);
+    }
+    return ['All Episodes', ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
+  }, [episodes]);
+
+  // Sort first, then apply search and topic filters
+  const sortedEpisodes = useMemo(() => {
+    const list = [...episodes];
+    if (sortBy === 'oldest') {
+      list.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
+    } else if (sortBy === 'featured') {
+      list.sort(
+        (a, b) =>
+          Number(!!b.featured) - Number(!!a.featured) ||
+          Date.parse(b.publishedAt) - Date.parse(a.publishedAt),
+      );
+    } else {
+      // newest (default) — matches RSS order from `fetchRssEpisodes`
+      list.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+    }
+    return list;
+  }, [episodes, sortBy]);
+
+  const filteredEpisodes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return sortedEpisodes.filter((episode) => {
+      const topic = episode.topic ?? FALLBACK_TOPIC;
+      const haystack = [
+        episode.title,
+        episode.guest ?? '',
+        episode.summary ?? '',
+        episode.descriptionHtml ? stripHtmlTags(episode.descriptionHtml) : '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      const matchesSearch = !q || haystack.includes(q);
+      const matchesTopic =
+        selectedTopic === 'All Episodes' ||
+        topic === selectedTopic ||
+        (episode.collections?.includes(selectedTopic) ?? false);
+      return matchesSearch && matchesTopic;
+    });
+  }, [sortedEpisodes, searchQuery, selectedTopic]);
+
+  // --- Loading / error: same shell as the archive (header band + grid width), clearer feedback ---
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <section className="pt-32 pb-12 bg-gradient-to-b from-accent/5 to-background border-b border-border">
+          <div className="max-w-[1400px] mx-auto px-6">
+            <div className="h-24 max-w-2xl bg-muted/80 rounded-sm mb-6 animate-pulse" aria-hidden />
+            <div className="h-6 max-w-xl bg-muted/60 rounded-sm mb-4 animate-pulse" aria-hidden />
+            <p className="text-lg text-muted-foreground">
+              Downloading the podcast RSS feed and building the episode list…
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              If this hangs, open the browser devtools <strong className="font-medium text-foreground">Console</strong> and look
+              for messages starting with <code className="text-xs bg-muted px-1 py-0.5 rounded">[EGGS RSS]</code>.
+            </p>
+          </div>
+        </section>
+        <section className="py-16">
+          <div className="max-w-[1400px] mx-auto px-6">
+            <div className="grid grid-cols-2 gap-12">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="space-y-4">
+                  <div className="aspect-video bg-muted animate-pulse rounded-sm" aria-hidden />
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded-sm" aria-hidden />
+                  <div className="h-8 w-full bg-muted/80 animate-pulse rounded-sm" aria-hidden />
+                  <div className="h-4 w-[88%] bg-muted/60 animate-pulse rounded-sm" aria-hidden />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (error) {
+    const feedUrl = resolvePodcastRssUrl();
+    return (
+      <div className="min-h-screen bg-background">
+        <section className="pt-32 pb-20 bg-gradient-to-b from-accent/5 to-background border-b border-border">
+          <div className="max-w-[1400px] mx-auto px-6">
+            <h1 className="text-4xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+              Couldn&apos;t load episodes
+            </h1>
+            <p className="text-lg text-muted-foreground mb-4 max-w-3xl leading-relaxed">{error}</p>
+            <p className="text-sm text-muted-foreground mb-6 max-w-3xl leading-relaxed">
+              The app loads this feed URL:{' '}
+              <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">{feedUrl}</code>
+              . In local development it is usually <code className="text-xs bg-muted px-1 py-0.5 rounded">/podcast-rss.xml</code>{' '}
+              (proxied by Vite). Check the <strong className="font-medium text-foreground">Console</strong> for{' '}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">[EGGS RSS]</code> lines for the exact failure.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={() => retry()}
+                className="border-2 border-foreground px-6 py-3 text-sm font-medium hover:bg-foreground hover:text-background transition-colors"
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="border-2 border-border px-6 py-3 text-sm font-medium hover:border-foreground transition-colors"
+              >
+                Reload page
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,7 +181,6 @@ export default function Episodes({ onEpisodeClick }: EpisodesProps) {
       <section className="sticky top-16 z-40 bg-background/95 backdrop-blur-sm border-b border-border py-6">
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="flex items-center gap-6">
-            {/* Search */}
             <div className="flex-1 max-w-md">
               <input
                 type="text"
@@ -146,7 +191,6 @@ export default function Episodes({ onEpisodeClick }: EpisodesProps) {
               />
             </div>
 
-            {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -157,7 +201,6 @@ export default function Episodes({ onEpisodeClick }: EpisodesProps) {
               <option value="featured">Featured</option>
             </select>
 
-            {/* Results count */}
             <span className="text-sm text-muted-foreground whitespace-nowrap">
               {filteredEpisodes.length} {filteredEpisodes.length === 1 ? 'episode' : 'episodes'}
             </span>
@@ -165,13 +208,14 @@ export default function Episodes({ onEpisodeClick }: EpisodesProps) {
         </div>
       </section>
 
-      {/* Topic Filters */}
+      {/* Topic Filters — options come from loaded data so filters stay honest */}
       <section className="py-8 border-b border-border">
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="flex items-center gap-3 overflow-x-auto">
-            {TOPICS.map((topic) => (
+            {topicFilters.map((topic) => (
               <button
                 key={topic}
+                type="button"
                 onClick={() => setSelectedTopic(topic)}
                 className={`px-6 py-2 text-sm font-medium whitespace-nowrap transition-all ${
                   selectedTopic === topic
@@ -190,70 +234,83 @@ export default function Episodes({ onEpisodeClick }: EpisodesProps) {
       <section className="py-16">
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="grid grid-cols-2 gap-12">
-            {filteredEpisodes.map((episode, index) => (
-              <motion.div
-                key={episode.id}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="group cursor-pointer"
-                onClick={() => onEpisodeClick(episode.id)}
-              >
-                {/* Thumbnail */}
-                <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-5 relative overflow-hidden">
-                  <img
-                    src={episode.img}
-                    alt={episode.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
+            {filteredEpisodes.map((episode, index) => {
+              const topic = episode.topic ?? FALLBACK_TOPIC;
+              const featured = episode.featured ?? false;
+              const cardSummary = episode.summary?.trim() || 'Show notes are available on the episode page.';
+              const dateLabel = format(new Date(episode.publishedAt), 'MMMM d, yyyy');
+              const durationLabel = formatDurationLabel(episode.duration);
+              const numberLabel =
+                episode.episodeNumber !== undefined ? String(episode.episodeNumber) : episode.id.slice(0, 8);
+              const imageUrl = episode.youtubeThumbnail ?? episode.image;
 
-                  {/* Play button overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
+              return (
+                <Link key={episode.id} to={episodePathFromSlug(episode.slug)} className="group block">
+                  <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: index * 0.05 }}
+                  >
+                    <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-5 relative overflow-hidden">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted" aria-hidden />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
+
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-4 right-4">
+                        <span
+                          className="text-5xl text-white/20 group-hover:text-white/30 transition-all"
+                          style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+                        >
+                          {numberLabel}
+                        </span>
+                      </div>
+
+                      {featured && (
+                        <div className="absolute top-4 left-4">
+                          <span className="px-3 py-1 bg-accent text-white text-xs font-medium tracking-wider">
+                            FEATURED
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Episode number */}
-                  <div className="absolute bottom-4 right-4">
-                    <span className="text-5xl text-white/20 group-hover:text-white/30 transition-all" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                      {episode.id}
-                    </span>
-                  </div>
-
-                  {/* Featured badge */}
-                  {episode.featured && (
-                    <div className="absolute top-4 left-4">
-                      <span className="px-3 py-1 bg-accent text-white text-xs font-medium tracking-wider">
-                        FEATURED
-                      </span>
+                    <div>
+                      <p className="text-xs text-accent font-medium mb-3 tracking-wider">{topic.toUpperCase()}</p>
+                      <h3
+                        className="text-2xl mb-3 leading-snug group-hover:text-accent transition-colors"
+                        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                      >
+                        {episode.title}
+                      </h3>
+                      <p className="text-base text-muted-foreground mb-4 leading-relaxed line-clamp-4">{cardSummary}</p>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{dateLabel}</span>
+                        <span>•</span>
+                        <span>{durationLabel}</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div>
-                  <p className="text-xs text-accent font-medium mb-3 tracking-wider">{episode.topic.toUpperCase()}</p>
-                  <h3 className="text-2xl mb-3 leading-snug group-hover:text-accent transition-colors" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                    {episode.title}
-                  </h3>
-                  <p className="text-base text-muted-foreground mb-4 leading-relaxed">
-                    {episode.summary}
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{episode.date}</span>
-                    <span>•</span>
-                    <span>{episode.duration}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                  </motion.div>
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Load More */}
+          {/* Full feed is loaded at once; button kept for layout parity (disabled until pagination exists) */}
           {filteredEpisodes.length > 0 && (
             <motion.div
               className="text-center mt-16"
@@ -261,13 +318,17 @@ export default function Episodes({ onEpisodeClick }: EpisodesProps) {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <button className="border-2 border-foreground px-10 py-4 text-base font-medium hover:bg-foreground hover:text-background transition-all">
+              <button
+                type="button"
+                disabled
+                title="All episodes from the RSS feed are already listed above."
+                className="border-2 border-foreground px-10 py-4 text-base font-medium opacity-50 cursor-not-allowed"
+              >
                 Load More Episodes
               </button>
             </motion.div>
           )}
 
-          {/* No Results */}
           {filteredEpisodes.length === 0 && (
             <div className="text-center py-20">
               <p className="text-2xl text-muted-foreground mb-4">No episodes found</p>
