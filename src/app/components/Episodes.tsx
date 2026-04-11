@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { ARCHIVE_INITIAL_PAGE_SIZE, ARCHIVE_LOAD_MORE_SIZE } from '../config/archiveUi';
 import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
+import { useYoutubeArchiveLiteChannelData } from '../hooks/useYoutubeArchiveLiteChannelData';
 import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
 import { useYoutubeOverlaysProgressive } from '../hooks/useYoutubeOverlaysProgressive';
 import { buildYoutubeOverlaysForEpisodes } from '../lib/computeEpisodeYoutubeOverlay';
@@ -37,14 +38,24 @@ export default function Episodes() {
    */
   const { data: episodes, loading, error, retry: retryRss } = useRssEpisodes();
   /**
-   * While the full channel snapshot is loading, episode art uses a shimmer — not RSS first —
-   * so cards do not swap to YouTube a moment later (same idea as the homepage).
+   * **Full** YouTube merge (slow) — used for topic pills, featured sort, and text/metadata
+   * enrichment across the whole RSS list. Card **images** do not wait on this.
    */
-  const { data: channelData, loading: youtubeLoading, hasApiKey, retry: retryChannel } = useYoutubeChannelData();
-  const awaitYoutubeOverlay = hasApiKey && youtubeLoading;
+  const { data: fullChannelData, retry: retryFullChannel } = useYoutubeChannelData();
+  /**
+   * **Lite** snapshot (fast, same network payload as the homepage) — used only to match
+   * the **currently visible** episode rows to YouTube thumbnails so the first grid paints quickly.
+   */
+  const {
+    data: liteChannelData,
+    loading: liteChannelLoading,
+    hasApiKey,
+    retry: retryLiteChannel,
+  } = useYoutubeArchiveLiteChannelData();
+
   const { overlays: progressiveOverlays } = useYoutubeOverlaysProgressive(
     episodes.length ? episodes : null,
-    channelData,
+    fullChannelData,
   );
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,7 +72,8 @@ export default function Episodes() {
     clearYoutubeChannelCache();
     clearRssEpisodesCache();
     retryRss();
-    retryChannel();
+    retryLiteChannel();
+    retryFullChannel();
   };
 
   // Topic pills: “All Episodes” plus whatever topics appear once YouTube overlays fill in
@@ -119,11 +131,23 @@ export default function Episodes() {
     [filteredEpisodes, visibleCount],
   );
 
-  /** Prefer a direct overlay pass for the visible slice so thumbnails update quickly */
-  const visibleOverlays = useMemo(() => {
-    if (!channelData || displayedEpisodes.length === 0) return {};
-    return buildYoutubeOverlaysForEpisodes(displayedEpisodes, channelData);
-  }, [channelData, displayedEpisodes]);
+  /**
+   * YouTube overlays for the **visible grid only**, using the **lite** channel catalog.
+   * Recomputed when you change filters/sort or click “Load more” — only that slice is matched.
+   */
+  const sliceLiteOverlays = useMemo(() => {
+    if (!liteChannelData || displayedEpisodes.length === 0) return {};
+    return buildYoutubeOverlaysForEpisodes(displayedEpisodes, liteChannelData);
+  }, [liteChannelData, displayedEpisodes]);
+
+  /** Same visible slice, but against the **full** catalog — better for featured/topic fields once loaded */
+  const visibleFullOverlays = useMemo(() => {
+    if (!fullChannelData || displayedEpisodes.length === 0) return {};
+    return buildYoutubeOverlaysForEpisodes(displayedEpisodes, fullChannelData);
+  }, [fullChannelData, displayedEpisodes]);
+
+  /** Shimmer in the image box only until the **lite** snapshot returns — not the full channel */
+  const awaitCardYoutubeFromLite = hasApiKey && liteChannelLoading;
 
   // --- Loading / error: same shell as the archive (header band + grid width), clearer feedback ---
   if (loading) {
@@ -279,8 +303,10 @@ export default function Episodes() {
             {displayedEpisodes.map((episode, index) => {
               const displayEp = mergeEpisodeForDisplay(
                 episode,
-                visibleOverlays[episode.slug] ?? progressiveOverlays[episode.slug] ?? null,
+                visibleFullOverlays[episode.slug] ?? progressiveOverlays[episode.slug] ?? null,
               );
+              /** Thumbnails use the lite catalog only so they are not blocked by the heavy full fetch */
+              const imageEp = mergeEpisodeForDisplay(episode, sliceLiteOverlays[episode.slug] ?? null);
               const topic = displayEp.topic ?? FALLBACK_TOPIC;
               const featured = displayEp.featured ?? false;
               const cardSummary = displayEp.summary?.trim() || 'Show notes are available on the episode page.';
@@ -305,9 +331,9 @@ export default function Episodes() {
                         key={displayEp.slug}
                         resetKey={displayEp.slug}
                         rssImage={episode.image}
-                        youtubeVideoId={displayEp.youtubeVideoId}
-                        youtubeThumbnailPreferred={displayEp.youtubeThumbnail}
-                        awaitYoutubeOverlay={awaitYoutubeOverlay}
+                        youtubeVideoId={imageEp.youtubeVideoId}
+                        youtubeThumbnailPreferred={imageEp.youtubeThumbnail}
+                        awaitYoutubeOverlay={awaitCardYoutubeFromLite}
                         imageClassName="group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
