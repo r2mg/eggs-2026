@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
-import { useEpisodes } from '../hooks/useEpisodes';
+import { ARCHIVE_INITIAL_PAGE_SIZE, ARCHIVE_LOAD_MORE_SIZE } from '../config/archiveUi';
+import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
+import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
+import { useYoutubeOverlaysProgressive } from '../hooks/useYoutubeOverlaysProgressive';
+import { buildYoutubeOverlaysForEpisodes } from '../lib/computeEpisodeYoutubeOverlay';
+import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
 import { episodePathFromSlug } from '../episodePaths';
 import { resolvePodcastRssUrl, stripHtmlTags } from '../lib/rss';
+import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 
 /** RSS items do not include iTunes-style topics yet — used for filters and labels */
 const FALLBACK_TOPIC = 'Episodes';
@@ -25,42 +31,60 @@ function formatDurationLabel(raw: string | undefined): string {
 
 export default function Episodes() {
   /**
-   * Episode rows come from the shared RSS cache (`useEpisodes` → `fetchRssEpisodes` in `rss.ts`).
-   * See that hook’s file comment for the full data flow.
+   * RSS rows stay stable (`useRssEpisodes`). YouTube thumbnails / “featured” / topic tags
+   * arrive in overlay maps so the grid is not replaced wholesale when the API returns.
    */
-  const { data: episodes, loading, error, retry } = useEpisodes();
+  const { data: episodes, loading, error, retry: retryRss } = useRssEpisodes();
+  const { data: channelData, retry: retryChannel } = useYoutubeChannelData();
+  const { overlays: progressiveOverlays } = useYoutubeOverlaysProgressive(
+    episodes.length ? episodes : null,
+    channelData,
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('All Episodes');
   const [sortBy, setSortBy] = useState('newest');
+  const [visibleCount, setVisibleCount] = useState(ARCHIVE_INITIAL_PAGE_SIZE);
 
-  // Topic pills: “All Episodes” plus whatever topics appear on episodes (today mostly “Episodes”)
+  /** Reset paging when the user changes search / topic / sort (new result set). */
+  useEffect(() => {
+    setVisibleCount(ARCHIVE_INITIAL_PAGE_SIZE);
+  }, [searchQuery, selectedTopic, sortBy]);
+
+  const retryAll = () => {
+    clearYoutubeChannelCache();
+    clearRssEpisodesCache();
+    retryRss();
+    retryChannel();
+  };
+
+  // Topic pills: “All Episodes” plus whatever topics appear once YouTube overlays fill in
   const topicFilters = useMemo(() => {
     const unique = new Set<string>();
     for (const ep of episodes) {
       unique.add(ep.topic ?? FALLBACK_TOPIC);
-      for (const c of ep.collections ?? []) unique.add(c);
+      const merged = mergeEpisodeForDisplay(ep, progressiveOverlays[ep.slug] ?? null);
+      for (const c of merged.collections ?? []) unique.add(c);
     }
     return ['All Episodes', ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
-  }, [episodes]);
+  }, [episodes, progressiveOverlays]);
 
-  // Sort first, then apply search and topic filters
+  // Sort RSS rows (featured order uses progressive overlays when present)
   const sortedEpisodes = useMemo(() => {
     const list = [...episodes];
     if (sortBy === 'oldest') {
       list.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
     } else if (sortBy === 'featured') {
-      list.sort(
-        (a, b) =>
-          Number(!!b.featured) - Number(!!a.featured) ||
-          Date.parse(b.publishedAt) - Date.parse(a.publishedAt),
-      );
+      list.sort((a, b) => {
+        const fa = !!mergeEpisodeForDisplay(a, progressiveOverlays[a.slug] ?? null).featured;
+        const fb = !!mergeEpisodeForDisplay(b, progressiveOverlays[b.slug] ?? null).featured;
+        return Number(fb) - Number(fa) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
+      });
     } else {
-      // newest (default) — matches RSS order from `fetchRssEpisodes`
       list.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
     }
     return list;
-  }, [episodes, sortBy]);
+  }, [episodes, sortBy, progressiveOverlays]);
 
   const filteredEpisodes = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -75,13 +99,25 @@ export default function Episodes() {
         .join(' ')
         .toLowerCase();
       const matchesSearch = !q || haystack.includes(q);
+      const merged = mergeEpisodeForDisplay(episode, progressiveOverlays[episode.slug] ?? null);
       const matchesTopic =
         selectedTopic === 'All Episodes' ||
         topic === selectedTopic ||
-        (episode.collections?.includes(selectedTopic) ?? false);
+        (merged.collections?.includes(selectedTopic) ?? false);
       return matchesSearch && matchesTopic;
     });
-  }, [sortedEpisodes, searchQuery, selectedTopic]);
+  }, [sortedEpisodes, searchQuery, selectedTopic, progressiveOverlays]);
+
+  const displayedEpisodes = useMemo(
+    () => filteredEpisodes.slice(0, visibleCount),
+    [filteredEpisodes, visibleCount],
+  );
+
+  /** Prefer a direct overlay pass for the visible slice so thumbnails update quickly */
+  const visibleOverlays = useMemo(() => {
+    if (!channelData || displayedEpisodes.length === 0) return {};
+    return buildYoutubeOverlaysForEpisodes(displayedEpisodes, channelData);
+  }, [channelData, displayedEpisodes]);
 
   // --- Loading / error: same shell as the archive (header band + grid width), clearer feedback ---
   if (loading) {
@@ -138,7 +174,7 @@ export default function Episodes() {
             <div className="flex flex-wrap gap-4">
               <button
                 type="button"
-                onClick={() => retry()}
+                onClick={() => retryAll()}
                 className="border-2 border-foreground px-6 py-3 text-sm font-medium hover:bg-foreground hover:text-background transition-colors"
               >
                 Try again
@@ -234,18 +270,22 @@ export default function Episodes() {
       <section className="py-16">
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="grid grid-cols-2 gap-12">
-            {filteredEpisodes.map((episode, index) => {
-              const topic = episode.topic ?? FALLBACK_TOPIC;
-              const featured = episode.featured ?? false;
-              const cardSummary = episode.summary?.trim() || 'Show notes are available on the episode page.';
-              const dateLabel = format(new Date(episode.publishedAt), 'MMMM d, yyyy');
-              const durationLabel = formatDurationLabel(episode.duration);
+            {displayedEpisodes.map((episode, index) => {
+              const displayEp = mergeEpisodeForDisplay(
+                episode,
+                visibleOverlays[episode.slug] ?? progressiveOverlays[episode.slug] ?? null,
+              );
+              const topic = displayEp.topic ?? FALLBACK_TOPIC;
+              const featured = displayEp.featured ?? false;
+              const cardSummary = displayEp.summary?.trim() || 'Show notes are available on the episode page.';
+              const dateLabel = format(new Date(displayEp.publishedAt), 'MMMM d, yyyy');
+              const durationLabel = formatDurationLabel(displayEp.duration);
               const numberLabel =
-                episode.episodeNumber !== undefined ? String(episode.episodeNumber) : episode.id.slice(0, 8);
-              const imageUrl = episode.youtubeThumbnail ?? episode.image;
+                displayEp.episodeNumber !== undefined ? String(displayEp.episodeNumber) : displayEp.id.slice(0, 8);
+              const imageUrl = displayEp.youtubeThumbnail ?? displayEp.image;
 
               return (
-                <Link key={episode.id} to={episodePathFromSlug(episode.slug)} className="group block">
+                <Link key={displayEp.id} to={episodePathFromSlug(displayEp.slug)} className="group block">
                   <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -295,7 +335,7 @@ export default function Episodes() {
                         className="text-2xl mb-3 leading-snug group-hover:text-accent transition-colors"
                         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                       >
-                        {episode.title}
+                        {displayEp.title}
                       </h3>
                       <p className="text-base text-muted-foreground mb-4 leading-relaxed line-clamp-4">{cardSummary}</p>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -310,8 +350,7 @@ export default function Episodes() {
             })}
           </div>
 
-          {/* Full feed is loaded at once; button kept for layout parity (disabled until pagination exists) */}
-          {filteredEpisodes.length > 0 && (
+          {filteredEpisodes.length > 0 && visibleCount < filteredEpisodes.length && (
             <motion.div
               className="text-center mt-16"
               initial={{ opacity: 0 }}
@@ -320,12 +359,14 @@ export default function Episodes() {
             >
               <button
                 type="button"
-                disabled
-                title="All episodes from the RSS feed are already listed above."
-                className="border-2 border-foreground px-10 py-4 text-base font-medium opacity-50 cursor-not-allowed"
+                onClick={() => setVisibleCount((n) => n + ARCHIVE_LOAD_MORE_SIZE)}
+                className="border-2 border-foreground px-10 py-4 text-base font-medium hover:bg-foreground hover:text-background transition-colors"
               >
-                Load More Episodes
+                Load more episodes
               </button>
+              <p className="text-sm text-muted-foreground mt-3">
+                Showing {displayedEpisodes.length} of {filteredEpisodes.length} matching episodes
+              </p>
             </motion.div>
           )}
 

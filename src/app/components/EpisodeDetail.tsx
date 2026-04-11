@@ -3,7 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import type { Episode } from '../types/episode';
-import { useEpisodes } from '../hooks/useEpisodes';
+import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
+import { useYoutubeOverlaysForSlugs } from '../hooks/useYoutubeOverlaysForSlugs';
+import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
+import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import {
   extractApplePodcastsUrl,
@@ -47,8 +50,8 @@ function longDescriptionPlain(ep: Episode): string {
  * Episode detail page (`EpisodeDetail.tsx`)
  * =========================================
  *
- * **Data source:** Same in-memory episode list as the archive — `useEpisodes()` in
- * `src/app/hooks/useEpisodes.ts`, which loads RSS via `fetchRssEpisodes()` in `rss.ts`.
+ * **Data source:** Stable RSS list from `useRssEpisodes()`; YouTube thumbnails / embed URL
+ * are merged only for this page’s slug via `useYoutubeOverlaysForSlugs` (no whole-feed swap).
  *
  * **How lookup works (after the feed has loaded):**
  * 1. Read the `:slug` route param from the URL (React Router fills this from `/episodes/:slug`).
@@ -63,23 +66,23 @@ function longDescriptionPlain(ep: Episode): string {
 export default function EpisodeDetail() {
   const { slug: slugParam } = useParams<{ slug: string }>();
 
-  const { data: catalog, loading, error, retry } = useEpisodes();
+  const { data: rssCatalog, loading, error, retry: retryRss } = useRssEpisodes();
 
   /**
-   * Resolve this URL to one `Episode` row from the catalog.
+   * Resolve this URL to one `Episode` row from the RSS list.
    * Runs only when `loading` is false and `error` is null so we do not flash “not found”
    * while the shared RSS request is still in flight.
    */
   const episode = useMemo(() => {
     if (loading || error) return null;
     const raw = slugParam ? safeDecodeURIComponent(slugParam) : '';
-    const bySlug = catalog.find((e) => e.slug === raw);
+    const bySlug = rssCatalog.find((e) => e.slug === raw);
     const byNumber =
       /^\d+$/.test(raw) === true
-        ? catalog.find((e) => e.episodeNumber === Number.parseInt(raw, 10))
+        ? rssCatalog.find((e) => e.episodeNumber === Number.parseInt(raw, 10))
         : undefined;
     return bySlug ?? byNumber ?? null;
-  }, [catalog, loading, error, slugParam]);
+  }, [rssCatalog, loading, error, slugParam]);
 
   const takeaways = useMemo(
     () => extractTakeawaysFromDescriptionHtml(episode?.descriptionHtml ?? '') ?? [],
@@ -88,13 +91,32 @@ export default function EpisodeDetail() {
 
   // Prefer the next three older episodes in publish order; if we’re at the end of the list, show any other recent ones
   const related = useMemo(() => {
-    if (!episode || catalog.length === 0) return [];
-    const sorted = [...catalog].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+    if (!episode || rssCatalog.length === 0) return [];
+    const sorted = [...rssCatalog].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
     const idx = sorted.findIndex((e) => e.id === episode.id);
     const older = idx >= 0 ? sorted.slice(idx + 1, idx + 4) : [];
     if (older.length > 0) return older;
     return sorted.filter((e) => e.id !== episode.id).slice(0, 3);
-  }, [catalog, episode]);
+  }, [rssCatalog, episode]);
+
+  const overlaySlugs = useMemo(() => {
+    const u = new Set<string>();
+    if (episode) u.add(episode.slug);
+    related.forEach((r) => u.add(r.slug));
+    return [...u];
+  }, [episode, related]);
+
+  const { overlays, retryChannel } = useYoutubeOverlaysForSlugs(
+    rssCatalog.length ? rssCatalog : null,
+    overlaySlugs,
+  );
+
+  const retryAll = () => {
+    clearYoutubeChannelCache();
+    clearRssEpisodesCache();
+    retryRss();
+    retryChannel();
+  };
 
   if (loading) {
     return (
@@ -133,7 +155,7 @@ export default function EpisodeDetail() {
           <div className="flex flex-wrap gap-4">
             <button
               type="button"
-              onClick={() => retry()}
+              onClick={() => retryAll()}
               className="border-2 border-foreground px-6 py-3 text-sm font-medium hover:bg-foreground hover:text-background transition-colors"
             >
               Try again
@@ -187,25 +209,27 @@ export default function EpisodeDetail() {
     );
   }
 
-  const topicLabel = episode.topic ?? FALLBACK_TOPIC;
-  const displayNum = episode.episodeNumber ?? '—';
-  const dateStr = format(new Date(episode.publishedAt), 'MMMM d, yyyy');
-  const durationStr = formatDurationLabel(episode.duration);
-  const summaryText = episode.summary?.trim() || 'No short summary was extracted for this episode.';
-  const overviewText = longDescriptionPlain(episode);
-  const chapters = episode.chapters ?? [];
-  const guestName = episode.guest?.trim();
-  const heroImageUrl = episode.youtubeThumbnail ?? episode.image;
+  /** RSS fields + optional YouTube overlay for this slug only (no whole-catalog swap). */
+  const ep = mergeEpisodeForDisplay(episode, overlays[episode.slug] ?? null);
+
+  const topicLabel = ep.topic ?? FALLBACK_TOPIC;
+  const displayNum = ep.episodeNumber ?? '—';
+  const dateStr = format(new Date(ep.publishedAt), 'MMMM d, yyyy');
+  const durationStr = formatDurationLabel(ep.duration);
+  const summaryText = ep.summary?.trim() || 'No short summary was extracted for this episode.';
+  const overviewText = longDescriptionPlain(ep);
+  const chapters = ep.chapters ?? [];
+  const guestName = ep.guest?.trim();
+  const heroImageUrl = ep.youtubeThumbnail ?? ep.image;
   /** Prefer the Data API embed URL; fall back to building from `youtubeVideoId` when needed */
   const youtubeEmbedSrc =
-    episode.youtubeEmbedUrl?.trim() ||
-    (episode.youtubeVideoId ? `https://www.youtube.com/embed/${episode.youtubeVideoId}` : '');
+    ep.youtubeEmbedUrl?.trim() || (ep.youtubeVideoId ? `https://www.youtube.com/embed/${ep.youtubeVideoId}` : '');
   const hasYoutubePlayer = youtubeEmbedSrc.length > 0;
   /** Watch link on YouTube (new tab) — same tab as “open in YouTube app” behavior */
-  const youtubeWatchHref = episode.youtubeUrl?.trim();
+  const youtubeWatchHref = ep.youtubeUrl?.trim();
 
   // Extra listen links parsed from show notes when the feed doesn’t expose them as separate fields
-  const appleUrl = extractApplePodcastsUrl(episode.descriptionHtml);
+  const appleUrl = extractApplePodcastsUrl(ep.descriptionHtml);
 
   return (
     <div className="min-h-screen bg-background pt-16">
@@ -229,7 +253,7 @@ export default function EpisodeDetail() {
                 EPISODE {displayNum} • {topicLabel.toUpperCase()}
               </p>
               <h1 className="text-7xl mb-6 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                {episode.title}
+                {ep.title}
               </h1>
               <div className="flex items-center gap-6 text-base text-muted-foreground">
                 <span>{dateStr}</span>
@@ -308,7 +332,7 @@ export default function EpisodeDetail() {
             </motion.div>
           )}
 
-          {!hasYoutubePlayer && episode.audioUrl ? (
+          {!hasYoutubePlayer && ep.audioUrl ? (
             <motion.div
               className="mt-6 p-4 rounded-sm border border-border bg-muted/20"
               initial={{ opacity: 0, y: 12 }}
@@ -317,7 +341,7 @@ export default function EpisodeDetail() {
             >
               <p className="text-sm text-muted-foreground mb-3">Podcast audio (RSS feed)</p>
               <audio controls className="w-full" preload="metadata">
-                <source src={episode.audioUrl} />
+                <source src={ep.audioUrl} />
                 Your browser does not support embedded audio. You can still use Spotify or the direct file link from your host.
               </audio>
             </motion.div>
@@ -330,9 +354,9 @@ export default function EpisodeDetail() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <div className="flex items-center justify-center gap-4 flex-wrap">
-            {episode.spotifyUrl ? (
+            {ep.spotifyUrl ? (
               <a
-                href={episode.spotifyUrl}
+                href={ep.spotifyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-accent text-accent-foreground px-8 py-4 text-sm font-medium hover:opacity-90 transition-opacity"
@@ -366,9 +390,9 @@ export default function EpisodeDetail() {
                 Apple Podcasts
               </button>
             )}
-            {episode.youtubeUrl ? (
+            {ep.youtubeUrl ? (
               <a
-                href={episode.youtubeUrl}
+                href={ep.youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="border-2 border-border px-8 py-4 text-sm font-medium hover:border-foreground transition-colors"
@@ -461,7 +485,7 @@ export default function EpisodeDetail() {
                 </motion.div>
               ) : null}
 
-              {episode.transcript ? (
+              {ep.transcript ? (
                 <motion.div
                   className="mb-16"
                   initial={{ opacity: 0, y: 40 }}
@@ -474,7 +498,7 @@ export default function EpisodeDetail() {
                   </h2>
                   <div className="p-8 bg-muted/50 border border-border">
                     <p className="text-base text-muted-foreground leading-loose whitespace-pre-line font-mono">
-                      {episode.transcript}
+                      {ep.transcript}
                     </p>
                     <button type="button" className="mt-6 text-accent font-medium hover:underline">
                       Read Full Transcript →
@@ -496,9 +520,9 @@ export default function EpisodeDetail() {
                   {guestName ? `About ${guestName}` : 'About this episode'}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-4">{summaryText}</p>
-                {episode.spotifyUrl ? (
+                {ep.spotifyUrl ? (
                   <a
-                    href={episode.spotifyUrl}
+                    href={ep.spotifyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-accent hover:underline"
@@ -584,12 +608,15 @@ export default function EpisodeDetail() {
 
             <div className="grid grid-cols-3 gap-8">
               {related.map((rel, index) => {
-                const relTopic = rel.topic ?? FALLBACK_TOPIC;
+                const relDisplay = mergeEpisodeForDisplay(rel, overlays[rel.slug] ?? null);
+                const relTopic = relDisplay.topic ?? FALLBACK_TOPIC;
                 const relNum =
-                  rel.episodeNumber !== undefined ? String(rel.episodeNumber) : rel.id.slice(0, 8);
-                const relImg = rel.youtubeThumbnail ?? rel.image;
+                  relDisplay.episodeNumber !== undefined
+                    ? String(relDisplay.episodeNumber)
+                    : relDisplay.id.slice(0, 8);
+                const relImg = relDisplay.youtubeThumbnail ?? relDisplay.image;
                 return (
-                  <Link key={rel.id} to={episodePathFromSlug(rel.slug)} className="group block">
+                  <Link key={relDisplay.id} to={episodePathFromSlug(relDisplay.slug)} className="group block">
                     <motion.div
                       initial={{ opacity: 0, y: 40 }}
                       whileInView={{ opacity: 1, y: 0 }}
@@ -621,9 +648,9 @@ export default function EpisodeDetail() {
                         className="text-lg mb-2 leading-snug group-hover:text-accent transition-colors"
                         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                       >
-                        {rel.title}
+                        {relDisplay.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground">{rel.guest?.trim() ?? ''}</p>
+                      <p className="text-sm text-muted-foreground">{relDisplay.guest?.trim() ?? ''}</p>
                     </motion.div>
                   </Link>
                 );

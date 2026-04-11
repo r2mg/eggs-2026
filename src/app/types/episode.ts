@@ -33,7 +33,7 @@ export type Episode = {
   topic?: string;
   /**
    * `featured` / `featuredRank` are normally set by YouTube playlist membership
-   * (“EGGS Featured”) when `VITE_YOUTUBE_API_KEY` is configured — see `enrichEpisodesWithYouTube.ts`.
+   * (“EGGS Featured”) when `VITE_YOUTUBE_API_KEY` is configured — see `computeEpisodeYoutubeOverlay.ts` / overlay hooks.
    */
   featured?: boolean;
   /** Order within the “EGGS Featured” YouTube playlist (lower = earlier in playlist). */

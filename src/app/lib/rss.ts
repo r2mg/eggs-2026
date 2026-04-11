@@ -389,7 +389,7 @@ export type FetchRssEpisodesOptions = {
  * Downloads the RSS feed and returns normalized episodes.
  *
  * **This is the only place the app performs the HTTP request** for the episode list.
- * Components use `useEpisodes()` instead of calling this directly.
+ * Components use `useRssEpisodes()` (see `src/app/hooks/useRssEpisodes.ts`) instead of calling this directly.
  *
  * @throws If the network fails, HTTP status is not ok, the body is empty, or XML parse fails
  */

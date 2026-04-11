@@ -1,13 +1,19 @@
 /**
- * Home page — uses `useEpisodes()` for latest + featured rows (RSS via `fetchRssEpisodes` in `rss.ts`).
- * Routes and layout chrome live in `App.tsx`; episode URLs are built with `episodePathFromSlug` in `episodePaths.ts`.
+ * Home page — RSS list from `useRssEpisodes()` (stable). YouTube thumbnails / featured order
+ * are layered on via small overlay maps so the page does not “swap” the whole feed when
+ * the YouTube API finishes.
  */
 import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { expectedTopicPlaylistTitles } from '../lib/youtube';
-import { useEpisodes } from '../hooks/useEpisodes';
+import { useRssEpisodes } from '../hooks/useRssEpisodes';
+import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
+import { useYoutubeOverlaysProgressive } from '../hooks/useYoutubeOverlaysProgressive';
+import { buildYoutubeOverlaysForEpisodes } from '../lib/computeEpisodeYoutubeOverlay';
+import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder';
+import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import YouTubePosterImage from './YouTubePosterImage';
 
@@ -27,40 +33,71 @@ function formatDurationLabel(raw: string | undefined): string {
   return raw.trim();
 }
 
+/** Stable string key so `useMemo` does not re-run on every new `slugs` array instance. */
+function orderedSlugKey(slugs: string[]): string {
+  if (slugs.length === 0) return '';
+  return [...slugs].filter(Boolean).sort().join('|');
+}
+
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const { data, loading, error, youtubeInfo } = useEpisodes();
+  const { data: rssData, loading, error } = useRssEpisodes();
+  const { data: channelData } = useYoutubeChannelData();
+  /** Fills topic counts in the background without touching the RSS array in React state */
+  const { overlays: topicOverlays } = useYoutubeOverlaysProgressive(rssData.length ? rssData : null, channelData);
 
-  // Newest episode is first in the RSS list
-  const latest = useMemo(() => {
-    if (loading || error || data.length === 0) return null;
-    return data[0];
-  }, [data, loading, error]);
+  const latestBase = useMemo(() => {
+    if (loading || error || rssData.length === 0) return null;
+    return rssData[0];
+  }, [rssData, loading, error]);
 
   /**
-   * “Featured Conversations” prefers episodes flagged from the **EGGS Featured** YouTube
-   * playlist (see `enrichEpisodesWithYouTube.ts`). If none are flagged, we keep the old
-   * behaviour: the next six RSS episodes after the latest.
+   * Featured row order comes from the **EGGS Featured** YouTube playlist when the API
+   * snapshot exists; otherwise we fall back to the next six RSS episodes after the latest.
    */
-  const featuredList = useMemo(() => {
-    if (loading || error) return [];
-    const fromYouTube = data
-      .filter((e) => e.featured)
-      .sort((a, b) => (a.featuredRank ?? 1e9) - (b.featuredRank ?? 1e9));
-    if (fromYouTube.length > 0) return fromYouTube.slice(0, 6);
-    return data.slice(1, 7);
-  }, [data, loading, error]);
-
-  /** Topic row labels + counts: from YouTube enrichment when available, else derived from `collections`. */
-  const topicRows = useMemo(() => {
-    if (youtubeInfo?.topicCards?.length) {
-      return youtubeInfo.topicCards.map((t) => ({ name: t.label, count: t.episodeCount }));
+  const featuredBase = useMemo(() => {
+    if (loading || error || rssData.length === 0) return [];
+    if (channelData) {
+      const ordered = getFeaturedEpisodesInPlaylistOrder(rssData, channelData);
+      if (ordered.length > 0) return ordered.slice(0, 6);
     }
+    return rssData.slice(1, 7);
+  }, [rssData, loading, error, channelData]);
+
+  /** Only compute YouTube overlays for the hero + featured cards (not the whole archive). */
+  const heroOverlaySlugs = useMemo(() => {
+    const s = new Set<string>();
+    if (latestBase) s.add(latestBase.slug);
+    featuredBase.forEach((e) => s.add(e.slug));
+    return Array.from(s);
+  }, [latestBase, featuredBase]);
+
+  const heroOverlays = useMemo(() => {
+    if (!channelData || heroOverlaySlugs.length === 0) return {};
+    const want = new Set(heroOverlaySlugs);
+    const subset = rssData.filter((e) => want.has(e.slug));
+    return buildYoutubeOverlaysForEpisodes(subset, channelData);
+  }, [channelData, rssData, orderedSlugKey(heroOverlaySlugs)]);
+
+  const latest = useMemo(
+    () => (latestBase ? mergeEpisodeForDisplay(latestBase, heroOverlays[latestBase.slug] ?? null) : null),
+    [latestBase, heroOverlays],
+  );
+
+  const featuredList = useMemo(
+    () => featuredBase.map((e) => mergeEpisodeForDisplay(e, heroOverlays[e.slug] ?? null)),
+    [featuredBase, heroOverlays],
+  );
+
+  /** Topic counts use the progressive overlay map so labels fill in without re-fetching RSS */
+  const topicRows = useMemo(() => {
     return expectedTopicPlaylistTitles().map((title) => ({
       name: title.replace(/^EGGS\s+/i, '').trim(),
-      count: data.filter((e) => e.collections?.includes(title)).length,
+      count: rssData.filter((e) =>
+        mergeEpisodeForDisplay(e, topicOverlays[e.slug] ?? null).collections?.includes(title),
+      ).length,
     }));
-  }, [youtubeInfo, data]);
+  }, [rssData, topicOverlays]);
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -71,7 +108,7 @@ export default function Home() {
   const textY = useTransform(scrollYProgress, [0, 1], [0, 100]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  const listenHref = latest ? episodePathFromSlug(latest.slug) : '/episodes';
+  const listenHref = latestBase ? episodePathFromSlug(latestBase.slug) : '/episodes';
 
   return (
     <>

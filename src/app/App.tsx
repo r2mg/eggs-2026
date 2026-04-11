@@ -7,8 +7,8 @@
  * `EpisodeDetail`, etc.). Shared chrome (nav + footer) wraps an `<Outlet />` where the
  * active page renders.
  *
- * **RSS:** This file does not fetch the feed. Episode data comes from `useEpisodes()`
- * in `src/app/hooks/useEpisodes.ts`, which calls `fetchRssEpisodes()` in `src/app/lib/rss.ts`.
+ * **RSS:** This file does not fetch the feed. Pages use `useRssEpisodes()` in
+ * `src/app/hooks/useRssEpisodes.ts` (RSS only) plus small YouTube overlay hooks where needed.
  */
 import { Link, NavLink, Outlet, Routes, Route } from 'react-router-dom';
 import logoSrc from '../imports/eggs_logo_full.png';
