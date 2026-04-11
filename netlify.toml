@@ -1,0 +1,14 @@
+# https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Client-side routing (e.g. React Router): every path serves index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
