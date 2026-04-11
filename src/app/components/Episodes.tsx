@@ -11,6 +11,7 @@ import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
 import { episodePathFromSlug } from '../episodePaths';
 import { resolvePodcastRssUrl, stripHtmlTags } from '../lib/rss';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
+import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 
 /** RSS items do not include iTunes-style topics yet — used for filters and labels */
 const FALLBACK_TOPIC = 'Episodes';
@@ -35,7 +36,12 @@ export default function Episodes() {
    * arrive in overlay maps so the grid is not replaced wholesale when the API returns.
    */
   const { data: episodes, loading, error, retry: retryRss } = useRssEpisodes();
-  const { data: channelData, retry: retryChannel } = useYoutubeChannelData();
+  /**
+   * While the full channel snapshot is loading, episode art uses a shimmer — not RSS first —
+   * so cards do not swap to YouTube a moment later (same idea as the homepage).
+   */
+  const { data: channelData, loading: youtubeLoading, hasApiKey, retry: retryChannel } = useYoutubeChannelData();
+  const awaitYoutubeOverlay = hasApiKey && youtubeLoading;
   const { overlays: progressiveOverlays } = useYoutubeOverlaysProgressive(
     episodes.length ? episodes : null,
     channelData,
@@ -282,7 +288,6 @@ export default function Episodes() {
               const durationLabel = formatDurationLabel(displayEp.duration);
               const numberLabel =
                 displayEp.episodeNumber !== undefined ? String(displayEp.episodeNumber) : displayEp.id.slice(0, 8);
-              const imageUrl = displayEp.youtubeThumbnail ?? displayEp.image;
 
               return (
                 <Link key={displayEp.id} to={episodePathFromSlug(displayEp.slug)} className="group block">
@@ -292,15 +297,19 @@ export default function Episodes() {
                     transition={{ duration: 0.6, delay: index * 0.05 }}
                   >
                     <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-5 relative overflow-hidden">
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-muted" aria-hidden />
-                      )}
+                      {/*
+                        Card image: shimmer while YouTube data is in flight, then YouTube (fade-in)
+                        or RSS if there is no match — see `PreferredYoutubeImageSlot`.
+                      */}
+                      <PreferredYoutubeImageSlot
+                        key={displayEp.slug}
+                        resetKey={displayEp.slug}
+                        rssImage={episode.image}
+                        youtubeVideoId={displayEp.youtubeVideoId}
+                        youtubeThumbnailPreferred={displayEp.youtubeThumbnail}
+                        awaitYoutubeOverlay={awaitYoutubeOverlay}
+                        imageClassName="group-hover:scale-105 transition-transform duration-500"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
 
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
