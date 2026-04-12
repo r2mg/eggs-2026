@@ -173,8 +173,8 @@ export default function Episodes() {
       <div className="min-h-screen bg-background">
         <section className="pt-32 pb-12 bg-gradient-to-b from-accent/5 to-background border-b border-border">
           <div className="max-w-[1400px] mx-auto px-6">
-            <div className="h-24 max-w-2xl bg-muted/80 rounded-sm mb-6 animate-pulse" aria-hidden />
-            <div className="h-6 max-w-xl bg-muted/60 rounded-sm mb-4 animate-pulse" aria-hidden />
+            <div className="h-24 max-w-2xl eggs-skeleton-block rounded-sm mb-6" aria-hidden />
+            <div className="h-6 max-w-xl eggs-skeleton-block rounded-sm mb-4" aria-hidden />
             <p className="text-lg text-muted-foreground">
               Downloading the podcast RSS feed and building the episode list…
             </p>
@@ -189,10 +189,10 @@ export default function Episodes() {
             <div className="grid grid-cols-2 gap-12">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="space-y-4">
-                  <div className="aspect-video bg-muted animate-pulse rounded-sm" aria-hidden />
-                  <div className="h-4 w-24 bg-muted animate-pulse rounded-sm" aria-hidden />
-                  <div className="h-8 w-full bg-muted/80 animate-pulse rounded-sm" aria-hidden />
-                  <div className="h-4 w-[88%] bg-muted/60 animate-pulse rounded-sm" aria-hidden />
+                  <div className="aspect-video eggs-skeleton-block rounded-sm" aria-hidden />
+                  <div className="h-4 w-24 eggs-skeleton-block rounded-sm" aria-hidden />
+                  <div className="h-8 w-full eggs-skeleton-block rounded-sm" aria-hidden />
+                  <div className="h-4 w-[88%] eggs-skeleton-block rounded-sm" aria-hidden />
                 </div>
               ))}
             </div>
@@ -349,17 +349,17 @@ export default function Episodes() {
                         awaitYoutubeOverlay={cardAwaitingYoutube(episode.slug)}
                         imageClassName="group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
+                      <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
 
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center">
+                      <div className="absolute inset-0 z-[15] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center pointer-events-auto">
                           <svg className="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                           </svg>
                         </div>
                       </div>
 
-                      <div className="absolute bottom-4 right-4">
+                      <div className="absolute bottom-4 right-4 z-[6] pointer-events-none">
                         <span
                           className="text-5xl text-white/20 group-hover:text-white/30 transition-all"
                           style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
@@ -369,7 +369,7 @@ export default function Episodes() {
                       </div>
 
                       {featured && (
-                        <div className="absolute top-4 left-4">
+                        <div className="absolute top-4 left-4 z-[8]">
                           <span className="px-3 py-1 bg-accent text-white text-xs font-medium tracking-wider">
                             FEATURED
                           </span>

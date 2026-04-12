@@ -3,12 +3,48 @@
 
 @import 'tw-animate-css';
 
-/* Shimmer sweep used by `PreferredYoutubeImageSlot` while episode art is loading */
+/**
+ * Diagonal sweep across the video / poster area while artwork loads.
+ * Slightly faster + wider travel than before so the motion is easier to notice at a glance.
+ */
 @keyframes eggs-media-shimmer {
   0% {
-    transform: translateX(-120%) skewX(-14deg);
+    transform: translateX(-140%) skewX(-11deg);
   }
   100% {
-    transform: translateX(220%) skewX(-14deg);
+    transform: translateX(240%) skewX(-11deg);
   }
+}
+
+/**
+ * Horizontal shine for rectangular placeholders (page shells, text lines).
+ * Uses `--eggs-skeleton-track` / `--eggs-skeleton-shine` from `theme.css`.
+ */
+@keyframes eggs-skeleton-sweep {
+  0% {
+    background-position: 135% 0;
+  }
+  100% {
+    background-position: -135% 0;
+  }
+}
+
+/**
+ * Shared “loading block” look — use this class instead of `bg-muted animate-pulse` for list /
+ * hero placeholders. Higher contrast than pulsing the same color as the page background.
+ */
+.eggs-skeleton-block {
+  background-color: var(--eggs-skeleton-track);
+  background-image: linear-gradient(
+    100deg,
+    var(--eggs-skeleton-track) 0%,
+    var(--eggs-skeleton-track) 34%,
+    var(--eggs-skeleton-shine) 50%,
+    var(--eggs-skeleton-track) 66%,
+    var(--eggs-skeleton-track) 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-position: 135% 0;
+  animation: eggs-skeleton-sweep 1.4s ease-in-out infinite;
 }

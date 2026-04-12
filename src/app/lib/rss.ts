@@ -248,6 +248,171 @@ export function splitRssDescriptionAtCredits(descriptionHtml: string | undefined
   return { mainHtml: html, creditsHtml: undefined };
 }
 
+/**
+ * Compare two RSS snippets as plain text: entities decoded, tags stripped, whitespace collapsed, lowercased.
+ * Used only to detect “same paragraph as the short summary” — not for final display.
+ */
+function normalizePlainForRssDedupe(htmlOrText: string): string {
+  return stripHtmlTags(decodeBasicHtmlEntities(htmlOrText)).replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * Anchor / Spotify show notes often start with:
+ *
+ * `<p><strong>Summary</strong></p><p>…short summary…</p>` then the rest of the episode.
+ *
+ * This returns **HTML** for those opening summary `<p>` blocks (so the site can render bold/links),
+ * and **HTML** for everything after them (overview, takeaways section in HTML, etc.).
+ * Stops before the next section whose title matches Takeaways, Chapters, Credits, etc.
+ */
+export function splitRssMainHtmlAfterSummaryHeading(mainHtml: string | undefined): {
+  summaryParagraphsHtml: string | undefined;
+  bodyHtml: string | undefined;
+} {
+  if (!mainHtml?.trim()) {
+    return { summaryParagraphsHtml: undefined, bodyHtml: undefined };
+  }
+  const html = mainHtml.trim();
+  const headerRe = /<p\b[^>]*>\s*<strong>\s*Summary\s*<\/strong>\s*<\/p>/i;
+  const h = headerRe.exec(html);
+  if (!h) {
+    return { summaryParagraphsHtml: undefined, bodyHtml: html };
+  }
+
+  let rest = html.slice(h.index + h[0].length).replace(/^\s+/, '');
+  const nextSectionRe = /^<p\b[^>]*>\s*<strong>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i;
+  const chunks: string[] = [];
+
+  while (rest.length) {
+    rest = rest.replace(/^\s+/, '');
+    if (nextSectionRe.test(rest)) break;
+    const pM = rest.match(/^<p\b[^>]*>[\s\S]*?<\/p>/i);
+    if (!pM) break;
+    chunks.push(pM[0]);
+    rest = rest.slice(pM[0].length);
+  }
+
+  const summaryParagraphsHtml = chunks.length > 0 ? chunks.join('\n') : undefined;
+  const bodyHtml = rest.replace(/^\s+/, '').trim() || undefined;
+  return { summaryParagraphsHtml, bodyHtml };
+}
+
+/**
+ * When there is **no** `<strong>Summary</strong>` heading in the HTML, the feed still gives us
+ * `episode.summary` (plain) which often repeats the first `<p>` of the description. This peels
+ * those opening `<p>…</p>` nodes in **HTML** until the plain text no longer matches the summary
+ * prefix logic — so the main column can render structured body HTML without repeating the blurb.
+ */
+export function stripLeadingSummaryDuplicateParagraphsFromMainHtml(
+  mainHtml: string,
+  summaryPlainFromFeed: string | undefined,
+): string {
+  const t = summaryPlainFromFeed?.trim() ? normalizePlainForRssDedupe(summaryPlainFromFeed) : '';
+  if (!t) return mainHtml.trim();
+
+  let work = mainHtml.trim();
+  let accumulated = '';
+
+  while (work.length) {
+    work = work.replace(/^\s+/, '');
+    const pM = work.match(/^<p\b[^>]*>[\s\S]*?<\/p>/i);
+    if (!pM) break;
+    const pPlain = normalizePlainForRssDedupe(pM[0]);
+    const combined = normalizePlainForRssDedupe(`${accumulated} ${pPlain}`);
+
+    if (pPlain === t || combined === t) {
+      work = work.slice(pM[0].length);
+      break;
+    }
+    if (t.startsWith(combined) && combined.length < t.length) {
+      accumulated = combined;
+      work = work.slice(pM[0].length);
+      continue;
+    }
+    if (pPlain.startsWith(t)) {
+      work = work.slice(pM[0].length);
+      break;
+    }
+    break;
+  }
+
+  return work.trim();
+}
+
+/**
+ * Minimal cleanup before `dangerouslySetInnerHTML` with **trusted** RSS-only strings.
+ * This is not a full XSS sanitizer; it removes obvious script/style and inline event handlers.
+ */
+export function sanitizeRssBodyHtmlForInnerHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+}
+
+/** Everything the episode detail page needs from `<description>` — all RSS-sourced HTML. */
+export type RssEpisodeDetailDescriptionSplit = {
+  /** Main show notes with the trailing Credits block removed (handy for takeaways parsing). */
+  mainHtmlWithoutCredits: string | undefined;
+  /**
+   * Opening summary paragraphs copied from the feed when the usual Summary heading exists.
+   * If missing, the UI should fall back to the plain `episode.summary` field once.
+   */
+  summaryHtml: string | undefined;
+  /** Rest of show notes (still HTML): overview copy, embedded lists, etc. — no Credits tail. */
+  bodyHtml: string | undefined;
+  /** Sidebar credits slice (from the word “Credits” onward). */
+  creditsHtml: string | undefined;
+};
+
+/**
+ * One place to derive summary / body / credits for `EpisodeDetail.tsx`.
+ *
+ * 1. Cut **Credits** off the end (`splitRssDescriptionAtCredits`).
+ * 2. Prefer the structured **Summary** heading in the remaining HTML (Anchor’s usual shape).
+ * 3. If that heading is missing, keep the plain RSS `summary` for the short blurb and peel duplicate
+ *    opening `<p>` blocks from the HTML body so nothing repeats.
+ */
+export function splitRssEpisodeDescriptionForDetailPage(
+  descriptionHtml: string | undefined,
+  summaryPlainFromFeed: string | undefined,
+): RssEpisodeDetailDescriptionSplit {
+  const { mainHtml, creditsHtml } = splitRssDescriptionAtCredits(descriptionHtml);
+  const main = (mainHtml ?? descriptionHtml ?? '').trim();
+
+  if (!main) {
+    return {
+      mainHtmlWithoutCredits: undefined,
+      summaryHtml: undefined,
+      bodyHtml: undefined,
+      creditsHtml,
+    };
+  }
+
+  const { summaryParagraphsHtml, bodyHtml } = splitRssMainHtmlAfterSummaryHeading(main);
+
+  if (summaryParagraphsHtml?.trim()) {
+    return {
+      mainHtmlWithoutCredits: main,
+      summaryHtml: summaryParagraphsHtml.trim(),
+      bodyHtml: bodyHtml?.trim() || undefined,
+      creditsHtml,
+    };
+  }
+
+  const bodyStripped = stripLeadingSummaryDuplicateParagraphsFromMainHtml(
+    bodyHtml ?? main,
+    summaryPlainFromFeed,
+  );
+
+  return {
+    mainHtmlWithoutCredits: main,
+    summaryHtml: undefined,
+    bodyHtml: bodyStripped.trim() || undefined,
+    creditsHtml,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Guest (heuristic for this podcast’s titles)
 // ---------------------------------------------------------------------------

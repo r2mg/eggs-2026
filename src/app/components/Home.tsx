@@ -258,9 +258,9 @@ export default function Home() {
                       awaitYoutubeOverlay={awaitYoutubeOverlay}
                       imageClassName=""
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="w-20 h-20 bg-accent rounded-full flex items-center justify-center">
+                    <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 z-[15] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                      <div className="w-20 h-20 bg-accent rounded-full flex items-center justify-center pointer-events-auto">
                         <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
@@ -355,9 +355,9 @@ export default function Home() {
                       awaitYoutubeOverlay={awaitYoutubeOverlay}
                       imageClassName="group-hover:scale-105 transition-transform duration-500"
                     />
-                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end justify-between">
-                        <div className="w-12 h-12 bg-accent/0 group-hover:bg-accent rounded-full flex items-center justify-center transition-all duration-300">
+                      <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 z-[6] p-6 flex items-end justify-between pointer-events-none">
+                        <div className="w-12 h-12 bg-accent/0 group-hover:bg-accent rounded-full flex items-center justify-center transition-all duration-300 pointer-events-auto">
                           <svg
                             className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
                             fill="currentColor"

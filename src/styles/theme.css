@@ -41,6 +41,14 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /**
+   * Loading skeletons — slightly darker than `--muted` so the moving highlight reads on white
+   * page backgrounds (see `eggs-skeleton-block` in `tailwind.css` and `PreferredYoutubeImageSlot`).
+   */
+  --eggs-skeleton-track: #e1e1e1;
+  --eggs-skeleton-shine: #ffffff;
+  --eggs-media-shimmer-base: #d8d8d8;
+  --eggs-media-shimmer-highlight: rgba(255, 255, 255, 0.92);
 }
 
 .dark {
@@ -78,6 +86,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+  --eggs-skeleton-track: oklch(0.30 0 0);
+  --eggs-skeleton-shine: oklch(0.44 0 0);
+  --eggs-media-shimmer-base: oklch(0.27 0 0);
+  --eggs-media-shimmer-highlight: rgba(255, 255, 255, 0.24);
 }
 
 @theme inline {

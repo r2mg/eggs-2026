@@ -1,19 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { youtubeThumbnailFallbackUrls } from '../lib/youtubeThumbnails';
 
-/** Shimmer layer — animation keyframes live in `src/styles/tailwind.css` (`eggs-media-shimmer`). */
+/**
+ * Shimmer while episode art resolves (YouTube overlay + thumbnail chain).
+ * - Keyframes: `eggs-media-shimmer` in `src/styles/tailwind.css`.
+ * - Colors: `--eggs-media-shimmer-*` in `src/styles/theme.css` (darker base + brighter band than before).
+ * - `z-[5]` keeps this **above** card scrim gradients (`z-[2]`) on Home / archive so the motion is not washed out.
+ */
 function MediaLoadingShimmer({ retreating }: { retreating: boolean }) {
   return (
     <div
-      className={`absolute inset-0 z-0 overflow-hidden transition-opacity duration-500 ease-out ${
+      className={`absolute inset-0 z-[5] overflow-hidden transition-opacity duration-500 ease-out ${
         retreating ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       aria-hidden
     >
-      <div className="absolute inset-0 bg-muted/45" />
+      <div className="absolute inset-0" style={{ backgroundColor: 'var(--eggs-media-shimmer-base)' }} />
       <div
-        className="pointer-events-none absolute inset-y-[-30%] w-[42%] bg-gradient-to-r from-transparent via-white/40 to-transparent"
-        style={{ animation: 'eggs-media-shimmer 1.9s ease-in-out infinite' }}
+        className="pointer-events-none absolute inset-y-[-38%] w-[56%]"
+        style={{
+          opacity: 0.94,
+          background:
+            'linear-gradient(90deg, transparent 0%, var(--eggs-media-shimmer-highlight) 50%, transparent 100%)',
+          animation: 'eggs-media-shimmer 1.35s cubic-bezier(0.42, 0, 0.58, 1) infinite',
+        }}
       />
     </div>
   );
@@ -99,13 +109,13 @@ export default function PreferredYoutubeImageSlot({
 
     return (
       <>
-        {/* Shimmer stays underneath until the real image has faded in on top */}
+        {/* Shimmer (z-5) under the photo (z-10) until pixels load; card scrims stay at z-2 */}
         <MediaLoadingShimmer retreating={pixelsReady} />
         <img
           key={`yt-${ytIndex}-${src}`}
           src={src}
           alt=""
-          className={`absolute inset-0 z-[1] h-full w-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
             pixelsReady ? 'opacity-100' : 'opacity-0'
           } ${imageClassName}`}
           onLoad={() => setPixelsReady(true)}
@@ -132,7 +142,7 @@ export default function PreferredYoutubeImageSlot({
         <img
           src={rss}
           alt=""
-          className={`absolute inset-0 z-[1] h-full w-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
             pixelsReady ? 'opacity-100' : 'opacity-0'
           } ${imageClassName}`}
           onLoad={() => setPixelsReady(true)}
@@ -141,5 +151,5 @@ export default function PreferredYoutubeImageSlot({
     );
   }
 
-  return <div className="absolute inset-0 z-0 bg-muted" aria-hidden />;
+  return <div className="absolute inset-0 z-[5] eggs-skeleton-block" aria-hidden />;
 }
