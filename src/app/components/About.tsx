@@ -3,20 +3,23 @@ import { Link } from 'react-router-dom';
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background pt-16 overflow-x-hidden">
       {/* Hero Section */}
-      <section className="py-24 bg-gradient-to-b from-accent/5 to-background">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-accent/5 to-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="max-w-4xl"
           >
-            <h1 className="text-8xl mb-8 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+            <h1
+              className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl mb-6 sm:mb-8 leading-tight break-words"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+            >
               About EGGS!
             </h1>
-            <p className="text-3xl text-muted-foreground leading-relaxed">
+            <p className="text-lg sm:text-2xl md:text-3xl text-muted-foreground leading-relaxed">
               A podcast exploring creativity, entrepreneurship, branding, and the people behind interesting work.
             </p>
           </motion.div>
@@ -24,16 +27,19 @@ export default function About() {
       </section>
 
       {/* What is EGGS */}
-      <section className="py-24 bg-background">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="grid grid-cols-2 gap-24 items-start">
+      <section className="py-12 sm:py-16 md:py-24 bg-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-start">
             <motion.div
               initial={{ opacity: 0, x: -40 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               viewport={{ once: true, margin: "-100px" }}
             >
-              <h2 className="text-5xl mb-8" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+              <h2
+                className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8"
+                style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+              >
                 What is EGGS!?
               </h2>
               <div className="w-24 h-1 bg-accent mb-8" />
@@ -46,13 +52,13 @@ export default function About() {
               viewport={{ once: true, margin: "-100px" }}
               className="space-y-6"
             >
-              <p className="text-xl text-muted-foreground leading-relaxed">
+              <p className="text-base sm:text-xl text-muted-foreground leading-relaxed">
                 EGGS! is a podcast that sits down with creative professionals, entrepreneurs, designers, and builders to unpack the stories, strategies, and insights behind their work.
               </p>
-              <p className="text-xl text-muted-foreground leading-relaxed">
+              <p className="text-base sm:text-xl text-muted-foreground leading-relaxed">
                 We're interested in the intersection of craft and commerce, creativity and systems, intuition and strategy. Each episode digs into how people build sustainable creative practices, navigate industry changes, and maintain their vision while growing their impact.
               </p>
-              <p className="text-xl text-muted-foreground leading-relaxed">
+              <p className="text-base sm:text-xl text-muted-foreground leading-relaxed">
                 Whether you're starting your first project or scaling your tenth company, EGGS! brings you conversations that challenge assumptions and offer practical wisdom from people who've done the work.
               </p>
             </motion.div>
@@ -61,10 +67,10 @@ export default function About() {
       </section>
 
       {/* What Makes Us Different */}
-      <section className="py-24 bg-muted/30">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-muted/30">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.h2
-            className="text-5xl mb-16 text-center"
+            className="text-3xl sm:text-4xl md:text-5xl mb-10 sm:mb-16 text-center"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -74,7 +80,7 @@ export default function About() {
             What Makes EGGS! Different
           </motion.h2>
 
-          <div className="grid grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-10 md:gap-12">
             {[
               {
                 title: 'Depth Over Surface',
@@ -95,7 +101,7 @@ export default function About() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true, margin: "-100px" }}
-                className="p-10 bg-background border-2 border-border hover:border-accent transition-colors"
+                className="p-6 sm:p-10 bg-background border-2 border-border hover:border-accent transition-colors"
               >
                 <h3 className="text-2xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   {item.title}
@@ -110,16 +116,19 @@ export default function About() {
       </section>
 
       {/* Topics We Cover */}
-      <section className="py-24 bg-background">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="grid grid-cols-2 gap-24">
+      <section className="py-12 sm:py-16 md:py-24 bg-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 lg:gap-24">
             <motion.div
               initial={{ opacity: 0, x: -40 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               viewport={{ once: true, margin: "-100px" }}
             >
-              <h2 className="text-5xl mb-8 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+              <h2
+                className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8 leading-tight"
+                style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+              >
                 Conversations We Have
               </h2>
               <p className="text-xl text-muted-foreground leading-relaxed">
@@ -128,7 +137,7 @@ export default function About() {
             </motion.div>
 
             <motion.div
-              className="grid grid-cols-2 gap-4"
+              className="grid grid-cols-2 gap-3 sm:gap-4 min-w-0"
               initial={{ opacity: 0, x: 40 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
@@ -146,7 +155,7 @@ export default function About() {
               ].map((topic, index) => (
                 <motion.div
                   key={topic}
-                  className="p-6 border-2 border-border hover:border-accent hover:bg-accent/5 transition-all"
+                  className="p-4 sm:p-6 border-2 border-border hover:border-accent hover:bg-accent/5 transition-all min-h-[3.25rem]"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.05 }}
@@ -161,16 +170,16 @@ export default function About() {
       </section>
 
       {/* Host Section */}
-      <section className="py-24 bg-accent text-white">
-        <div className="max-w-[1200px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-accent text-white">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
-            className="grid grid-cols-5 gap-16 items-center"
+            className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-12 lg:gap-16 items-center"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <div className="aspect-square bg-white/10 rounded-sm overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1733159038814-0c9915bf5142?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800"
@@ -180,9 +189,9 @@ export default function About() {
               </div>
             </div>
 
-            <div className="col-span-3">
+            <div className="md:col-span-3 min-w-0">
               <p className="text-sm tracking-widest mb-4 text-white/70 uppercase">Host</p>
-              <h2 className="text-5xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                 Ryan Reynolds
               </h2>
               <p className="text-xl text-white/90 mb-6 leading-relaxed">
@@ -191,14 +200,14 @@ export default function About() {
               <p className="text-lg text-white/80 leading-relaxed mb-8">
                 Over the past decade, Ryan has worked with Fortune 500 companies and ambitious startups, helping them build brands and products that resonate. EGGS! is an extension of that work—a space to learn from the people shaping creative industries.
               </p>
-              <div className="flex items-center gap-6">
-                <a href="#" className="text-white/80 hover:text-white transition-colors text-sm">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                <a href="#" className="text-white/80 hover:text-white transition-colors text-sm min-h-10 inline-flex items-center">
                   @ryanreynolds
                 </a>
-                <a href="#" className="text-white/80 hover:text-white transition-colors text-sm">
+                <a href="#" className="text-white/80 hover:text-white transition-colors text-sm min-h-10 inline-flex items-center">
                   taelorstyle.com
                 </a>
-                <a href="#" className="text-white/80 hover:text-white transition-colors text-sm">
+                <a href="#" className="text-white/80 hover:text-white transition-colors text-sm min-h-10 inline-flex items-center">
                   LinkedIn
                 </a>
               </div>
@@ -208,18 +217,18 @@ export default function About() {
       </section>
 
       {/* Co-Host Section */}
-      <section className="py-24 bg-accent/10">
-        <div className="max-w-[1200px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-accent/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
-            className="grid grid-cols-5 gap-16 items-center"
+            className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-12 lg:gap-16 items-center"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <div className="col-span-3">
+            <div className="md:col-span-3 order-2 md:order-1 min-w-0">
               <p className="text-sm tracking-widest mb-4 text-muted-foreground uppercase">Co-Host</p>
-              <h2 className="text-5xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                 Michael Smith
               </h2>
               <p className="text-xl text-muted-foreground mb-6 leading-relaxed">
@@ -228,20 +237,20 @@ export default function About() {
               <p className="text-lg text-muted-foreground leading-relaxed mb-8">
                 With a background spanning advertising, product design, and venture building, Michael asks the questions that reveal how great ideas become sustainable ventures. His contributions bring energy and insight to every episode.
               </p>
-              <div className="flex items-center gap-6">
-                <a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                <a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm min-h-10 inline-flex items-center">
                   @michaelsmith
                 </a>
-                <a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm">
+                <a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm min-h-10 inline-flex items-center">
                   michaelsmith.com
                 </a>
-                <a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm">
+                <a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm min-h-10 inline-flex items-center">
                   LinkedIn
                 </a>
               </div>
             </div>
 
-            <div className="col-span-2">
+            <div className="md:col-span-2 order-1 md:order-2">
               <div className="aspect-square bg-accent/20 rounded-sm overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1769636929131-56dd60238266?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800"
@@ -255,18 +264,18 @@ export default function About() {
       </section>
 
       {/* Why EGGS Exists */}
-      <section className="py-24 bg-background">
-        <div className="max-w-[1000px] mx-auto px-6 text-center">
+      <section className="py-12 sm:py-16 md:py-24 bg-background">
+        <div className="max-w-[1000px] mx-auto px-4 sm:px-6 text-center min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <h2 className="text-5xl mb-8" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
               Why EGGS! Exists
             </h2>
-            <p className="text-2xl text-muted-foreground leading-relaxed mb-8">
+            <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground leading-relaxed mb-6 sm:mb-8">
               We started EGGS! because we believe the best insights come from conversations with people actively doing the work.
             </p>
             <p className="text-xl text-muted-foreground leading-relaxed">
@@ -277,22 +286,22 @@ export default function About() {
       </section>
 
       {/* Platform Links */}
-      <section className="py-24 bg-foreground text-background">
-        <div className="max-w-[1200px] mx-auto px-6 text-center">
+      <section className="py-12 sm:py-16 md:py-24 bg-foreground text-background">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 text-center min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <h2 className="text-5xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-4 sm:mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
               Listen Everywhere
             </h2>
-            <p className="text-xl opacity-80 mb-12 leading-relaxed">
+            <p className="text-base sm:text-xl opacity-80 mb-8 sm:mb-12 leading-relaxed">
               EGGS! is available on all major podcast platforms. Choose your favorite way to listen.
             </p>
 
-            <div className="grid grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 max-w-4xl mx-auto mb-8 sm:mb-12">
               {[
                 { name: 'Spotify', icon: '♫' },
                 { name: 'Apple Podcasts', icon: '🎧' },
@@ -301,7 +310,7 @@ export default function About() {
               ].map((platform, index) => (
                 <motion.button
                   key={platform.name}
-                  className="p-8 bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-all"
+                  className="p-5 sm:p-8 min-h-[5.5rem] bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-all"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -314,17 +323,17 @@ export default function About() {
               ))}
             </div>
 
-            <div className="flex items-center justify-center gap-8">
-              <a href="#" className="text-background/70 hover:text-background transition-colors">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+              <a href="#" className="text-background/70 hover:text-background transition-colors min-h-10 inline-flex items-center px-1">
                 Twitter
               </a>
-              <a href="#" className="text-background/70 hover:text-background transition-colors">
+              <a href="#" className="text-background/70 hover:text-background transition-colors min-h-10 inline-flex items-center px-1">
                 Instagram
               </a>
-              <a href="#" className="text-background/70 hover:text-background transition-colors">
+              <a href="#" className="text-background/70 hover:text-background transition-colors min-h-10 inline-flex items-center px-1">
                 LinkedIn
               </a>
-              <a href="#" className="text-background/70 hover:text-background transition-colors">
+              <a href="#" className="text-background/70 hover:text-background transition-colors min-h-10 inline-flex items-center px-1">
                 YouTube
               </a>
             </div>
@@ -333,15 +342,15 @@ export default function About() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-[#FFF5EE]">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid grid-cols-2 gap-8">
+      <section className="py-12 sm:py-16 md:py-24 bg-[#FFF5EE]">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             <Link
               to="/be-a-guest"
               className="block h-full text-inherit no-underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               <motion.div
-                className="p-16 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
+                className="p-8 sm:p-12 md:p-16 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
@@ -349,10 +358,13 @@ export default function About() {
                 whileHover={{ y: -8 }}
               >
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-                <div className="absolute top-8 right-8 text-8xl text-accent/10 group-hover:text-accent/20 transition-all group-hover:rotate-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                <div
+                  className="absolute top-6 right-4 sm:top-8 sm:right-8 text-5xl sm:text-7xl md:text-8xl text-accent/10 group-hover:text-accent/20 transition-all group-hover:rotate-12"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+                >
                   !
                 </div>
-                <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3 className="text-3xl sm:text-4xl md:text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   Be a Guest
                 </h3>
                 <p className="text-lg text-muted-foreground mb-10 leading-relaxed relative z-10">
@@ -372,7 +384,7 @@ export default function About() {
               className="block h-full text-inherit no-underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF5EE]"
             >
               <motion.div
-                className="p-16 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
+                className="p-8 sm:p-12 md:p-16 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
@@ -380,10 +392,13 @@ export default function About() {
                 whileHover={{ y: -8 }}
               >
                 <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-                <div className="absolute top-8 right-8 text-8xl text-white/10 group-hover:text-white/20 transition-all group-hover:-rotate-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                <div
+                  className="absolute top-6 right-4 sm:top-8 sm:right-8 text-5xl sm:text-7xl md:text-8xl text-white/10 group-hover:text-white/20 transition-all group-hover:-rotate-12"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+                >
                   $
                 </div>
-                <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3 className="text-3xl sm:text-4xl md:text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   Sponsor EGGS!
                 </h3>
                 <p className="text-lg text-white/90 mb-10 leading-relaxed relative z-10">

@@ -3,13 +3,18 @@
  * matching rules as the archive (`buildYoutubeOverlaysForEpisodes` + merged catalog), but
  * loads the **lite** snapshot first, then layers in the **full** channel when available
  * (shared global cache — often free if you already visited the archive this session).
+ *
+ * **Top of page (what you’ll edit most):**
+ * 1. Orange “latest episode” hero — one viewport (`100dvh`), then black strip below the fold; presenter eyebrow, title, summary, meta, CTAs, art.
+ * 2. Black brand strip — one-line positioning statement (replaces the old full-screen hero tagline).
+ * 3. Everything else — Featured, Topics, Newsletter, Guest/Sponsor (unchanged in role).
  */
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion } from 'motion/react';
 import { expectedTopicPlaylistTitles } from '../lib/youtube';
-import { titleMatchesPlaylist, YOUTUBE_CHANNEL_PAGE_URL } from '../config/youtubeChannel';
+import { titleMatchesPlaylist } from '../config/youtubeChannel';
 import { useRssEpisodes } from '../hooks/useRssEpisodes';
 import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
 import { useYoutubeLiteChannelData } from '../hooks/useYoutubeLiteChannelData';
@@ -19,8 +24,6 @@ import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder'
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
-
-const FALLBACK_TOPIC = 'Episodes';
 
 /** Same idea as the archive page — turns `01:04:14` into a short label */
 function formatDurationLabel(raw: string | undefined): string {
@@ -43,9 +46,6 @@ function orderedSlugKey(slugs: string[]): string {
 }
 
 export default function Home() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  /** “Learn More” scroll target — first section below the full-screen hero (“Latest Episode”). */
-  const postHeroSectionRef = useRef<HTMLElement | null>(null);
   const { data: rssData, loading, error } = useRssEpisodes();
   /**
    * Two loads, one merged view for **matching** (same idea as the archive’s `full ?? lite`):
@@ -78,7 +78,7 @@ export default function Home() {
     return rssData.slice(1, 7);
   }, [rssData, loading, error, channelData]);
 
-  /** Only compute YouTube overlays for the hero + featured cards (not the whole archive). */
+  /** Only compute YouTube overlays for the top hero + featured cards (not the whole archive). */
   const heroOverlaySlugs = useMemo(() => {
     const s = new Set<string>();
     if (latestBase) s.add(latestBase.slug);
@@ -118,202 +118,106 @@ export default function Home() {
     });
   }, [channelData?.playlists]);
 
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ['start start', 'end start'],
-  });
-
-  const backgroundY = useTransform(scrollYProgress, [0, 1], [0, -100]);
-  const textY = useTransform(scrollYProgress, [0, 1], [0, 100]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  /** One-line brand voice for the black strip (same idea as the old hero subtitle, tightened). */
+  const BRAND_POSITIONING_LINE =
+    'Conversations on creativity, entrepreneurship, branding, and the people behind interesting work.';
 
   return (
     <>
       {/*
-        Hero stacking (why it used to look “more orange” than the wash opacity alone suggested):
-        1. The photo sits at `opacity-20`, so ~80% of that layer is transparent to whatever is *under* it.
-        2. The section used to be `bg-accent` (solid orange) — so most of the “image” area was still
-           solid brand color before the wash even applied. That reads like a second orange layer.
-        3. Then `bg-accent/70` sits on top of the photo for the intentional tint (stronger wash than /50).
-
-        Base is neutral so transparency in the photo reveals darkness, not more orange; only the wash
-        adds accent color on top of the pixels.
+        ---------------------------------------------------------------------------
+        Orange hero — exactly **one viewport tall** (`100dvh`) from the top of the page so the
+        black brand strip sits **just below the fold**. `pt-16` matches the fixed header (`min-h-16`).
+        Content is vertically centered in the space under the nav; `overflow-y-auto` avoids clipping
+        on very small screens if the episode title + CTAs are unusually tall.
+        ---------------------------------------------------------------------------
       */}
-      <section ref={heroRef} className="relative h-screen overflow-hidden bg-black">
-        {/*
-          Layer is slightly taller than the viewport so parallax (`backgroundY`, max -100px) does not
-          expose a gap at the bottom. Only ~100px extra — more than that made `object-cover` feel
-          overly zoomed. `object-top` keeps the top of the photo aligned to the top of this layer.
-        */}
-        <motion.div
-          className="absolute left-0 right-0 top-0 z-0 h-[calc(100vh+100px)]"
-          style={{ y: backgroundY }}
-        >
-          <div className="absolute inset-0 bg-accent/70 z-10" />
-          <img
-            src="https://images.unsplash.com/photo-1632800237110-f9c87acc2222?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920"
-            alt=""
-            className="absolute inset-0 z-0 h-full w-full object-cover object-top opacity-35"
-          />
-        </motion.div>
-
-        <div className="absolute inset-0 z-10 opacity-10 pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-40 right-40 w-96 h-96 bg-white rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative z-20 h-full max-w-[1400px] mx-auto px-6 flex items-center">
-          <motion.div style={{ y: textY, opacity }} className="max-w-3xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <p className="text-sm tracking-widest text-white/70 mb-4 uppercase">Presented by Taelor Style</p>
-              <h1
-                className="text-[10rem] leading-[0.85] mb-8 text-white"
-                style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
-              >
-                EGGS!
-              </h1>
-              <p className="text-2xl text-white/90 mb-10 max-w-lg leading-relaxed">
-                Conversations around creativity, entrepreneurship, branding, and the people behind interesting work.
-              </p>
-              <div className="flex items-center gap-4 flex-wrap">
-                {/*
-                  Both buttons use `border-2`: the YouTube control needs a visible stroke; Learn More uses
-                  `border-transparent` so the outer box matches — otherwise the 2px border sits outside the
-                  filled button and the primary looks smaller side-by-side.
-                */}
-                <button
-                  type="button"
-                  aria-label="Learn more — scroll to the latest episode section"
-                  className="inline-block border-2 border-transparent bg-foreground text-background px-8 py-4 text-base font-medium hover:bg-foreground/90 transition-all"
-                  onClick={() =>
-                    postHeroSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }
-                >
-                  Learn More
-                </button>
-                <a
-                  href={YOUTUBE_CHANNEL_PAGE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block border-2 border-white text-white px-8 py-4 text-base font-medium hover:bg-white hover:text-accent transition-all"
-                >
-                  Watch on YouTube
-                </a>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-
-        <motion.div
-          className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20"
-          style={{ opacity }}
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="w-6 h-10 border-2 border-white/40 rounded-full flex items-start justify-center p-2">
-            <div className="w-1 h-2 bg-white rounded-full" />
-          </div>
-        </motion.div>
-      </section>
-
       <section
-        ref={postHeroSectionRef}
-        id="home-latest-episode"
-        className="scroll-mt-24 py-24 bg-background relative overflow-hidden"
+        id="home-hero"
+        className="relative flex h-[100dvh] min-h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-auto bg-accent text-white pt-16 scroll-mt-16 xl:scroll-mt-24"
       >
-        <div className="absolute top-20 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        {/* Very light highlight so the orange field doesn’t read as flat paint */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          aria-hidden
+          style={{
+            background:
+              'radial-gradient(ellipse 80% 60% at 20% 0%, rgb(255 255 255 / 0.35), transparent 55%), radial-gradient(circle at 90% 80%, rgb(0 0 0 / 0.06), transparent 45%)',
+          }}
+        />
 
-        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true, margin: '-100px' }}
-          >
-            <div className="flex items-end justify-between mb-12">
-              <h2 className="text-6xl" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                Latest Episode
-              </h2>
-              <span className="text-7xl text-accent/10" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                {latest?.episodeNumber ?? (loading ? '…' : '—')}
-              </span>
-            </div>
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center max-w-[1400px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-8">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            {/*
+              Eyebrow treatment (like episode / archive labels), reversed: small caps, wide tracking,
+              sans — white on orange instead of accent on a light background.
+            */}
+            <p className="text-[0.65rem] sm:text-xs md:text-sm font-medium font-sans text-white tracking-wide sm:tracking-wider uppercase mb-6 sm:mb-8">
+              Presented by{' '}
+              <a
+                href="https://taelor.style"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2"
+              >
+                Taelor Style
+              </a>
+            </p>
 
             {loading && (
-              <p className="text-lg text-muted-foreground mb-8">Loading the latest episode from the feed…</p>
+              <p className="text-base sm:text-lg text-white/90 mb-6">Loading the latest episode from the feed…</p>
             )}
             {error && (
-              <p className="text-lg text-muted-foreground mb-8">
+              <p className="text-base sm:text-lg text-white/90 mb-6">
                 Couldn&apos;t load episodes.{' '}
-                <Link to="/episodes" className="text-accent underline">
+                <Link to="/episodes" className="text-black underline underline-offset-4 decoration-white/80 hover:decoration-white">
                   Browse the archive
                 </Link>
               </p>
             )}
             {!loading && !error && !latest && (
-              <p className="text-lg text-muted-foreground mb-8">
+              <p className="text-base sm:text-lg text-white/90 mb-6">
                 No episodes in the feed yet.{' '}
-                <Link to="/episodes" className="text-accent underline">
+                <Link to="/episodes" className="text-black underline underline-offset-4 decoration-white/80 hover:decoration-white">
                   Open the archive
                 </Link>
               </p>
             )}
 
             {latest && (
-              <div className="grid grid-cols-2 gap-12 items-start">
-                <Link to={episodePathFromSlug(latest.slug)} className="block">
-                  <motion.div
-                    className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 rounded-sm overflow-hidden relative group cursor-pointer"
-                    whileHover={{ scale: 1.01 }}
-                    transition={{ duration: 0.3 }}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 lg:items-center">
+                {/*
+                  First column on mobile = reading order: title → summary → episode meta → CTAs.
+                  Second column = large art. On large screens: text left, art right (same DOM order).
+                */}
+                <div className="min-w-0">
+                  <h2
+                    className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] lg:leading-tight text-white mb-4 sm:mb-5 break-words"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                   >
-                    <PreferredYoutubeImageSlot
-                      key={latest.slug}
-                      resetKey={latest.slug}
-                      rssImage={latest.image}
-                      youtubeVideoId={latest.youtubeVideoId}
-                      youtubeThumbnailPreferred={latest.youtubeThumbnail}
-                      awaitYoutubeOverlay={awaitYoutubeOverlay}
-                      imageClassName=""
-                    />
-                    <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute inset-0 z-[15] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                      <div className="w-20 h-20 bg-accent rounded-full flex items-center justify-center pointer-events-auto">
-                        <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </motion.div>
-                </Link>
-
-                <div>
-                  <p className="text-sm text-accent font-medium mb-4 tracking-wider">
-                    EPISODE {latest.episodeNumber ?? '—'} • LATEST
-                  </p>
-                  <h3 className="text-4xl mb-5 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                     {latest.title}
-                  </h3>
-                  <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+                  </h2>
+
+                  <p className="text-base sm:text-lg text-white/90 leading-relaxed mb-5 sm:mb-6 max-w-xl">
                     {latest.summary?.trim() || 'Open the episode for full show notes.'}
                   </p>
-                  <div className="flex items-center gap-6 mb-8 text-sm text-muted-foreground">
-                    <span>{format(new Date(latest.publishedAt), 'MMMM d, yyyy')}</span>
-                    <span>•</span>
-                    <span>{formatDurationLabel(latest.duration)}</span>
-                  </div>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {/*
-                      Same border box as the hero CTAs: primary uses `border-2 border-transparent` so it
-                      matches the outlined “Watch on YouTube” button width/height (that stroke sits outside padding).
-                    */}
+
+                  {/*
+                    Eyebrow-style meta (same idea as `EpisodeDetail` + archive cards): small caps line,
+                    wide tracking, sans for contrast with the display title — black on orange for readability.
+                  */}
+                  <p className="text-[0.65rem] sm:text-xs md:text-sm font-medium font-sans text-black tracking-wide sm:tracking-wider break-words leading-snug mb-8">
+                    {`Episode ${latest.episodeNumber ?? '—'} • ${format(new Date(latest.publishedAt), 'MMMM d, yyyy')} • ${formatDurationLabel(latest.duration)}`.toUpperCase()}
+                  </p>
+
+                  {/*
+                    CTAs reuse the same rules as before: internal “Show Details”, outbound YouTube when we
+                    have a match, Spotify when the RSS row includes `spotifyUrl` (Anchor link field).
+                  */}
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
                     <Link
                       to={episodePathFromSlug(latest.slug)}
-                      className="inline-block border-2 border-transparent bg-accent text-accent-foreground px-8 py-4 text-sm font-medium hover:opacity-90 transition-opacity"
+                      className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-transparent bg-black text-white px-6 sm:px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity text-center"
                     >
                       Show Details
                     </Link>
@@ -322,30 +226,119 @@ export default function Home() {
                         href={latest.youtubeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block border-2 border-foreground px-8 py-4 text-sm font-medium hover:bg-foreground hover:text-background transition-all"
+                        className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-white text-white px-6 sm:px-8 py-3.5 text-sm font-medium hover:bg-white hover:text-accent transition-all text-center"
                       >
                         Watch on YouTube
                       </a>
                     ) : (
                       <span
-                        className="inline-block border-2 border-border px-8 py-4 text-sm font-medium text-muted-foreground cursor-default"
+                        className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-white/35 text-white/50 px-6 sm:px-8 py-3.5 text-sm font-medium cursor-default text-center"
                         title="No matching YouTube video found for this episode"
                       >
                         Watch on YouTube
                       </span>
                     )}
+                    {latest.spotifyUrl ? (
+                      <a
+                        href={latest.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-white text-black px-6 sm:px-8 py-3.5 text-sm font-medium hover:bg-white/90 transition-colors text-center"
+                      >
+                        Listen on Spotify
+                      </a>
+                    ) : (
+                      <span
+                        className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-white/25 text-white/60 px-6 sm:px-8 py-3.5 text-sm font-medium cursor-default text-center"
+                        title="No Spotify link on this RSS item"
+                      >
+                        Listen on Spotify
+                      </span>
+                    )}
                   </div>
+                </div>
+
+                {/* Large 16:9 art — same PreferredYoutubeImageSlot + await contract as the old “Latest” block */}
+                <div className="min-w-0">
+                  <Link to={episodePathFromSlug(latest.slug)} className="block group">
+                    <div className="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">
+                      <PreferredYoutubeImageSlot
+                        key={latest.slug}
+                        resetKey={latest.slug}
+                        rssImage={latest.image}
+                        youtubeVideoId={latest.youtubeVideoId}
+                        youtubeThumbnailPreferred={latest.youtubeThumbnail}
+                        awaitYoutubeOverlay={awaitYoutubeOverlay}
+                        imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                      <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50 group-hover:opacity-80 transition-opacity" />
+                      <div className="absolute inset-0 z-[15] flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center pointer-events-auto shadow-md">
+                          <svg className="w-7 h-7 sm:w-8 sm:h-8 text-accent ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
                 </div>
               </div>
             )}
           </motion.div>
         </div>
+
+        {/*
+          Scroll affordance (same visual language as the old full-screen hero): subtle “mouse” outline
+          with a bobbing dot; button scrolls the black brand strip into view.
+        */}
+        <motion.div
+          className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 sm:bottom-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.75, duration: 0.5 }}
+        >
+          <button
+            type="button"
+            className="flex flex-col items-center rounded-full p-1 text-white/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+            aria-label="Scroll down to continue"
+            onClick={() => document.getElementById('home-brand')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            <motion.div
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
+            >
+              <div className="w-6 h-10 border-2 border-current rounded-full flex items-start justify-center p-2">
+                <div className="w-1 h-2 bg-current rounded-full" aria-hidden />
+              </div>
+            </motion.div>
+          </button>
+        </motion.div>
       </section>
 
-      <section className="py-32 bg-[#FFF5EE]">
-        <div className="max-w-[1400px] mx-auto px-6">
+      {/*
+        ---------------------------------------------------------------------------
+        Black brand strip — one sentence; carries the positioning the old hero body copy did.
+        ---------------------------------------------------------------------------
+      */}
+      <section
+        id="home-brand"
+        className="bg-black text-white py-10 sm:py-14 md:py-16 scroll-mt-16 xl:scroll-mt-24"
+        aria-label="About the show"
+      >
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 text-center min-w-0">
+          <p
+            className="text-lg sm:text-xl md:text-2xl leading-snug sm:leading-relaxed text-white/95 tracking-tight"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            {BRAND_POSITIONING_LINE}
+          </p>
+        </div>
+      </section>
+
+      <section className="py-12 sm:py-24 md:py-32 bg-[#FFF5EE]">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
           <motion.h2
-            className="text-6xl mb-20"
+            className="text-3xl sm:text-5xl md:text-6xl mb-8 sm:mb-16 md:mb-20"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -359,10 +352,13 @@ export default function Home() {
             <p className="text-muted-foreground mb-8">More episodes will appear here once the feed loads.</p>
           )}
 
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
             {featuredList.map((ep, index) => {
-              const topic = ep.topic ?? FALLBACK_TOPIC;
               const num = ep.episodeNumber !== undefined ? String(ep.episodeNumber) : ep.id.slice(0, 8);
+              const dateLabel = format(new Date(ep.publishedAt), 'MMMM d, yyyy');
+              const durationLabel = formatDurationLabel(ep.duration);
+              const episodeNumForEyebrow = ep.episodeNumber !== undefined ? String(ep.episodeNumber) : '—';
+              const cardEyebrow = `EPISODE ${episodeNumForEyebrow} • ${dateLabel} • ${durationLabel}`.toUpperCase();
               return (
                 <Link key={ep.id} to={episodePathFromSlug(ep.slug)} className="group block">
                   <motion.div
@@ -382,7 +378,7 @@ export default function Home() {
                       imageClassName="group-hover:scale-105 transition-transform duration-500"
                     />
                       <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 z-[6] p-6 flex items-end justify-between pointer-events-none">
+                      <div className="absolute bottom-0 left-0 right-0 z-[6] p-4 sm:p-6 flex items-end justify-between pointer-events-none">
                         <div className="w-12 h-12 bg-accent/0 group-hover:bg-accent rounded-full flex items-center justify-center transition-all duration-300 pointer-events-auto">
                           <svg
                             className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
@@ -393,16 +389,18 @@ export default function Home() {
                           </svg>
                         </div>
                         <span
-                          className="text-5xl text-white/20 group-hover:text-white/30 transition-all"
+                          className="text-3xl sm:text-5xl text-white/20 group-hover:text-white/30 transition-all tabular-nums"
                           style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
                         >
                           {num}
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-accent font-medium mb-2 tracking-wider">{topic.toUpperCase()}</p>
+                    <p className="text-[0.65rem] sm:text-xs text-accent font-medium mb-3 tracking-wide sm:tracking-wider break-words leading-snug">
+                      {cardEyebrow}
+                    </p>
                     <h3
-                      className="text-xl mb-2 leading-snug group-hover:text-accent transition-colors"
+                      className="text-lg sm:text-xl mb-3 leading-snug group-hover:text-accent transition-colors line-clamp-3 md:line-clamp-none"
                       style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                     >
                       {ep.title}
@@ -423,7 +421,7 @@ export default function Home() {
           >
             <Link
               to="/episodes"
-              className="inline-block border border-foreground px-8 py-4 text-base font-medium hover:bg-foreground hover:text-background transition-colors"
+              className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border border-foreground px-8 py-3.5 sm:py-4 text-sm sm:text-base font-medium hover:bg-foreground hover:text-background transition-colors"
             >
               Browse All Episodes
             </Link>
@@ -431,28 +429,31 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-32 bg-background relative overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent/5 rounded-full blur-3xl" />
+      <section className="py-12 sm:py-24 md:py-32 bg-background relative overflow-hidden">
+        <div className="absolute bottom-0 left-0 w-[min(100vw,600px)] h-[min(100vw,600px)] max-w-full bg-accent/5 rounded-full blur-3xl" />
 
-        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-2 gap-24 items-center">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-24 items-center">
             <motion.div
               initial={{ opacity: 0, x: -40 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               viewport={{ once: true, margin: '-100px' }}
             >
-              <h2 className="text-7xl mb-8 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+              <h2
+                className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl mb-5 sm:mb-8 leading-tight"
+                style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+              >
                 Explore by Topic
               </h2>
-              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-12 leading-relaxed">
                 Dive into conversations organized around the themes that matter most to creative professionals and entrepreneurs.
               </p>
               <div className="w-24 h-1 bg-accent" />
             </motion.div>
 
             <motion.div
-              className="grid grid-cols-2 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
               initial={{ opacity: 0, x: 40 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
@@ -462,7 +463,7 @@ export default function Home() {
                 <motion.button
                   key={topic.name}
                   type="button"
-                  className="text-left p-8 border-2 border-border hover:border-accent hover:bg-accent/5 transition-all duration-300 group relative overflow-hidden"
+                  className="text-left min-h-[3.5rem] sm:min-h-[4.5rem] p-4 sm:p-8 border-2 border-border hover:border-accent hover:bg-accent/5 transition-all duration-300 group relative overflow-hidden"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   initial={{ opacity: 0, y: 20 }}
@@ -485,29 +486,32 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-32 bg-foreground text-background">
-        <div className="max-w-[1000px] mx-auto px-6 text-center">
+      <section className="py-12 sm:py-24 md:py-32 bg-foreground text-background">
+        <div className="max-w-[1000px] mx-auto px-4 sm:px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true, margin: '-100px' }}
           >
-            <h2 className="text-6xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            <h2
+              className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-6"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+            >
               Never Miss an Episode
             </h2>
-            <p className="text-xl opacity-70 mb-12 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl opacity-70 mb-8 sm:mb-12 leading-relaxed max-w-xl mx-auto">
               Get episode updates, key insights, and exclusive content delivered to your inbox.
             </p>
-            <div className="flex gap-4 max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-md mx-auto">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-6 py-4 bg-background text-foreground border border-background/20 focus:outline-none focus:border-accent"
+                className="flex-1 min-h-12 px-4 sm:px-6 py-3 sm:py-4 bg-background text-foreground border border-background/20 focus:outline-none focus:border-accent text-base w-full"
               />
               <button
                 type="button"
-                className="bg-accent text-accent-foreground px-8 py-4 font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+                className="min-h-12 bg-accent text-accent-foreground px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium hover:opacity-90 transition-opacity whitespace-nowrap shrink-0 w-full sm:w-auto"
               >
                 Subscribe
               </button>
@@ -516,12 +520,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-32 bg-[#FFF5EE]">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="grid grid-cols-2 gap-8">
+      <section className="py-12 sm:py-24 md:py-32 bg-[#FFF5EE]">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
             <Link to="/be-a-guest" className="block">
               <motion.div
-                className="p-16 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
+                className="p-6 sm:p-12 md:p-16 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
@@ -530,15 +534,18 @@ export default function Home() {
               >
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
                 <div
-                  className="absolute top-8 right-8 text-8xl text-accent/10 group-hover:text-accent/20 transition-all group-hover:rotate-12"
+                  className="absolute top-6 right-4 sm:top-8 sm:right-8 text-6xl sm:text-7xl md:text-8xl text-accent/10 group-hover:text-accent/20 transition-all group-hover:rotate-12"
                   style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
                 >
                   !
                 </div>
-                <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3
+                  className="text-2xl sm:text-4xl md:text-5xl mb-3 sm:mb-6 relative z-10 pr-14 sm:pr-16"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                >
                   Be a Guest
                 </h3>
-                <p className="text-lg text-muted-foreground mb-10 leading-relaxed relative z-10">
+                <p className="text-base sm:text-lg text-muted-foreground mb-8 sm:mb-10 leading-relaxed relative z-10">
                   Share your story and expertise with our community of creative professionals.
                 </p>
                 <span className="text-accent font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">
@@ -552,7 +559,7 @@ export default function Home() {
 
             <Link to="/sponsor" className="block">
               <motion.div
-                className="p-16 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
+                className="p-6 sm:p-12 md:p-16 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
@@ -561,15 +568,18 @@ export default function Home() {
               >
                 <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
                 <div
-                  className="absolute top-8 right-8 text-8xl text-white/10 group-hover:text-white/20 transition-all group-hover:-rotate-12"
+                  className="absolute top-6 right-4 sm:top-8 sm:right-8 text-6xl sm:text-7xl md:text-8xl text-white/10 group-hover:text-white/20 transition-all group-hover:-rotate-12"
                   style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
                 >
                   $
                 </div>
-                <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3
+                  className="text-2xl sm:text-4xl md:text-5xl mb-3 sm:mb-6 relative z-10 pr-14 sm:pr-16"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                >
                   Sponsor the Show
                 </h3>
-                <p className="text-lg text-white/90 mb-10 leading-relaxed relative z-10">
+                <p className="text-base sm:text-lg text-white/90 mb-8 sm:mb-10 leading-relaxed relative z-10">
                   Reach an engaged audience of entrepreneurs, creatives, and decision-makers.
                 </p>
                 <span className="text-white font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">

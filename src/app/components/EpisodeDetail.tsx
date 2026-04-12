@@ -261,23 +261,35 @@ export default function EpisodeDetail() {
   const youtubeWatchHref = !awaitYoutubeChannel ? ep.youtubeUrl?.trim() : '';
 
   return (
-    <div className="min-h-screen bg-background pt-16">
-      <section className="py-16 bg-gradient-to-b from-accent/5 to-background">
-        <div className="max-w-[1400px] mx-auto px-6">
+    <div className="min-h-screen bg-background pt-16 overflow-x-hidden">
+      <section className="py-8 sm:py-14 md:py-16 bg-gradient-to-b from-accent/5 to-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted-foreground mb-8">
-              <Link to="/episodes" className="hover:text-foreground transition-colors">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted-foreground mb-6 sm:mb-8">
+              <Link
+                to="/episodes"
+                className="inline-flex min-h-11 items-center py-1 -ml-1 px-1 rounded-sm hover:text-foreground transition-colors"
+              >
                 ← Back to Episodes
               </Link>
             </div>
 
-            <div className="mb-8">
-              <p className="text-sm text-accent font-medium mb-4 tracking-wider">{headerEyebrowText}</p>
-              <h1 className="text-7xl mb-6 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+            <div className="mb-5 sm:mb-8 min-w-0">
+              <p className="text-[0.65rem] sm:text-xs md:text-sm text-accent font-medium mb-2 sm:mb-4 tracking-wide sm:tracking-wider break-words leading-snug">
+                {headerEyebrowText}
+              </p>
+              {/*
+                Episode titles can be very long — scale down the floor on small screens so lines wrap
+                comfortably instead of one or two giant words per line.
+              */}
+              <h1
+                className="text-[clamp(1.375rem,5.5vw,2.75rem)] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-3 sm:mb-6 leading-[1.12] sm:leading-tight break-words"
+                style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+              >
                 {ep.title}
               </h1>
             </div>
@@ -285,8 +297,8 @@ export default function EpisodeDetail() {
         </div>
       </section>
 
-      <section className="py-12 bg-background">
-        <div className="max-w-[1200px] mx-auto px-6">
+      <section className="py-6 sm:py-10 md:py-12 bg-background">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
           {/*
             Primary media (YouTube-first):
             - While `awaitYoutubeChannel` (`hasApiKey && channelLoading` from `useYoutubeOverlaysForSlugs`),
@@ -357,7 +369,7 @@ export default function EpisodeDetail() {
                     </svg>
                   </span>
                 </div>
-                <p className="absolute bottom-4 left-4 right-4 z-[16] text-center text-sm text-white/90 font-medium drop-shadow-md pointer-events-none">
+                <p className="absolute bottom-3 sm:bottom-4 left-3 right-3 sm:left-4 sm:right-4 z-[16] text-center text-xs sm:text-sm text-white/90 font-medium drop-shadow-md pointer-events-none leading-snug">
                   Opens on YouTube — watch in the browser or the YouTube app
                 </p>
               </div>
@@ -397,25 +409,25 @@ export default function EpisodeDetail() {
           ) : null}
 
           <motion.div
-            className="flex flex-col items-center justify-center gap-4 mt-8"
+            className="flex flex-col items-stretch sm:items-center justify-center gap-3 sm:gap-4 mt-5 sm:mt-8 w-full max-w-xl mx-auto min-w-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            <div className="flex items-center justify-center gap-4 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3 sm:gap-4 w-full">
             {ep.spotifyUrl ? (
               <a
                 href={ep.spotifyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-accent text-accent-foreground px-8 py-4 text-sm font-medium hover:opacity-90 transition-opacity"
+                className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity text-center"
               >
                 Listen on Spotify
               </a>
             ) : (
               <button
                 type="button"
-                className="bg-accent text-accent-foreground px-8 py-4 text-sm font-medium opacity-50 cursor-not-allowed"
+                className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium opacity-50 cursor-not-allowed"
                 disabled
               >
                 Listen on Spotify
@@ -426,14 +438,14 @@ export default function EpisodeDetail() {
                 href={ep.youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="border-2 border-border px-8 py-4 text-sm font-medium hover:border-foreground transition-colors"
+                className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium hover:border-foreground transition-colors text-center"
               >
                 Watch on YouTube
               </a>
             ) : (
               <button
                 type="button"
-                className="border-2 border-border px-8 py-4 text-sm font-medium opacity-50 cursor-not-allowed"
+                className="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium opacity-50 cursor-not-allowed"
                 disabled
               >
                 Watch on YouTube
@@ -444,18 +456,25 @@ export default function EpisodeDetail() {
         </div>
       </section>
 
-      <section className="py-16">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid grid-cols-3 gap-16">
-            <div className="col-span-2">
+      <section className="py-8 sm:py-12 md:py-16">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
+          {/*
+            Main column first, sidebar second — on phones this reads as one column: summary → takeaways
+            → chapters → transcript, then credits / subscribe / share.
+          */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 sm:gap-12 lg:gap-14 xl:gap-16">
+            <div className="lg:col-span-2 min-w-0 order-1">
               <motion.div
-                className="mb-16"
+                className="mb-10 sm:mb-16"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
                 viewport={{ once: true, margin: '-100px' }}
               >
-                <h2 className="text-3xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h2
+                  className="text-xl sm:text-3xl mb-3 sm:mb-6"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                >
                   Episode Summary
                 </h2>
                 {/*
@@ -465,37 +484,42 @@ export default function EpisodeDetail() {
                 */}
                 {summaryHtmlFromRss ? (
                   <div
-                    className={`text-xl text-muted-foreground leading-relaxed mb-6 ${RSS_INNER_HTML_CLASS}`}
+                    className={`text-[0.9375rem] sm:text-lg md:text-xl text-muted-foreground leading-relaxed mb-6 break-words ${RSS_INNER_HTML_CLASS}`}
                     // eslint-disable-next-line react/no-danger -- trusted podcast RSS HTML only
                     dangerouslySetInnerHTML={{
                       __html: sanitizeRssBodyHtmlForInnerHtml(summaryHtmlFromRss),
                     }}
                   />
                 ) : (
-                  <p className="text-xl text-muted-foreground leading-relaxed mb-6">{summaryPlainFallback}</p>
+                  <p className="text-[0.9375rem] sm:text-lg md:text-xl text-muted-foreground leading-relaxed mb-6 break-words">
+                    {summaryPlainFallback}
+                  </p>
                 )}
               </motion.div>
 
               {takeaways.length > 0 ? (
                 <motion.div
-                  className="mb-16 p-10 bg-accent/5 border-l-4 border-accent"
+                  className="mb-10 sm:mb-16 p-4 sm:p-8 md:p-10 bg-accent/5 border-l-4 border-accent"
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8 }}
                   viewport={{ once: true, margin: '-100px' }}
                 >
-                  <h2 className="text-2xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  <h2
+                    className="text-lg sm:text-2xl mb-3 sm:mb-6"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                  >
                     Key Takeaways
                   </h2>
-                  <ul className="space-y-4">
+                  <ul className="space-y-3 sm:space-y-4">
                     {takeaways.map((takeaway, index) => (
-                      <li key={index} className="flex items-start gap-4">
-                        <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <li key={index} className="flex items-start gap-3 sm:gap-4">
+                        <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-1">
                           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
-                        <span className="text-lg leading-relaxed">{takeaway}</span>
+                        <span className="text-base sm:text-lg leading-relaxed">{takeaway}</span>
                       </li>
                     ))}
                   </ul>
@@ -504,24 +528,31 @@ export default function EpisodeDetail() {
 
               {chapters.length > 0 ? (
                 <motion.div
-                  className="mb-16"
+                  className="mb-10 sm:mb-16"
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8 }}
                   viewport={{ once: true, margin: '-100px' }}
                 >
-                  <h2 className="text-3xl mb-8" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  <h2
+                    className="text-xl sm:text-3xl mb-4 sm:mb-8"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                  >
                     Chapters
                   </h2>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {chapters.map((chapter, index) => (
                       <button
                         key={`${chapter.time}-${index}`}
                         type="button"
-                        className="w-full flex items-center gap-6 p-5 bg-muted hover:bg-accent/5 transition-colors text-left group"
+                        className="w-full min-h-[3.5rem] flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-4 md:gap-6 p-4 sm:p-5 bg-muted hover:bg-accent/5 transition-colors text-left group active:bg-accent/10"
                       >
-                        <span className="text-sm font-medium text-accent min-w-[4rem]">{chapter.time}</span>
-                        <span className="text-base group-hover:text-accent transition-colors">{chapter.title}</span>
+                        <span className="text-sm font-medium text-accent shrink-0 min-w-[3.5rem] sm:min-w-[4rem]">
+                          {chapter.time}
+                        </span>
+                        <span className="text-sm sm:text-base group-hover:text-accent transition-colors break-words">
+                          {chapter.title}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -536,10 +567,13 @@ export default function EpisodeDetail() {
                   transition={{ duration: 0.8 }}
                   viewport={{ once: true, margin: '-100px' }}
                 >
-                  <h2 className="text-3xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  <h2
+                    className="text-2xl sm:text-3xl mb-4 sm:mb-6"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                  >
                     Transcript
                   </h2>
-                  <div className="p-8 bg-muted/50 border border-border">
+                  <div className="p-4 sm:p-6 md:p-8 bg-muted/50 border border-border">
                     <p className="text-base text-muted-foreground leading-loose whitespace-pre-line font-mono">
                       {ep.transcript}
                     </p>
@@ -551,15 +585,15 @@ export default function EpisodeDetail() {
               ) : null}
             </div>
 
-            <div className="col-span-1">
+            <div className="lg:col-span-1 min-w-0 order-2 space-y-6 sm:space-y-8 lg:space-y-0">
               <motion.div
-                className="mb-12 p-8 bg-muted/30 border border-border"
+                className="lg:mb-12 p-5 sm:p-8 bg-muted/30 border border-border"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
                 viewport={{ once: true, margin: '-100px' }}
               >
-                <h3 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3 className="text-lg sm:text-xl mb-3 sm:mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   Show Credits
                 </h3>
                 {guestName ? (
@@ -575,13 +609,13 @@ export default function EpisodeDetail() {
               </motion.div>
 
               <motion.div
-                className="mb-12 p-8 bg-foreground text-background"
+                className="lg:mb-12 p-5 sm:p-8 bg-foreground text-background"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
                 viewport={{ once: true, margin: '-100px' }}
               >
-                <h3 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3 className="text-lg sm:text-xl mb-3 sm:mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   Never Miss an Episode
                 </h3>
                 <p className="text-sm opacity-80 mb-6 leading-relaxed">
@@ -590,40 +624,40 @@ export default function EpisodeDetail() {
                 <input
                   type="email"
                   placeholder="Your email"
-                  className="w-full px-4 py-3 bg-background text-foreground mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full min-h-11 px-4 py-3 bg-background text-foreground mb-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 <button
                   type="button"
-                  className="w-full bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
+                  className="w-full min-h-11 bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
                 >
                   Subscribe
                 </button>
               </motion.div>
 
               <motion.div
-                className="mb-12"
+                className="lg:mb-12"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
                 viewport={{ once: true, margin: '-100px' }}
               >
-                <h3 className="text-lg mb-4 font-medium">Share This Episode</h3>
-                <div className="flex items-center gap-3">
+                <h3 className="text-base sm:text-lg mb-3 sm:mb-4 font-medium">Share This Episode</h3>
+                <div className="flex flex-col sm:flex-row sm:items-stretch gap-2 sm:gap-3 min-w-0">
                   <button
                     type="button"
-                    className="flex-1 px-4 py-3 bg-muted hover:bg-muted-foreground/10 transition-colors text-sm font-medium"
+                    className="flex-1 min-h-12 px-4 py-3 bg-muted hover:bg-muted-foreground/10 transition-colors text-sm font-medium"
                   >
                     Twitter
                   </button>
                   <button
                     type="button"
-                    className="flex-1 px-4 py-3 bg-muted hover:bg-muted-foreground/10 transition-colors text-sm font-medium"
+                    className="flex-1 min-h-12 px-4 py-3 bg-muted hover:bg-muted-foreground/10 transition-colors text-sm font-medium"
                   >
                     LinkedIn
                   </button>
                   <button
                     type="button"
-                    className="flex-1 px-4 py-3 bg-muted hover:bg-muted-foreground/10 transition-colors text-sm font-medium"
+                    className="flex-1 min-h-12 px-4 py-3 bg-muted hover:bg-muted-foreground/10 transition-colors text-sm font-medium"
                   >
                     Copy
                   </button>
@@ -635,10 +669,10 @@ export default function EpisodeDetail() {
       </section>
 
       {related.length > 0 ? (
-        <section className="py-20 bg-muted/30">
-          <div className="max-w-[1400px] mx-auto px-6">
+        <section className="py-10 sm:py-16 md:py-20 bg-muted/30">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
             <motion.h2
-              className="text-5xl mb-12"
+              className="text-2xl sm:text-4xl md:text-5xl mb-6 sm:mb-10 md:mb-12"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -648,7 +682,7 @@ export default function EpisodeDetail() {
               Related Episodes
             </motion.h2>
 
-            <div className="grid grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
               {related.map((rel, index) => {
                 const relDisplay = mergeEpisodeForDisplay(rel, overlays[rel.slug] ?? null);
                 const relTopic = relDisplay.topic ?? FALLBACK_TOPIC;
@@ -680,7 +714,7 @@ export default function EpisodeDetail() {
                         <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
                         <div className="absolute bottom-4 right-4 z-[6] pointer-events-none">
                           <span
-                            className="text-4xl text-white/20 group-hover:text-white/30 transition-all"
+                            className="text-3xl sm:text-4xl text-white/20 group-hover:text-white/30 transition-all"
                             style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
                           >
                             {relNum}
@@ -704,12 +738,12 @@ export default function EpisodeDetail() {
         </section>
       ) : null}
 
-      <section className="py-20 bg-background">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid grid-cols-2 gap-8">
+      <section className="py-10 sm:py-16 md:py-20 bg-background">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
             <Link to="/be-a-guest" className="block">
               <motion.div
-                className="p-12 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
+                className="p-8 sm:p-10 md:p-12 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
@@ -717,10 +751,13 @@ export default function EpisodeDetail() {
                 whileHover={{ y: -8 }}
               >
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-                <h3 className="text-4xl mb-4 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3
+                  className="text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4 relative z-10"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                >
                   Be a Guest
                 </h3>
-                <p className="text-base text-muted-foreground mb-8 leading-relaxed relative z-10">
+                <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 leading-relaxed relative z-10">
                   Share your story with our audience.
                 </p>
                 <span className="text-accent font-medium inline-flex items-center gap-2 relative z-10">
@@ -734,7 +771,7 @@ export default function EpisodeDetail() {
 
             <Link to="/sponsor" className="block">
               <motion.div
-                className="p-12 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
+                className="p-8 sm:p-10 md:p-12 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
@@ -742,10 +779,13 @@ export default function EpisodeDetail() {
                 whileHover={{ y: -8 }}
               >
                 <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-                <h3 className="text-4xl mb-4 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <h3
+                  className="text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4 relative z-10"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                >
                   Sponsor the Show
                 </h3>
-                <p className="text-base text-white/90 mb-8 leading-relaxed relative z-10">
+                <p className="text-sm sm:text-base text-white/90 mb-6 sm:mb-8 leading-relaxed relative z-10">
                   Reach our engaged audience.
                 </p>
                 <span className="text-white font-medium inline-flex items-center gap-2 relative z-10">

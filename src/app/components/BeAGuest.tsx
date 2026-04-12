@@ -15,9 +15,9 @@ export default function BeAGuest() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background pt-16 flex items-center justify-center">
+      <div className="min-h-screen bg-background pt-16 flex items-center justify-center overflow-x-hidden px-4">
         <motion.div
-          className="max-w-2xl mx-auto px-6 text-center py-24"
+          className="max-w-2xl mx-auto px-4 sm:px-6 text-center py-16 sm:py-24 min-w-0"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -27,10 +27,10 @@ export default function BeAGuest() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-6xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h1 className="text-3xl sm:text-5xl md:text-6xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
             Thanks for Reaching Out!
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+          <p className="text-base sm:text-xl text-muted-foreground mb-8 leading-relaxed">
             We've received your submission and will review it carefully. If there's a good fit, we'll be in touch within 2-3 weeks.
           </p>
           <button
@@ -45,20 +45,23 @@ export default function BeAGuest() {
   }
 
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background pt-16 overflow-x-hidden">
       {/* Hero Section */}
-      <section className="py-24 bg-gradient-to-b from-accent/5 to-background">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-accent/5 to-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="max-w-4xl"
           >
-            <h1 className="text-8xl mb-8 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+            <h1
+              className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl mb-6 sm:mb-8 leading-tight break-words"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+            >
               Be a Guest on EGGS!
             </h1>
-            <p className="text-3xl text-muted-foreground leading-relaxed">
+            <p className="text-lg sm:text-2xl md:text-3xl text-muted-foreground leading-relaxed">
               We're always looking for creative professionals, entrepreneurs, and builders with stories worth sharing.
             </p>
           </motion.div>
@@ -66,8 +69,8 @@ export default function BeAGuest() {
       </section>
 
       {/* Who We're Looking For */}
-      <section className="py-24 bg-background">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -75,7 +78,7 @@ export default function BeAGuest() {
             viewport={{ once: true, margin: "-100px" }}
             className="mb-16"
           >
-            <h2 className="text-5xl mb-8" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
               Who We're Looking For
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">
@@ -83,7 +86,7 @@ export default function BeAGuest() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
             {[
               {
                 title: 'Founders & Entrepreneurs',
@@ -104,7 +107,7 @@ export default function BeAGuest() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true, margin: "-100px" }}
-                className="p-8 border-2 border-border hover:border-accent transition-colors"
+                className="p-6 sm:p-8 border-2 border-border hover:border-accent transition-colors"
               >
                 <h3 className="text-2xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   {item.title}
@@ -118,7 +121,7 @@ export default function BeAGuest() {
 
           {/* What Makes a Great Guest */}
           <motion.div
-            className="p-12 bg-accent/5 border-l-4 border-accent"
+            className="p-6 sm:p-10 md:p-12 bg-accent/5 border-l-4 border-accent"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -127,7 +130,7 @@ export default function BeAGuest() {
             <h3 className="text-2xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
               What Makes a Great Guest
             </h3>
-            <ul className="grid grid-cols-2 gap-4">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {[
                 'You\'re actively doing the work, not just advising',
                 'You have specific insights from real challenges',
@@ -151,23 +154,24 @@ export default function BeAGuest() {
       </section>
 
       {/* Form Type Selection */}
-      <section className="py-24 bg-muted/30">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-muted/30">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <h2 className="text-5xl mb-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-8 sm:mb-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
               How Would You Like to Connect?
             </h2>
 
-            {/* Tab Selection */}
-            <div className="flex items-center gap-4 mb-12">
+            {/* Tab Selection — stack on narrow screens so labels stay readable */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 mb-8 sm:mb-12">
               <button
+                type="button"
                 onClick={() => setActiveForm('apply')}
-                className={`px-8 py-4 text-base font-medium transition-all ${
+                className={`min-h-12 w-full sm:w-auto px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium transition-all text-center ${
                   activeForm === 'apply'
                     ? 'bg-accent text-accent-foreground'
                     : 'bg-background border-2 border-border hover:border-accent'
@@ -176,8 +180,9 @@ export default function BeAGuest() {
                 Apply to Be a Guest
               </button>
               <button
+                type="button"
                 onClick={() => setActiveForm('nominate')}
-                className={`px-8 py-4 text-base font-medium transition-all ${
+                className={`min-h-12 w-full sm:w-auto px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium transition-all text-center ${
                   activeForm === 'nominate'
                     ? 'bg-accent text-accent-foreground'
                     : 'bg-background border-2 border-border hover:border-accent'
@@ -186,8 +191,9 @@ export default function BeAGuest() {
                 Nominate Someone
               </button>
               <button
+                type="button"
                 onClick={() => setActiveForm('publicist')}
-                className={`px-8 py-4 text-base font-medium transition-all ${
+                className={`min-h-12 w-full sm:w-auto px-5 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium transition-all text-center ${
                   activeForm === 'publicist'
                     ? 'bg-accent text-accent-foreground'
                     : 'bg-background border-2 border-border hover:border-accent'
@@ -206,7 +212,7 @@ export default function BeAGuest() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
                   onSubmit={handleSubmit}
-                  className="p-12 bg-background border-2 border-border space-y-6"
+                  className="p-6 sm:p-10 md:p-12 bg-background border-2 border-border space-y-6"
                 >
                   <div>
                     <label className="block mb-2 text-sm font-medium">Your Name *</label>
@@ -306,7 +312,7 @@ export default function BeAGuest() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
                   onSubmit={handleSubmit}
-                  className="p-12 bg-background border-2 border-border space-y-6"
+                  className="p-6 sm:p-10 md:p-12 bg-background border-2 border-border space-y-6"
                 >
                   <p className="text-base text-muted-foreground mb-6 leading-relaxed">
                     Know someone who'd be a great guest? We'd love to hear about them.
@@ -400,7 +406,7 @@ export default function BeAGuest() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
                   onSubmit={handleSubmit}
-                  className="p-12 bg-background border-2 border-border space-y-6"
+                  className="p-6 sm:p-10 md:p-12 bg-background border-2 border-border space-y-6"
                 >
                   <p className="text-base text-muted-foreground mb-6 leading-relaxed">
                     Representing a potential guest? Please share their information and we'll be in touch.
@@ -507,10 +513,10 @@ export default function BeAGuest() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 bg-background">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.h2
-            className="text-5xl mb-16"
+            className="text-3xl sm:text-4xl md:text-5xl mb-10 sm:mb-16"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -520,7 +526,7 @@ export default function BeAGuest() {
             Common Questions
           </motion.h2>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             {[
               {
                 question: 'How long does the interview take?',
@@ -549,7 +555,7 @@ export default function BeAGuest() {
             ].map((faq, index) => (
               <motion.div
                 key={index}
-                className="p-8 border-2 border-border hover:border-accent transition-colors"
+                className="p-6 sm:p-8 border-2 border-border hover:border-accent transition-colors"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}

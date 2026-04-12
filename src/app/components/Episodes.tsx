@@ -171,8 +171,8 @@ export default function Episodes() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <section className="pt-32 pb-12 bg-gradient-to-b from-accent/5 to-background border-b border-border">
-          <div className="max-w-[1400px] mx-auto px-6">
+        <section className="pt-24 sm:pt-28 md:pt-32 pb-10 sm:pb-12 bg-gradient-to-b from-accent/5 to-background border-b border-border">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
             <div className="h-24 max-w-2xl eggs-skeleton-block rounded-sm mb-6" aria-hidden />
             <div className="h-6 max-w-xl eggs-skeleton-block rounded-sm mb-4" aria-hidden />
             <p className="text-lg text-muted-foreground">
@@ -186,7 +186,7 @@ export default function Episodes() {
         </section>
         <section className="py-16">
           <div className="max-w-[1400px] mx-auto px-6">
-            <div className="grid grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="space-y-4">
                   <div className="aspect-video eggs-skeleton-block rounded-sm" aria-hidden />
@@ -206,9 +206,9 @@ export default function Episodes() {
     const feedUrl = resolvePodcastRssUrl();
     return (
       <div className="min-h-screen bg-background">
-        <section className="pt-32 pb-20 bg-gradient-to-b from-accent/5 to-background border-b border-border">
-          <div className="max-w-[1400px] mx-auto px-6">
-            <h1 className="text-4xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+        <section className="pt-24 sm:pt-28 md:pt-32 pb-16 sm:pb-20 bg-gradient-to-b from-accent/5 to-background border-b border-border">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+            <h1 className="text-3xl sm:text-4xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
               Couldn&apos;t load episodes
             </h1>
             <p className="text-lg text-muted-foreground mb-4 max-w-3xl leading-relaxed">{error}</p>
@@ -244,17 +244,20 @@ export default function Episodes() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <section className="pt-32 pb-20 bg-gradient-to-b from-accent/5 to-background">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <section className="pt-20 sm:pt-28 md:pt-32 pb-10 sm:pb-16 md:pb-20 bg-gradient-to-b from-accent/5 to-background">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-8xl mb-6" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+            <h1
+              className="text-3xl sm:text-6xl md:text-7xl lg:text-8xl mb-3 sm:mb-6 break-words"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+            >
               All Episodes
             </h1>
-            <p className="text-2xl text-muted-foreground max-w-3xl leading-relaxed">
+            <p className="text-sm sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-3xl leading-relaxed">
               Browse our complete archive of conversations with creative professionals, entrepreneurs, and industry leaders.
             </p>
           </motion.div>
@@ -262,46 +265,52 @@ export default function Episodes() {
       </section>
 
       {/* Search and Filters */}
-      <section className="sticky top-16 z-40 bg-background/95 backdrop-blur-sm border-b border-border py-6">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="flex items-center gap-6">
-            <div className="flex-1 max-w-md">
+      {/*
+        Sticky controls: stack search → sort → count on narrow screens so nothing squishes horizontally.
+        `min-w-0` lets flex children shrink inside the page instead of forcing sideways scroll.
+      */}
+      <section className="sticky top-16 z-40 bg-background/95 backdrop-blur-sm border-b border-border py-3 sm:py-6">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-6">
+            <div className="w-full min-w-0 lg:flex-1 lg:max-w-md">
               <input
                 type="text"
                 placeholder="Search episodes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors"
+                className="w-full min-h-12 px-4 sm:px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors text-base max-w-full"
               />
             </div>
 
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="featured">Featured</option>
-            </select>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full min-w-0 lg:w-auto lg:shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full sm:min-w-[11rem] sm:w-auto min-h-12 px-4 sm:px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors text-base max-w-full"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="featured">Featured</option>
+              </select>
 
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {topicFiltered.length} {topicFiltered.length === 1 ? 'episode' : 'episodes'}
-            </span>
+              <span className="text-xs sm:text-sm text-muted-foreground sm:whitespace-nowrap lg:ml-2 py-1">
+                {topicFiltered.length} {topicFiltered.length === 1 ? 'episode' : 'episodes'}
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Topic Filters — options come from loaded data so filters stay honest */}
-      <section className="py-8 border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="flex items-center gap-3 overflow-x-auto">
+      <section className="py-3 sm:py-6 md:py-8 border-b border-border">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-1 px-1 scroll-pl-4 snap-x snap-mandatory [scrollbar-gutter:stable] touch-pan-x">
             {topicFiltersWithYoutube.map((topic) => (
               <button
                 key={topic}
                 type="button"
                 onClick={() => setSelectedTopic(topic)}
-                className={`px-6 py-2 text-sm font-medium whitespace-nowrap transition-all ${
+                className={`shrink-0 snap-start min-h-11 px-4 sm:px-6 py-2.5 text-sm font-medium whitespace-nowrap transition-all rounded-sm ${
                   selectedTopic === topic
                     ? 'bg-accent text-accent-foreground'
                     : 'bg-muted text-foreground hover:bg-accent/10'
@@ -315,18 +324,20 @@ export default function Episodes() {
       </section>
 
       {/* Episodes Grid */}
-      <section className="py-16">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="grid grid-cols-2 gap-12">
+      <section className="py-8 sm:py-14 md:py-16">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-7 md:gap-10 lg:gap-12">
             {displayedEpisodes.map((episode, index) => {
               const displayEp = mergeEpisodeForDisplay(episode, overlayBySlug[episode.slug] ?? null);
-              const topic = displayEp.topic ?? FALLBACK_TOPIC;
               const featured = displayEp.featured ?? false;
               const cardSummary = displayEp.summary?.trim() || 'Show notes are available on the episode page.';
               const dateLabel = format(new Date(displayEp.publishedAt), 'MMMM d, yyyy');
               const durationLabel = formatDurationLabel(displayEp.duration);
               const numberLabel =
                 displayEp.episodeNumber !== undefined ? String(displayEp.episodeNumber) : displayEp.id.slice(0, 8);
+              const episodeNumForEyebrow =
+                displayEp.episodeNumber !== undefined ? String(displayEp.episodeNumber) : '—';
+              const cardEyebrow = `EPISODE ${episodeNumForEyebrow} • ${dateLabel} • ${durationLabel}`.toUpperCase();
 
               return (
                 <Link key={displayEp.id} to={episodePathFromSlug(displayEp.slug)} className="group block">
@@ -359,9 +370,9 @@ export default function Episodes() {
                         </div>
                       </div>
 
-                      <div className="absolute bottom-4 right-4 z-[6] pointer-events-none">
+                      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-[6] pointer-events-none">
                         <span
-                          className="text-5xl text-white/20 group-hover:text-white/30 transition-all"
+                          className="text-3xl sm:text-5xl text-white/20 group-hover:text-white/30 transition-all tabular-nums"
                           style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
                         >
                           {numberLabel}
@@ -377,20 +388,17 @@ export default function Episodes() {
                       )}
                     </div>
 
-                    <div>
-                      <p className="text-xs text-accent font-medium mb-3 tracking-wider">{topic.toUpperCase()}</p>
+                    <div className="min-w-0">
+                      <p className="text-[0.65rem] sm:text-xs text-accent font-medium mb-3 tracking-wide sm:tracking-wider break-words leading-snug">
+                        {cardEyebrow}
+                      </p>
                       <h3
-                        className="text-2xl mb-3 leading-snug group-hover:text-accent transition-colors"
+                        className="text-lg sm:text-2xl mb-3 leading-snug group-hover:text-accent transition-colors break-words"
                         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                       >
                         {displayEp.title}
                       </h3>
-                      <p className="text-base text-muted-foreground mb-4 leading-relaxed line-clamp-4">{cardSummary}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{dateLabel}</span>
-                        <span>•</span>
-                        <span>{durationLabel}</span>
-                      </div>
+                      <p className="text-base text-muted-foreground leading-relaxed line-clamp-4">{cardSummary}</p>
                     </div>
                   </motion.div>
                 </Link>
@@ -408,7 +416,7 @@ export default function Episodes() {
               <button
                 type="button"
                 onClick={() => setVisibleCount((n) => n + ARCHIVE_LOAD_MORE_SIZE)}
-                className="border-2 border-foreground px-10 py-4 text-base font-medium hover:bg-foreground hover:text-background transition-colors"
+                className="min-h-12 w-full sm:w-auto border-2 border-foreground px-8 sm:px-10 py-3.5 sm:py-4 text-sm sm:text-base font-medium hover:bg-foreground hover:text-background transition-colors"
               >
                 Load more episodes
               </button>
