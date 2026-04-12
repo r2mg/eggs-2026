@@ -22,8 +22,14 @@ function slugsDependencyKey(slugs: string[]): string {
  *
  * **Overlay map:** Every requested slug gets an entry once `mergedCatalog` exists: either a matched
  * overlay object or **`null`** (tried, no YouTube). While the API key exists but no merged catalog
- * is ready yet, `overlays` is empty — use `awaitYoutubeCatalog` for skeleton-first media (see
- * `PreferredYoutubeImageSlot`).
+ * is ready yet, `overlays` is empty.
+ *
+ * **Which flag for skeletons?**
+ * - `awaitYoutubeCatalog` — true only when there is no merged catalog yet **and** a request is in flight
+ *   (good when you care about “no overlay keys yet”).
+ * - `hasApiKey && channelLoading` — true while **either** lite or full channel hook is still loading
+ *   (use on **EpisodeDetail** so the hero and RSS audio do not appear until both loads settle, avoiding
+ *   a two-step swap when the full catalog refines matches).
  */
 export function useYoutubeOverlaysForSlugs(rssEpisodes: Episode[] | null, slugs: string[]) {
   const full = useYoutubeChannelData();

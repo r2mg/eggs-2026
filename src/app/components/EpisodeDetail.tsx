@@ -10,7 +10,6 @@ import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 import {
-  extractApplePodcastsUrl,
   extractTakeawaysFromDescriptionHtml,
   resolvePodcastRssUrl,
   sanitizeRssBodyHtmlForInnerHtml,
@@ -122,7 +121,7 @@ export default function EpisodeDetail() {
     return [...u];
   }, [episode, related]);
 
-  const { overlays, awaitYoutubeCatalog, retryChannel } = useYoutubeOverlaysForSlugs(
+  const { overlays, channelLoading, hasApiKey, retryChannel } = useYoutubeOverlaysForSlugs(
     rssCatalog.length ? rssCatalog : null,
     overlaySlugs,
   );
@@ -240,19 +239,18 @@ export default function EpisodeDetail() {
   const chapters = ep.chapters ?? [];
   const guestName = ep.guest?.trim();
   /**
-   * While `awaitYoutubeCatalog` is true (API key present, merged YouTube snapshot not ready yet),
-   * the hero and related thumbnails use **only** `PreferredYoutubeImageSlot` in “waiting” mode —
-   * we do **not** paint RSS artwork first, so nothing later swaps to a YouTube poster.
+   * Skeleton-first media (same spirit as Home / archive): while an API key exists and **either**
+   * the lite or full channel request is still in flight, we do not paint RSS hero art or the RSS
+   * audio block — only the shared shimmer in the hero, and `PreferredYoutubeImageSlot` in waiting
+   * mode on related cards. This avoids showing RSS first and then swapping when the full snapshot arrives.
    */
+  const awaitYoutubeChannel = hasApiKey && channelLoading;
   /** Prefer the Data API embed URL; fall back to building from `youtubeVideoId` when needed */
   const youtubeEmbedSrc =
     ep.youtubeEmbedUrl?.trim() || (ep.youtubeVideoId ? `https://www.youtube.com/embed/${ep.youtubeVideoId}` : '');
-  const hasYoutubePlayer = !awaitYoutubeCatalog && youtubeEmbedSrc.length > 0;
+  const hasYoutubePlayer = !awaitYoutubeChannel && youtubeEmbedSrc.length > 0;
   /** Watch link on YouTube (new tab) — same tab as “open in YouTube app” behavior */
-  const youtubeWatchHref = !awaitYoutubeCatalog ? ep.youtubeUrl?.trim() : '';
-
-  // Extra listen links parsed from show notes when the feed doesn’t expose them as separate fields
-  const appleUrl = extractApplePodcastsUrl(ep.descriptionHtml);
+  const youtubeWatchHref = !awaitYoutubeChannel ? ep.youtubeUrl?.trim() : '';
 
   return (
     <div className="min-h-screen bg-background pt-16">
@@ -291,14 +289,14 @@ export default function EpisodeDetail() {
       <section className="py-12 bg-background">
         <div className="max-w-[1200px] mx-auto px-6">
           {/*
-            Primary media (YouTube-first, same idea as Home / archive):
-            - While a merged channel snapshot is still loading (`awaitYoutubeCatalog`), show only the
-              shared shimmer in this aspect box — **no** RSS image first, so there is no swap.
+            Primary media (YouTube-first):
+            - While `awaitYoutubeChannel` (`hasApiKey && channelLoading` from `useYoutubeOverlaysForSlugs`),
+              show only the shared hero shimmer — **no** RSS image and **no** RSS audio yet.
             - Then: YouTube iframe when we have an embed URL; else watch link + poster via
-              `PreferredYoutubeImageSlot` (YouTube chain, then RSS); else RSS-only in the same slot.
-            Podcast audio stays in the native player below when there is no YouTube embed.
+              `PreferredYoutubeImageSlot`; else RSS-only in the same slot.
+            Podcast audio appears only after channel loads finish and there is still no in-page embed.
           */}
-          {awaitYoutubeCatalog ? (
+          {awaitYoutubeChannel ? (
             <motion.div
               className="aspect-video w-full rounded-sm overflow-hidden border border-border relative bg-gradient-to-br from-accent/10 to-accent/5"
               initial={{ opacity: 0, y: 40 }}
@@ -307,7 +305,7 @@ export default function EpisodeDetail() {
             >
               {/*
                 Intentionally **no** `rssImage` here — the slot shows only the shared media shimmer
-                until `awaitYoutubeCatalog` flips false (see `PreferredYoutubeImageSlot`).
+                until `awaitYoutubeChannel` is false (see `PreferredYoutubeImageSlot`).
               */}
               <PreferredYoutubeImageSlot
                 resetKey={episode.slug}
@@ -384,7 +382,7 @@ export default function EpisodeDetail() {
             </motion.div>
           )}
 
-          {!hasYoutubePlayer && ep.audioUrl ? (
+          {!awaitYoutubeChannel && !hasYoutubePlayer && ep.audioUrl ? (
             <motion.div
               className="mt-6 p-4 rounded-sm border border-border bg-muted/20"
               initial={{ opacity: 0, y: 12 }}
@@ -422,24 +420,6 @@ export default function EpisodeDetail() {
                 disabled
               >
                 Listen on Spotify
-              </button>
-            )}
-            {appleUrl ? (
-              <a
-                href={appleUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border-2 border-border px-8 py-4 text-sm font-medium hover:border-foreground transition-colors"
-              >
-                Apple Podcasts
-              </a>
-            ) : (
-              <button
-                type="button"
-                className="border-2 border-border px-8 py-4 text-sm font-medium opacity-50 cursor-not-allowed"
-                disabled
-              >
-                Apple Podcasts
               </button>
             )}
             {ep.youtubeUrl ? (
@@ -707,15 +687,15 @@ export default function EpisodeDetail() {
                     >
                       <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-4 relative overflow-hidden">
                         {/*
-                          Same `PreferredYoutubeImageSlot` + `awaitYoutubeCatalog` contract as the archive
-                          cards — shimmer until the merged YouTube snapshot has been applied for this slug.
+                          Same waiting contract as the hero: shimmer until both channel hooks finish
+                          (`awaitYoutubeChannel`), then the shared slot resolves YouTube vs RSS like Home / archive.
                         */}
                         <PreferredYoutubeImageSlot
                           resetKey={rel.slug}
                           rssImage={rel.image}
                           youtubeVideoId={relDisplay.youtubeVideoId}
                           youtubeThumbnailPreferred={relDisplay.youtubeThumbnail}
-                          awaitYoutubeOverlay={awaitYoutubeCatalog}
+                          awaitYoutubeOverlay={awaitYoutubeChannel}
                           imageClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
