@@ -71,9 +71,12 @@ export async function enrichEpisodesWithYouTube(episodes: Episode[]): Promise<{
   }
 
   const overlays = buildYoutubeOverlaysForEpisodes(episodes, data);
-  const out = episodes.map((ep) => ({ ...ep, ...overlays[ep.slug] }));
+  const out = episodes.map((ep) => {
+    const o = overlays[ep.slug];
+    return o ? { ...ep, ...o } : { ...ep };
+  });
 
-  const matched = Object.keys(overlays).length;
+  const matched = episodes.filter((ep) => overlays[ep.slug]).length;
   const unmatched = episodes.filter((ep) => !overlays[ep.slug]).map((ep) => ({ slug: ep.slug, title: ep.title }));
 
   console.log(

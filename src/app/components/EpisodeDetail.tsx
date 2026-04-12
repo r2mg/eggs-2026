@@ -8,6 +8,7 @@ import { useYoutubeOverlaysForSlugs } from '../hooks/useYoutubeOverlaysForSlugs'
 import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
+import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 import {
   extractApplePodcastsUrl,
   extractTakeawaysFromDescriptionHtml,
@@ -52,7 +53,8 @@ const RSS_INNER_HTML_CLASS =
  * =========================================
  *
  * **Data source:** Stable RSS list from `useRssEpisodes()`; YouTube thumbnails / embed URL
- * are merged only for this page’s slug via `useYoutubeOverlaysForSlugs` (no whole-feed swap).
+ * are merged via `useYoutubeOverlaysForSlugs` for **this page’s episode + related slugs only**
+ * (same lite+full catalog merge as Home / archive — see that hook’s comments).
  *
  * **How lookup works (after the feed has loaded):**
  * 1. Read the `:slug` route param from the URL (React Router fills this from `/episodes/:slug`).
@@ -120,7 +122,7 @@ export default function EpisodeDetail() {
     return [...u];
   }, [episode, related]);
 
-  const { overlays, retryChannel } = useYoutubeOverlaysForSlugs(
+  const { overlays, awaitYoutubeCatalog, retryChannel } = useYoutubeOverlaysForSlugs(
     rssCatalog.length ? rssCatalog : null,
     overlaySlugs,
   );
@@ -238,13 +240,17 @@ export default function EpisodeDetail() {
   const creditsHtmlFromRss = rssEpisodeDesc.creditsHtml;
   const chapters = ep.chapters ?? [];
   const guestName = ep.guest?.trim();
-  const heroImageUrl = ep.youtubeThumbnail ?? ep.image;
+  /**
+   * While `awaitYoutubeCatalog` is true (API key present, merged YouTube snapshot not ready yet),
+   * the hero and related thumbnails use **only** `PreferredYoutubeImageSlot` in “waiting” mode —
+   * we do **not** paint RSS artwork first, so nothing later swaps to a YouTube poster.
+   */
   /** Prefer the Data API embed URL; fall back to building from `youtubeVideoId` when needed */
   const youtubeEmbedSrc =
     ep.youtubeEmbedUrl?.trim() || (ep.youtubeVideoId ? `https://www.youtube.com/embed/${ep.youtubeVideoId}` : '');
-  const hasYoutubePlayer = youtubeEmbedSrc.length > 0;
+  const hasYoutubePlayer = !awaitYoutubeCatalog && youtubeEmbedSrc.length > 0;
   /** Watch link on YouTube (new tab) — same tab as “open in YouTube app” behavior */
-  const youtubeWatchHref = ep.youtubeUrl?.trim();
+  const youtubeWatchHref = !awaitYoutubeCatalog ? ep.youtubeUrl?.trim() : '';
 
   // Extra listen links parsed from show notes when the feed doesn’t expose them as separate fields
   const appleUrl = extractApplePodcastsUrl(ep.descriptionHtml);
@@ -286,11 +292,32 @@ export default function EpisodeDetail() {
       <section className="py-12 bg-background">
         <div className="max-w-[1200px] mx-auto px-6">
           {/*
-            Primary media: YouTube embed when we have a video id / embed URL.
-            We do **not** use the big play button for the RSS MP3 anymore — that looked like a video
-            but opened a raw audio file. Podcast audio lives in the native player below when there is no YouTube match.
+            Primary media (YouTube-first, same idea as Home / archive):
+            - While a merged channel snapshot is still loading (`awaitYoutubeCatalog`), show only the
+              shared shimmer in this aspect box — **no** RSS image first, so there is no swap.
+            - Then: YouTube iframe when we have an embed URL; else watch link + poster via
+              `PreferredYoutubeImageSlot` (YouTube chain, then RSS); else RSS-only in the same slot.
+            Podcast audio stays in the native player below when there is no YouTube embed.
           */}
-          {hasYoutubePlayer ? (
+          {awaitYoutubeCatalog ? (
+            <motion.div
+              className="aspect-video w-full rounded-sm overflow-hidden border border-border relative bg-gradient-to-br from-accent/10 to-accent/5"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              {/*
+                Intentionally **no** `rssImage` here — the slot shows only the shared media shimmer
+                until `awaitYoutubeCatalog` flips false (see `PreferredYoutubeImageSlot`).
+              */}
+              <PreferredYoutubeImageSlot
+                resetKey={episode.slug}
+                awaitYoutubeOverlay
+                imageClassName=""
+              />
+              <span className="sr-only">Loading YouTube artwork for this episode</span>
+            </motion.div>
+          ) : hasYoutubePlayer ? (
             <motion.div
               className="aspect-video w-full rounded-sm overflow-hidden border border-border bg-black"
               initial={{ opacity: 0, y: 40 }}
@@ -314,25 +341,30 @@ export default function EpisodeDetail() {
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 rounded-sm overflow-hidden relative group block focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="block rounded-sm overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Watch this episode on YouTube"
             >
-              {heroImageUrl ? (
-                <img src={heroImageUrl} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
-              ) : (
-                <div className="w-full h-full bg-muted" aria-hidden />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/30 to-transparent" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="w-24 h-24 bg-accent rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                  <svg className="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </span>
+              <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 relative overflow-hidden group">
+                <PreferredYoutubeImageSlot
+                  resetKey={episode.slug}
+                  rssImage={episode.image}
+                  youtubeVideoId={ep.youtubeVideoId}
+                  youtubeThumbnailPreferred={ep.youtubeThumbnail}
+                  awaitYoutubeOverlay={false}
+                  imageClassName="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                />
+                <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/30 to-transparent" />
+                <div className="absolute inset-0 z-[15] flex items-center justify-center pointer-events-none">
+                  <span className="w-24 h-24 bg-accent rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg pointer-events-auto">
+                    <svg className="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </span>
+                </div>
+                <p className="absolute bottom-4 left-4 right-4 z-[16] text-center text-sm text-white/90 font-medium drop-shadow-md pointer-events-none">
+                  Opens on YouTube — watch in the browser or the YouTube app
+                </p>
               </div>
-              <p className="absolute bottom-4 left-4 right-4 text-center text-sm text-white/90 font-medium drop-shadow-md">
-                Opens on YouTube — watch in the browser or the YouTube app
-              </p>
             </motion.a>
           ) : (
             <motion.div
@@ -341,12 +373,15 @@ export default function EpisodeDetail() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 rounded-sm overflow-hidden relative"
             >
-              {heroImageUrl ? (
-                <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-muted" aria-hidden />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-transparent to-transparent pointer-events-none" />
+              <PreferredYoutubeImageSlot
+                resetKey={episode.slug}
+                rssImage={episode.image}
+                youtubeVideoId={ep.youtubeVideoId}
+                youtubeThumbnailPreferred={ep.youtubeThumbnail}
+                awaitYoutubeOverlay={false}
+                imageClassName="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/50 via-transparent to-transparent" />
             </motion.div>
           )}
 
@@ -673,7 +708,6 @@ export default function EpisodeDetail() {
                   relDisplay.episodeNumber !== undefined
                     ? String(relDisplay.episodeNumber)
                     : relDisplay.id.slice(0, 8);
-                const relImg = relDisplay.youtubeThumbnail ?? relDisplay.image;
                 return (
                   <Link key={relDisplay.id} to={episodePathFromSlug(relDisplay.slug)} className="group block">
                     <motion.div
@@ -683,17 +717,20 @@ export default function EpisodeDetail() {
                       viewport={{ once: true, margin: '-100px' }}
                     >
                       <div className="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-4 relative overflow-hidden">
-                        {relImg ? (
-                          <img
-                            src={relImg}
-                            alt=""
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted" aria-hidden />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
-                        <div className="absolute bottom-4 right-4">
+                        {/*
+                          Same `PreferredYoutubeImageSlot` + `awaitYoutubeCatalog` contract as the archive
+                          cards — shimmer until the merged YouTube snapshot has been applied for this slug.
+                        */}
+                        <PreferredYoutubeImageSlot
+                          resetKey={rel.slug}
+                          rssImage={rel.image}
+                          youtubeVideoId={relDisplay.youtubeVideoId}
+                          youtubeThumbnailPreferred={relDisplay.youtubeThumbnail}
+                          awaitYoutubeOverlay={awaitYoutubeCatalog}
+                          imageClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
+                        <div className="absolute bottom-4 right-4 z-[6] pointer-events-none">
                           <span
                             className="text-4xl text-white/20 group-hover:text-white/30 transition-all"
                             style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}

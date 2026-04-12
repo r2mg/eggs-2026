@@ -86,15 +86,19 @@ export function computeEpisodeYoutubeOverlay(
   };
 }
 
+/**
+ * One overlay entry per episode slug: a matched object, or **`null`** when we tried and found
+ * no confident YouTube video. Callers can tell “still loading” (no key yet) from “RSS-only for
+ * media” (`null`) — same contract as the archive batch map.
+ */
 export function buildYoutubeOverlaysForEpisodes(
   episodes: Episode[],
   data: YouTubeChannelData,
-): Record<string, YoutubeEpisodeOverlay> {
+): Record<string, YoutubeEpisodeOverlay | null> {
   const catalog = youtubeCandidatesFromChannelData(data);
-  const out: Record<string, YoutubeEpisodeOverlay> = {};
+  const out: Record<string, YoutubeEpisodeOverlay | null> = {};
   for (const ep of episodes) {
-    const o = computeEpisodeYoutubeOverlay(ep, data, catalog);
-    if (o) out[ep.slug] = o;
+    out[ep.slug] = computeEpisodeYoutubeOverlay(ep, data, catalog);
   }
   return out;
 }
