@@ -236,7 +236,6 @@ export default function EpisodeDetail() {
   const summaryPlainFallback =
     episode.summary?.trim() || 'No short summary was extracted for this episode.';
   const summaryHtmlFromRss = rssEpisodeDesc.summaryHtml;
-  const bodyHtmlFromRss = rssEpisodeDesc.bodyHtml;
   const creditsHtmlFromRss = rssEpisodeDesc.creditsHtml;
   const chapters = ep.chapters ?? [];
   const guestName = ep.guest?.trim();
@@ -481,10 +480,9 @@ export default function EpisodeDetail() {
                   Episode Summary
                 </h2>
                 {/*
-                  Summary is shown **once**:
-                  - Prefer the real `<p>` block(s) under the Summary heading inside the RSS HTML.
-                  - Otherwise one plain paragraph from the parser’s `summary` field (same feed, not YouTube).
-                  Overview is the remaining description HTML (no Credits tail, no duplicate of the blurb).
+                  Short episode summary only (from RSS). We **do not** dump the rest of the show-notes
+                  HTML here — that block still included Takeaways / Chapters markup, and this page already
+                  renders those sections in a clearer, styled form farther down (still parsed from the same RSS).
                 */}
                 {summaryHtmlFromRss ? (
                   <div
@@ -497,15 +495,6 @@ export default function EpisodeDetail() {
                 ) : (
                   <p className="text-xl text-muted-foreground leading-relaxed mb-6">{summaryPlainFallback}</p>
                 )}
-                {bodyHtmlFromRss ? (
-                  <div
-                    className={`text-lg text-muted-foreground leading-relaxed ${RSS_INNER_HTML_CLASS}`}
-                    // eslint-disable-next-line react/no-danger -- trusted podcast RSS HTML only
-                    dangerouslySetInnerHTML={{
-                      __html: sanitizeRssBodyHtmlForInnerHtml(bodyHtmlFromRss),
-                    }}
-                  />
-                ) : null}
               </motion.div>
 
               {takeaways.length > 0 ? (
