@@ -5,9 +5,9 @@ import { motion } from 'motion/react';
 import { ARCHIVE_INITIAL_PAGE_SIZE, ARCHIVE_LOAD_MORE_SIZE } from '../config/archiveUi';
 import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
 import { useYoutubeArchiveBatchOverlays } from '../hooks/useYoutubeArchiveBatchOverlays';
-import { useYoutubeArchiveLiteChannelData } from '../hooks/useYoutubeArchiveLiteChannelData';
+import { useYoutubeLiteChannelData } from '../hooks/useYoutubeLiteChannelData';
 import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
-import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
+import { clearYoutubeChannelCache, mergeYoutubeCatalogForMatching } from '../lib/youtubeChannelCache';
 import { episodePathFromSlug } from '../episodePaths';
 import { resolvePodcastRssUrl, stripHtmlTags } from '../lib/rss';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
@@ -39,7 +39,7 @@ export default function Episodes() {
   /** Full channel (slow) — used as the catalog for matching once it exists; until then we use lite. */
   const { data: fullChannelData, retry: retryFullChannel } = useYoutubeChannelData();
   /** Lite snapshot (fast) — lets the first visible batch match YouTube before the full merge finishes. */
-  const { data: liteChannelData, hasApiKey, retry: retryLiteChannel } = useYoutubeArchiveLiteChannelData();
+  const { data: liteChannelData, hasApiKey, retry: retryLiteChannel } = useYoutubeLiteChannelData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('All Episodes');
@@ -65,8 +65,8 @@ export default function Episodes() {
     retryFullChannel();
   };
 
-  /** Prefer the richer catalog when the slow fetch completes; otherwise the lite snapshot is enough to start. */
-  const youtubeCatalog = fullChannelData ?? liteChannelData ?? null;
+  /** Same merge rule as the homepage — one source of truth for matching rules. */
+  const youtubeCatalog = mergeYoutubeCatalogForMatching(fullChannelData, liteChannelData);
 
   /**
    * Step 1 — sort without waiting on YouTube (featured starts as “newest” order, then we re-order below

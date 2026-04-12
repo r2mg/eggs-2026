@@ -1,7 +1,8 @@
 /**
- * Home page — RSS list from `useRssEpisodes()` (stable). YouTube is a **small** enrichment
- * layer (`useYoutubeHomeChannelData`): thumbnails + featured order from a lite channel
- * snapshot, and topic row counts from playlist metadata — not the full archive merge.
+ * Home page — RSS list from `useRssEpisodes()` (stable). YouTube enrichment uses the **same**
+ * matching rules as the archive (`buildYoutubeOverlaysForEpisodes` + merged catalog), but
+ * loads the **lite** snapshot first, then layers in the **full** channel when available
+ * (shared global cache — often free if you already visited the archive this session).
  */
 import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -10,12 +11,13 @@ import { motion, useScroll, useTransform } from 'motion/react';
 import { expectedTopicPlaylistTitles } from '../lib/youtube';
 import { titleMatchesPlaylist } from '../config/youtubeChannel';
 import { useRssEpisodes } from '../hooks/useRssEpisodes';
-import { useYoutubeHomeChannelData } from '../hooks/useYoutubeHomeChannelData';
+import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
+import { useYoutubeLiteChannelData } from '../hooks/useYoutubeLiteChannelData';
 import { buildYoutubeOverlaysForEpisodes } from '../lib/computeEpisodeYoutubeOverlay';
+import { mergeYoutubeCatalogForMatching } from '../lib/youtubeChannelCache';
 import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
-import YouTubePosterImage from './YouTubePosterImage';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 
 const FALLBACK_TOPIC = 'Episodes';
@@ -44,12 +46,17 @@ export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
   const { data: rssData, loading, error } = useRssEpisodes();
   /**
-   * Homepage uses a **small** YouTube snapshot only (uploads + Featured + Start Here).
-   * The full channel merge runs on the archive page — not here — so this route stays fast.
+   * Two loads, one merged view for **matching** (same idea as the archive’s `full ?? lite`):
+   * - **Lite** — small, fast (always started here and on `/episodes`).
+   * - **Full** — large merge; shares `getYoutubeChannelDataCached()` with the archive so it
+   *   may already be in memory, or finishes in the background without blocking lite-first art.
    */
-  const { data: channelData, loading: youtubeLoading, hasApiKey } = useYoutubeHomeChannelData();
-  /** When an API key exists, wait for the home YouTube fetch before picking RSS vs YouTube art (see `PreferredYoutubeImageSlot`). */
-  const awaitYoutubeOverlay = hasApiKey && youtubeLoading;
+  const { data: fullChannelData, loading: fullChannelLoading } = useYoutubeChannelData();
+  const { data: liteChannelData, loading: liteChannelLoading, hasApiKey } = useYoutubeLiteChannelData();
+  const channelData = mergeYoutubeCatalogForMatching(fullChannelData, liteChannelData);
+  /** Shimmer only until we have *some* catalog to run `buildYoutubeOverlaysForEpisodes` against */
+  const youtubeLoading = hasApiKey && !channelData && (liteChannelLoading || fullChannelLoading);
+  const awaitYoutubeOverlay = youtubeLoading;
 
   const latestBase = useMemo(() => {
     if (loading || error || rssData.length === 0) return null;
@@ -162,29 +169,14 @@ export default function Home() {
                   Listen Now
                 </Link>
                 {latest?.youtubeUrl && latest.youtubeVideoId ? (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <a
-                      href={latest.youtubeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 overflow-hidden rounded-sm border-2 border-white/80 shadow-md hover:opacity-95 transition-opacity"
-                      aria-label="Watch on YouTube"
-                    >
-                      <YouTubePosterImage
-                        videoId={latest.youtubeVideoId}
-                        preferredUrl={latest.youtubeThumbnail}
-                        className="h-14 w-[6.5rem] object-cover bg-white/10"
-                      />
-                    </a>
-                    <a
-                      href={latest.youtubeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block border-2 border-white text-white px-8 py-4 text-base font-medium hover:bg-white hover:text-accent transition-all"
-                    >
-                      Watch on YouTube
-                    </a>
-                  </div>
+                  <a
+                    href={latest.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block border-2 border-white text-white px-8 py-4 text-base font-medium hover:bg-white hover:text-accent transition-all"
+                  >
+                    Watch on YouTube
+                  </a>
                 ) : (
                   <span
                     className="inline-block border-2 border-white/40 text-white/60 px-8 py-4 text-base font-medium cursor-default"
@@ -300,29 +292,14 @@ export default function Home() {
                       Listen Now
                     </Link>
                     {latest.youtubeUrl && latest.youtubeVideoId ? (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <a
-                          href={latest.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 overflow-hidden rounded-sm border border-border shadow-sm hover:opacity-95 transition-opacity"
-                          aria-label="Watch on YouTube"
-                        >
-                          <YouTubePosterImage
-                            videoId={latest.youtubeVideoId}
-                            preferredUrl={latest.youtubeThumbnail}
-                            className="h-12 w-[5.25rem] object-cover bg-muted"
-                          />
-                        </a>
-                        <a
-                          href={latest.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block border-2 border-foreground px-8 py-4 text-sm font-medium hover:bg-foreground hover:text-background transition-all"
-                        >
-                          Watch on YouTube
-                        </a>
-                      </div>
+                      <a
+                        href={latest.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block border-2 border-foreground px-8 py-4 text-sm font-medium hover:bg-foreground hover:text-background transition-all"
+                      >
+                        Watch on YouTube
+                      </a>
                     ) : (
                       <span
                         className="inline-block border-2 border-border px-8 py-4 text-sm font-medium text-muted-foreground cursor-default"

@@ -39,11 +39,29 @@ function formatDurationLabel(raw: string | undefined): string {
   return raw.trim();
 }
 
-/** Plain-text continuation under the short summary (from full show notes HTML) */
+/** Plain-text from the RSS `<description>` / show notes only (never merged YouTube fields). */
 function longDescriptionPlain(ep: Episode): string {
   if (!ep.descriptionHtml) return '';
   const plain = stripHtmlTags(ep.descriptionHtml).replace(/\s+/g, ' ').trim();
   return plain.length > 800 ? `${plain.slice(0, 800)}…` : plain;
+}
+
+/**
+ * The RSS parser often sets `summary` from the first part of the same HTML description.
+ * Without this step, “Episode Summary” would show the short summary and then repeat it
+ * at the start of the longer body. We keep the RSS `summary` and only show **new** text below.
+ */
+function continuedDescriptionAfterRssSummary(ep: Episode): string {
+  const summary = ep.summary?.trim() ?? '';
+  const plain = longDescriptionPlain(ep);
+  if (!summary || !plain) return plain;
+  try {
+    const escaped = summary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    const stripped = plain.replace(new RegExp(`^\\s*${escaped}\\s*`, 'i'), '').trim();
+    return stripped;
+  } catch {
+    return plain;
+  }
 }
 
 /**
@@ -216,8 +234,11 @@ export default function EpisodeDetail() {
   const displayNum = ep.episodeNumber ?? '—';
   const dateStr = format(new Date(ep.publishedAt), 'MMMM d, yyyy');
   const durationStr = formatDurationLabel(ep.duration);
-  const summaryText = ep.summary?.trim() || 'No short summary was extracted for this episode.';
-  const overviewText = longDescriptionPlain(ep);
+  /** Short blurb always comes from the RSS row — not from any YouTube merge (there is no YouTube summary field, but this makes the rule obvious for readers of the code). */
+  const summaryText =
+    episode.summary?.trim() || 'No short summary was extracted for this episode.';
+  /** Longer copy is still from RSS show notes, with the short summary stripped when it would duplicate. */
+  const overviewText = continuedDescriptionAfterRssSummary(episode);
   const chapters = ep.chapters ?? [];
   const guestName = ep.guest?.trim();
   const heroImageUrl = ep.youtubeThumbnail ?? ep.image;

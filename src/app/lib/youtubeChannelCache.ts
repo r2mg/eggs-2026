@@ -62,3 +62,17 @@ export function getYoutubeChannelHomeLiteCached(): Promise<YouTubeChannelData> {
   }
   return inflightHomeLite;
 }
+
+/**
+ * One catalog object for **matching** RSS episodes to YouTube (same rules as
+ * `buildYoutubeOverlaysForEpisodes` / `computeEpisodeYoutubeOverlay` everywhere).
+ *
+ * Prefer the **full** channel merge when it exists (complete `videosById` for older episodes);
+ * otherwise use the **lite** snapshot (fast, smaller caps — see `fetchYouTubeChannelHomeLite`).
+ */
+export function mergeYoutubeCatalogForMatching(
+  full: YouTubeChannelData | null | undefined,
+  lite: YouTubeChannelData | null | undefined,
+): YouTubeChannelData | null {
+  return full ?? lite ?? null;
+}

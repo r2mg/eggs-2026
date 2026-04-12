@@ -4,11 +4,13 @@ import type { YouTubeChannelData } from '../lib/youtube';
 import { clearYoutubeChannelCache, getYoutubeChannelHomeLiteCached } from '../lib/youtubeChannelCache';
 
 /**
- * Homepage-only YouTube load: **small** snapshot (uploads + Featured + Start Here + short
- * excluded-list scan). Same return shape as `useYoutubeChannelData`, but does not pull
- * every topic playlist’s items — that work stays on the archive route.
+ * **Lite** YouTube channel snapshot (shared by Home + Archive).
+ *
+ * Loads the same small payload as the homepage originally did: uploads + Featured + Start Here
+ * (see `fetchYouTubeChannelHomeLite` in `youtube.ts`). Uses `getYoutubeChannelHomeLiteCached`
+ * so only one network request runs no matter how many components call this hook.
  */
-export type UseYoutubeHomeChannelDataResult = {
+export type UseYoutubeLiteChannelDataResult = {
   data: YouTubeChannelData | null;
   loading: boolean;
   error: string | null;
@@ -16,7 +18,7 @@ export type UseYoutubeHomeChannelDataResult = {
   hasApiKey: boolean;
 };
 
-export function useYoutubeHomeChannelData(): UseYoutubeHomeChannelDataResult {
+export function useYoutubeLiteChannelData(): UseYoutubeLiteChannelDataResult {
   const [data, setData] = useState<YouTubeChannelData | null>(null);
   const [loading, setLoading] = useState(() => !!getYouTubeApiKey());
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export function useYoutubeHomeChannelData(): UseYoutubeHomeChannelDataResult {
         if (cancelled) return;
         setData(null);
         setError(e instanceof Error ? e.message : String(e));
-        console.error('[EGGS YouTube API] useYoutubeHomeChannelData: fetch failed.', e);
+        console.error('[EGGS YouTube API] useYoutubeLiteChannelData: fetch failed.', e);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
