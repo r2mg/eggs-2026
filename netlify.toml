@@ -6,6 +6,15 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Same-origin RSS path the app fetches in production (see `resolvePodcastRssUrl` + redirect below).
+  VITE_PODCAST_RSS_URL = "/podcast-rss.xml"
+
+# Proxy podcast RSS so the browser never hits Anchor cross-origin on Netlify.
+[[redirects]]
+  from = "/podcast-rss.xml"
+  to = "https://anchor.fm/s/fc17887c/podcast/rss"
+  status = 200
+  force = true
 
 # Client-side routing (e.g. React Router): every path serves index.html
 [[redirects]]

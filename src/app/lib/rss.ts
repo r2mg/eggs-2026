@@ -37,10 +37,9 @@ export const EGGS_LISTEN_LINKS = {
 /**
  * Which URL `fetchRssEpisodes` uses by default.
  *
- * - In **development**, we default to `/podcast-rss.xml` so Vite can proxy the
- *   request and avoid browser CORS issues.
- * - In **production**, we call Anchor directly. If your host blocks that, set
- *   `VITE_PODCAST_RSS_URL` in `.env` to your own same-origin proxy path.
+ * - **Development:** `/podcast-rss.xml` (Vite proxy in `vite.config.ts`).
+ * - **Production:** `VITE_PODCAST_RSS_URL` when set (Netlify sets `/podcast-rss.xml` + rewrite in `netlify.toml`).
+ * - Otherwise Anchor’s public RSS URL (direct fetch; may hit CORS on some hosts).
  */
 export function resolvePodcastRssUrl(): string {
   const env = import.meta.env;

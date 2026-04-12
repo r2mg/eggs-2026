@@ -5,7 +5,16 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "setup:env": "node scripts/setup-local-env.mjs",
+    "netlify:login": "netlify login",
+    "netlify:link": "netlify link",
+    "netlify:status": "netlify status",
+    "netlify:env:list": "netlify env:list",
+    "netlify:env:pull": "netlify env:pull --yes",
+    "netlify:dev": "netlify dev",
+    "netlify:deploy": "npm run build && netlify deploy --dir=dist",
+    "netlify:deploy:prod": "npm run build && netlify deploy --dir=dist --prod"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

@@ -105,12 +105,16 @@ export function getYouTubeApiKey(): string | null {
   if (typeof raw !== 'string' || !raw.trim()) {
     if (!loggedMissingKey) {
       loggedMissingKey = true;
-      console.error(
-        '[EGGS YouTube API] Missing VITE_YOUTUBE_API_KEY.\n' +
-          'Add it to a root `.env` file, e.g.:\n' +
-          '  VITE_YOUTUBE_API_KEY=your_key_here\n' +
-          'Then restart the dev server. The site will keep working with RSS only.',
-      );
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[EGGS YouTube API] Missing VITE_YOUTUBE_API_KEY.\n' +
+            'Copy `.env.example` to `.env` in the project root and set:\n' +
+            '  VITE_YOUTUBE_API_KEY=your_key_here\n' +
+            'Then restart the dev server. The site keeps working on RSS only without this key.',
+        );
+      } else {
+        console.info('[EGGS YouTube API] No VITE_YOUTUBE_API_KEY — YouTube enrichment off (RSS only).');
+      }
     }
     return null;
   }
