@@ -204,6 +204,50 @@ export function extractTakeawaysFromDescriptionHtml(html: string): string[] | un
   return out.length > 0 ? out : undefined;
 }
 
+/** Result of {@link splitRssDescriptionAtCredits} — both slices stay RSS-sourced HTML. */
+export type RssDescriptionCreditsSplit = {
+  /** Show notes **before** the trailing Credits block (trimmed). */
+  mainHtml: string | undefined;
+  /** Everything from the first “Credits” heading through the end, or `undefined` if none. */
+  creditsHtml: string | undefined;
+};
+
+/**
+ * Many EGGS show notes end with a **Credits** section in the Anchor HTML. The detail page
+ * wants that in the sidebar while the main column stays summary + story body only.
+ *
+ * Detection is forgiving: several common HTML shapes plus a plain `Credits` after line breaks.
+ */
+export function splitRssDescriptionAtCredits(descriptionHtml: string | undefined): RssDescriptionCreditsSplit {
+  if (!descriptionHtml?.trim()) {
+    return { mainHtml: undefined, creditsHtml: undefined };
+  }
+  const html = descriptionHtml;
+
+  const patterns: RegExp[] = [
+    /<p>\s*<strong>\s*Credits\s*<\/strong>\s*<\/p>/i,
+    /<strong>\s*Credits\s*<\/strong>\s*<\/p>/i,
+    /<(?:p|div|h[1-6])(?:\s[^>]*)?>\s*(?:<(?:strong|b)[^>]*>\s*)?Credits\b/i,
+    /(?:<br\s*\/?>|\r?\n)+\s*Credits\b/i,
+  ];
+
+  for (const re of patterns) {
+    const m = re.exec(html);
+    if (m && m.index !== undefined) {
+      const mainHtml = html.slice(0, m.index).trimEnd();
+      const creditsHtml = html.slice(m.index).trimStart();
+      if (creditsHtml.length > 0) {
+        return {
+          mainHtml: mainHtml.length > 0 ? mainHtml : undefined,
+          creditsHtml,
+        };
+      }
+    }
+  }
+
+  return { mainHtml: html, creditsHtml: undefined };
+}
+
 // ---------------------------------------------------------------------------
 // Guest (heuristic for this podcast’s titles)
 // ---------------------------------------------------------------------------

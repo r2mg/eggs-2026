@@ -9,9 +9,11 @@ import { clearYoutubeChannelCache } from '../lib/youtubeChannelCache';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import {
+  decodeBasicHtmlEntities,
   extractApplePodcastsUrl,
   extractTakeawaysFromDescriptionHtml,
   resolvePodcastRssUrl,
+  splitRssDescriptionAtCredits,
   stripHtmlTags,
 } from '../lib/rss';
 
@@ -39,10 +41,10 @@ function formatDurationLabel(raw: string | undefined): string {
   return raw.trim();
 }
 
-/** Plain-text from the RSS `<description>` / show notes only (never merged YouTube fields). */
-function longDescriptionPlain(ep: Episode): string {
-  if (!ep.descriptionHtml) return '';
-  const plain = stripHtmlTags(ep.descriptionHtml).replace(/\s+/g, ' ').trim();
+/** Plain-text from a slice of RSS HTML (never merged YouTube fields). */
+function longDescriptionPlainFromHtml(descriptionHtml: string | undefined): string {
+  if (!descriptionHtml?.trim()) return '';
+  const plain = stripHtmlTags(descriptionHtml).replace(/\s+/g, ' ').trim();
   return plain.length > 800 ? `${plain.slice(0, 800)}…` : plain;
 }
 
@@ -50,13 +52,17 @@ function longDescriptionPlain(ep: Episode): string {
  * The RSS parser often sets `summary` from the first part of the same HTML description.
  * Without this step, “Episode Summary” would show the short summary and then repeat it
  * at the start of the longer body. We keep the RSS `summary` and only show **new** text below.
+ * `mainDescriptionHtml` should already exclude the trailing Credits block when present.
  */
-function continuedDescriptionAfterRssSummary(ep: Episode): string {
-  const summary = ep.summary?.trim() ?? '';
-  const plain = longDescriptionPlain(ep);
-  if (!summary || !plain) return plain;
+function continuedDescriptionAfterRssSummaryFromParts(
+  summary: string | undefined,
+  mainDescriptionHtml: string | undefined,
+): string {
+  const summaryT = summary?.trim() ?? '';
+  const plain = longDescriptionPlainFromHtml(mainDescriptionHtml);
+  if (!summaryT || !plain) return plain;
   try {
-    const escaped = summary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    const escaped = summaryT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
     const stripped = plain.replace(new RegExp(`^\\s*${escaped}\\s*`, 'i'), '').trim();
     return stripped;
   } catch {
@@ -102,9 +108,18 @@ export default function EpisodeDetail() {
     return bySlug ?? byNumber ?? null;
   }, [rssCatalog, loading, error, slugParam]);
 
-  const takeaways = useMemo(
-    () => extractTakeawaysFromDescriptionHtml(episode?.descriptionHtml ?? '') ?? [],
+  /** Split early so Takeaways / main body never accidentally read past the Credits block. */
+  const rssDetailSplit = useMemo(
+    () => splitRssDescriptionAtCredits(episode?.descriptionHtml),
     [episode?.descriptionHtml],
+  );
+
+  const takeaways = useMemo(
+    () =>
+      extractTakeawaysFromDescriptionHtml(
+        rssDetailSplit.mainHtml ?? episode?.descriptionHtml ?? '',
+      ) ?? [],
+    [episode?.descriptionHtml, rssDetailSplit.mainHtml],
   );
 
   // Prefer the next three older episodes in publish order; if we’re at the end of the list, show any other recent ones
@@ -234,11 +249,20 @@ export default function EpisodeDetail() {
   const displayNum = ep.episodeNumber ?? '—';
   const dateStr = format(new Date(ep.publishedAt), 'MMMM d, yyyy');
   const durationStr = formatDurationLabel(ep.duration);
-  /** Short blurb always comes from the RSS row — not from any YouTube merge (there is no YouTube summary field, but this makes the rule obvious for readers of the code). */
+  /** Short blurb always comes from the RSS row — not from any YouTube merge. */
   const summaryText =
     episode.summary?.trim() || 'No short summary was extracted for this episode.';
-  /** Longer copy is still from RSS show notes, with the short summary stripped when it would duplicate. */
-  const overviewText = continuedDescriptionAfterRssSummary(episode);
+  /** Main-column body: RSS show notes **before** the Credits section, minus duplicate intro vs `summary`. */
+  const overviewText = continuedDescriptionAfterRssSummaryFromParts(
+    episode.summary,
+    rssDetailSplit.mainHtml ?? episode.descriptionHtml,
+  );
+  /** Sidebar Credits box — plain text from the RSS HTML slice after “Credits”. */
+  const creditsSidebarPlain = rssDetailSplit.creditsHtml
+    ? stripHtmlTags(decodeBasicHtmlEntities(rssDetailSplit.creditsHtml))
+        .replace(/\s+/g, ' ')
+        .trim()
+    : '';
   const chapters = ep.chapters ?? [];
   const guestName = ep.guest?.trim();
   const heroImageUrl = ep.youtubeThumbnail ?? ep.image;
@@ -538,9 +562,23 @@ export default function EpisodeDetail() {
                 viewport={{ once: true, margin: '-100px' }}
               >
                 <h3 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                  {guestName ? `About ${guestName}` : 'About this episode'}
+                  {creditsSidebarPlain ? 'Show Credits' : guestName ? `About ${guestName}` : 'Episode info'}
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">{summaryText}</p>
+                {creditsSidebarPlain ? (
+                  <>
+                    {guestName ? (
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Guest: {guestName}</p>
+                    ) : null}
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4 whitespace-pre-wrap">
+                      {creditsSidebarPlain}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    Episode details, listen links, and chapters on this page all come from the podcast feed. Open the
+                    summary for the full story—credits will appear here when the show notes include a Credits section.
+                  </p>
+                )}
                 {ep.spotifyUrl ? (
                   <a
                     href={ep.spotifyUrl}
