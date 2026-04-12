@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { expectedTopicPlaylistTitles } from '../lib/youtube';
-import { titleMatchesPlaylist } from '../config/youtubeChannel';
+import { titleMatchesPlaylist, YOUTUBE_CHANNEL_PAGE_URL } from '../config/youtubeChannel';
 import { useRssEpisodes } from '../hooks/useRssEpisodes';
 import { useYoutubeChannelData } from '../hooks/useYoutubeChannelData';
 import { useYoutubeLiteChannelData } from '../hooks/useYoutubeLiteChannelData';
@@ -44,6 +44,8 @@ function orderedSlugKey(slugs: string[]): string {
 
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
+  /** “Learn More” scroll target — first section below the full-screen hero (“Latest Episode”). */
+  const postHeroSectionRef = useRef<HTMLElement | null>(null);
   const { data: rssData, loading, error } = useRssEpisodes();
   /**
    * Two loads, one merged view for **matching** (same idea as the archive’s `full ?? lite`):
@@ -125,17 +127,33 @@ export default function Home() {
   const textY = useTransform(scrollYProgress, [0, 1], [0, 100]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  const listenHref = latestBase ? episodePathFromSlug(latestBase.slug) : '/episodes';
-
   return (
     <>
-      <section ref={heroRef} className="relative h-screen overflow-hidden bg-accent">
-        <motion.div className="absolute inset-0" style={{ y: backgroundY }}>
-          <div className="absolute inset-0 bg-accent/90 z-10" />
+      {/*
+        Hero stacking (why it used to look “more orange” than the wash opacity alone suggested):
+        1. The photo sits at `opacity-20`, so ~80% of that layer is transparent to whatever is *under* it.
+        2. The section used to be `bg-accent` (solid orange) — so most of the “image” area was still
+           solid brand color before the wash even applied. That reads like a second orange layer.
+        3. Then `bg-accent/70` sits on top of the photo for the intentional tint (stronger wash than /50).
+
+        Base is neutral so transparency in the photo reveals darkness, not more orange; only the wash
+        adds accent color on top of the pixels.
+      */}
+      <section ref={heroRef} className="relative h-screen overflow-hidden bg-black">
+        {/*
+          Layer is slightly taller than the viewport so parallax (`backgroundY`, max -100px) does not
+          expose a gap at the bottom. Only ~100px extra — more than that made `object-cover` feel
+          overly zoomed. `object-top` keeps the top of the photo aligned to the top of this layer.
+        */}
+        <motion.div
+          className="absolute left-0 right-0 top-0 z-0 h-[calc(100vh+100px)]"
+          style={{ y: backgroundY }}
+        >
+          <div className="absolute inset-0 bg-accent/70 z-10" />
           <img
             src="https://images.unsplash.com/photo-1632800237110-f9c87acc2222?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1920"
             alt=""
-            className="w-full h-full object-cover opacity-20"
+            className="absolute inset-0 z-0 h-full w-full object-cover object-top opacity-35"
           />
         </motion.div>
 
@@ -162,29 +180,29 @@ export default function Home() {
                 Conversations around creativity, entrepreneurship, branding, and the people behind interesting work.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
-                <Link
-                  to={listenHref}
-                  className="inline-block bg-foreground text-background px-8 py-4 text-base font-medium hover:bg-foreground/90 transition-all"
+                {/*
+                  Both buttons use `border-2`: the YouTube control needs a visible stroke; Learn More uses
+                  `border-transparent` so the outer box matches — otherwise the 2px border sits outside the
+                  filled button and the primary looks smaller side-by-side.
+                */}
+                <button
+                  type="button"
+                  aria-label="Learn more — scroll to the latest episode section"
+                  className="inline-block border-2 border-transparent bg-foreground text-background px-8 py-4 text-base font-medium hover:bg-foreground/90 transition-all"
+                  onClick={() =>
+                    postHeroSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
                 >
-                  Listen Now
-                </Link>
-                {latest?.youtubeUrl && latest.youtubeVideoId ? (
-                  <a
-                    href={latest.youtubeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block border-2 border-white text-white px-8 py-4 text-base font-medium hover:bg-white hover:text-accent transition-all"
-                  >
-                    Watch on YouTube
-                  </a>
-                ) : (
-                  <span
-                    className="inline-block border-2 border-white/40 text-white/60 px-8 py-4 text-base font-medium cursor-default"
-                    title="No matching YouTube video found (show notes or playlist)"
-                  >
-                    Watch on YouTube
-                  </span>
-                )}
+                  Learn More
+                </button>
+                <a
+                  href={YOUTUBE_CHANNEL_PAGE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block border-2 border-white text-white px-8 py-4 text-base font-medium hover:bg-white hover:text-accent transition-all"
+                >
+                  Watch on YouTube
+                </a>
               </div>
             </motion.div>
           </motion.div>
@@ -202,7 +220,11 @@ export default function Home() {
         </motion.div>
       </section>
 
-      <section className="py-24 bg-background relative overflow-hidden">
+      <section
+        ref={postHeroSectionRef}
+        id="home-latest-episode"
+        className="scroll-mt-24 py-24 bg-background relative overflow-hidden"
+      >
         <div className="absolute top-20 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
 
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
@@ -285,11 +307,15 @@ export default function Home() {
                     <span>{formatDurationLabel(latest.duration)}</span>
                   </div>
                   <div className="flex items-center gap-4 flex-wrap">
+                    {/*
+                      Same border box as the hero CTAs: primary uses `border-2 border-transparent` so it
+                      matches the outlined “Watch on YouTube” button width/height (that stroke sits outside padding).
+                    */}
                     <Link
                       to={episodePathFromSlug(latest.slug)}
-                      className="inline-block bg-accent text-accent-foreground px-8 py-4 text-sm font-medium hover:opacity-90 transition-opacity"
+                      className="inline-block border-2 border-transparent bg-accent text-accent-foreground px-8 py-4 text-sm font-medium hover:opacity-90 transition-opacity"
                     >
-                      Listen Now
+                      Show Details
                     </Link>
                     {latest.youtubeUrl && latest.youtubeVideoId ? (
                       <a

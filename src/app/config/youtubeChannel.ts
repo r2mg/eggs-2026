@@ -21,6 +21,9 @@ export const YOUTUBE_CHANNEL_ID = 'UCz53WsQ9KmEJb5yKeMTsmGg';
 /** Human-friendly channel link (not used by the API, for your own reference) */
 export const YOUTUBE_CHANNEL_HANDLE_URL = 'https://www.youtube.com/@EggsThePodcast';
 
+/** Custom channel URL — use for “Watch on YouTube” style CTAs that should open the channel, not one video. */
+export const YOUTUBE_CHANNEL_PAGE_URL = 'https://www.youtube.com/EggsThePodcast';
+
 /**
  * Editorial playlists — the app finds them by **title** after listing all channel playlists.
  * Rename your YouTube playlists to match (or change these strings to match your playlists).

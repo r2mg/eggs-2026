@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 
 export default function About() {
   return (
@@ -335,57 +336,67 @@ export default function About() {
       <section className="py-24 bg-[#FFF5EE]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 gap-8">
-            <motion.div
-              className="p-16 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true, margin: "-100px" }}
-              whileHover={{ y: -8 }}
+            <Link
+              to="/be-a-guest"
+              className="block h-full text-inherit no-underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-              <div className="absolute top-8 right-8 text-8xl text-accent/10 group-hover:text-accent/20 transition-all group-hover:rotate-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                !
-              </div>
-              <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                Be a Guest
-              </h3>
-              <p className="text-lg text-muted-foreground mb-10 leading-relaxed relative z-10">
-                Have a story worth sharing? We'd love to hear from you.
-              </p>
-              <span className="text-accent font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">
-                Apply Now
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </span>
-            </motion.div>
+              <motion.div
+                className="p-16 bg-white border-2 border-accent relative overflow-hidden group cursor-pointer h-full"
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true, margin: "-100px" }}
+                whileHover={{ y: -8 }}
+              >
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
+                <div className="absolute top-8 right-8 text-8xl text-accent/10 group-hover:text-accent/20 transition-all group-hover:rotate-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                  !
+                </div>
+                <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  Be a Guest
+                </h3>
+                <p className="text-lg text-muted-foreground mb-10 leading-relaxed relative z-10">
+                  Have a story worth sharing? We'd love to hear from you.
+                </p>
+                <span className="text-accent font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">
+                  Apply Now
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </motion.div>
+            </Link>
 
-            <motion.div
-              className="p-16 bg-accent text-white relative overflow-hidden group cursor-pointer"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              viewport={{ once: true, margin: "-100px" }}
-              whileHover={{ y: -8 }}
+            <Link
+              to="/sponsor"
+              className="block h-full text-inherit no-underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF5EE]"
             >
-              <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-              <div className="absolute top-8 right-8 text-8xl text-white/10 group-hover:text-white/20 transition-all group-hover:-rotate-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                $
-              </div>
-              <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                Sponsor EGGS!
-              </h3>
-              <p className="text-lg text-white/90 mb-10 leading-relaxed relative z-10">
-                Reach our audience of creative professionals and entrepreneurs.
-              </p>
-              <span className="text-white font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">
-                Learn More
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </span>
-            </motion.div>
+              <motion.div
+                className="p-16 bg-accent text-white relative overflow-hidden group cursor-pointer h-full"
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                viewport={{ once: true, margin: "-100px" }}
+                whileHover={{ y: -8 }}
+              >
+                <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
+                <div className="absolute top-8 right-8 text-8xl text-white/10 group-hover:text-white/20 transition-all group-hover:-rotate-12" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                  $
+                </div>
+                <h3 className="text-5xl mb-6 relative z-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  Sponsor EGGS!
+                </h3>
+                <p className="text-lg text-white/90 mb-10 leading-relaxed relative z-10">
+                  Reach our audience of creative professionals and entrepreneurs.
+                </p>
+                <span className="text-white font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">
+                  Learn More
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </motion.div>
+            </Link>
           </div>
         </div>
       </section>

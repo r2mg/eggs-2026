@@ -10,7 +10,9 @@ import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 import {
+  EGGS_DEFAULT_SHOW_CREDITS_HTML,
   extractTakeawaysFromDescriptionHtml,
+  prepareRssCreditsHtmlForInnerHtml,
   resolvePodcastRssUrl,
   sanitizeRssBodyHtmlForInnerHtml,
   splitRssEpisodeDescriptionForDetailPage,
@@ -227,15 +229,21 @@ export default function EpisodeDetail() {
   /** RSS fields + optional YouTube overlay for this slug only (no whole-catalog swap). */
   const ep = mergeEpisodeForDisplay(episode, overlays[episode.slug] ?? null);
 
-  const topicLabel = ep.topic ?? FALLBACK_TOPIC;
   const displayNum = ep.episodeNumber ?? '—';
   const dateStr = format(new Date(ep.publishedAt), 'MMMM d, yyyy');
   const durationStr = formatDurationLabel(ep.duration);
-  /** Plain RSS summary when the feed did not use the usual `<strong>Summary</strong>` HTML block. */
+  /** Orange eyebrow above the title: episode number, date, and runtime (all from RSS / merged row). */
+  const headerEyebrowText = `Episode ${displayNum} • ${dateStr} • ${durationStr}`.toUpperCase();
+  /**
+   * Plain RSS `itunes:summary` (or similar) when we still have no summary **HTML** — including after
+   * the older-episode fallback that reads the first real paragraph from the description.
+   */
   const summaryPlainFallback =
     episode.summary?.trim() || 'No short summary was extracted for this episode.';
   const summaryHtmlFromRss = rssEpisodeDesc.summaryHtml;
   const creditsHtmlFromRss = rssEpisodeDesc.creditsHtml;
+  /** RSS credits when present; otherwise the shared default block for legacy episodes. */
+  const creditsHtmlForSidebar = creditsHtmlFromRss ?? EGGS_DEFAULT_SHOW_CREDITS_HTML;
   const chapters = ep.chapters ?? [];
   const guestName = ep.guest?.trim();
   /**
@@ -265,22 +273,13 @@ export default function EpisodeDetail() {
               <Link to="/episodes" className="hover:text-foreground transition-colors">
                 ← Back to Episodes
               </Link>
-              <span>/</span>
-              <span>Episode {displayNum}</span>
             </div>
 
             <div className="mb-8">
-              <p className="text-sm text-accent font-medium mb-4 tracking-wider">
-                EPISODE {displayNum} • {topicLabel.toUpperCase()}
-              </p>
+              <p className="text-sm text-accent font-medium mb-4 tracking-wider">{headerEyebrowText}</p>
               <h1 className="text-7xl mb-6 leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
                 {ep.title}
               </h1>
-              <div className="flex items-center gap-6 text-base text-muted-foreground">
-                <span>{dateStr}</span>
-                <span>•</span>
-                <span>{durationStr}</span>
-              </div>
             </div>
           </motion.div>
         </div>
@@ -561,38 +560,18 @@ export default function EpisodeDetail() {
                 viewport={{ once: true, margin: '-100px' }}
               >
                 <h3 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                  {creditsHtmlFromRss ? 'Show Credits' : 'Episode details'}
+                  Show Credits
                 </h3>
-                {creditsHtmlFromRss ? (
-                  <>
-                    {guestName ? (
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Guest: {guestName}</p>
-                    ) : null}
-                    <div
-                      className={`text-sm text-muted-foreground leading-relaxed mb-4 ${RSS_INNER_HTML_CLASS}`}
-                      // eslint-disable-next-line react/no-danger -- trusted podcast RSS HTML only
-                      dangerouslySetInnerHTML={{
-                        __html: sanitizeRssBodyHtmlForInnerHtml(creditsHtmlFromRss),
-                      }}
-                    />
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                    Credits from the feed will appear in this box when the show notes include a <strong>Credits</strong>{' '}
-                    section. Everything else on this page (summary, overview, links) already comes from the RSS
-                    description.
-                  </p>
-                )}
-                {ep.spotifyUrl ? (
-                  <a
-                    href={ep.spotifyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-accent hover:underline"
-                  >
-                    Episode on Spotify
-                  </a>
+                {guestName ? (
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Guest: {guestName}</p>
                 ) : null}
+                <div
+                  className={`text-sm text-muted-foreground leading-relaxed mb-4 ${RSS_INNER_HTML_CLASS} [&_a]:text-accent [&_a]:underline hover:[&_a]:opacity-90`}
+                  // eslint-disable-next-line react/no-danger -- RSS HTML or curated default credits only
+                  dangerouslySetInnerHTML={{
+                    __html: prepareRssCreditsHtmlForInnerHtml(creditsHtmlForSidebar),
+                  }}
+                />
               </motion.div>
 
               <motion.div

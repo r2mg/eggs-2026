@@ -265,6 +265,94 @@ function normalizePlainForRssDedupe(htmlOrText: string): string {
  * and **HTML** for everything after them (overview, takeaways section in HTML, etc.).
  * Stops before the next section whose title matches Takeaways, Chapters, Credits, etc.
  */
+/**
+ * Where structured sections (Takeaways, Chapters, …) usually start in Anchor-style HTML.
+ * Used only to cap the “head” of the description when guessing a summary for **older** episodes
+ * that never added a `<strong>Summary</strong>` block.
+ */
+const RSS_DETAIL_SECTION_START_PATTERNS: RegExp[] = [
+  /<p\b[^>]*>\s*<strong>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i,
+  /<p\b[^>]*>\s*<b>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i,
+  /<h[1-6]\b[^>]*>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i,
+];
+
+function indexOfFirstRssDetailSection(html: string): number {
+  let min = Infinity;
+  for (const re of RSS_DETAIL_SECTION_START_PATTERNS) {
+    const idx = html.search(re);
+    if (idx >= 0 && idx < min) min = idx;
+  }
+  return min === Infinity ? -1 : min;
+}
+
+/** One-line labels that look like a section title, not episode summary copy. */
+const RSS_SECTION_LABEL_ONLY = /^(takeaways|chapters|credits|timestamps|resources|links|summary|show notes|overview|topics|guests?)$/i;
+
+/**
+ * For older RSS notes without `<strong>Summary</strong>`: pick the first real `<p>…</p>` in the
+ * opening of the description (before Takeaways / Chapters / Credits, etc.) and treat it as the
+ * summary HTML. Returns that paragraph plus the same HTML with that paragraph removed so the
+ * main column does not repeat it.
+ */
+export function extractFallbackSummaryParagraphFromRssMainHtml(mainHtml: string): {
+  summaryHtml: string | undefined;
+  /** Same as input but with the chosen summary `<p>` removed when `summaryHtml` is set. */
+  mainHtmlWithSummaryParagraphRemoved: string;
+} {
+  const trimmed = mainHtml.trim();
+  if (!trimmed) {
+    return { summaryHtml: undefined, mainHtmlWithSummaryParagraphRemoved: trimmed };
+  }
+
+  const boundary = indexOfFirstRssDetailSection(trimmed);
+  const head = boundary >= 0 ? trimmed.slice(0, boundary) : trimmed;
+  const headLen = head.length;
+
+  const MIN_SUMMARY_CHARS = 40;
+  const MAX_SUMMARY_CHARS = 2200;
+
+  let pos = 0;
+  while (pos < headLen) {
+    const sub = head.slice(pos);
+    const skipWs = sub.match(/^(?:\s|<br\s*\/?>)+/i);
+    if (skipWs) {
+      pos += skipWs[0].length;
+      continue;
+    }
+    const pMatch = sub.match(/^<p\b[^>]*>[\s\S]*?<\/p>/i);
+    if (!pMatch) break;
+
+    const paragraphHtml = pMatch[0];
+    const plainOneLine = stripHtmlTags(decodeBasicHtmlEntities(paragraphHtml)).replace(/\s+/g, ' ').trim();
+    const len = plainOneLine.length;
+
+    const looksLikeChapterStamp = /^\d{1,2}:\d{2}(?::\d{2})?\s+\S/.test(plainOneLine);
+    const skippable =
+      len < MIN_SUMMARY_CHARS ||
+      len > MAX_SUMMARY_CHARS ||
+      looksLikeChapterStamp ||
+      RSS_SECTION_LABEL_ONLY.test(plainOneLine);
+
+    if (skippable) {
+      pos += paragraphHtml.length;
+      continue;
+    }
+
+    const startIdx = pos;
+    const endIdx = pos + paragraphHtml.length;
+    const before = trimmed.slice(0, startIdx).replace(/\s+$/, '');
+    const after = trimmed.slice(endIdx).replace(/^\s+/, '');
+    const joined = [before, after].filter((s) => s.length > 0).join('\n').trim();
+
+    return {
+      summaryHtml: paragraphHtml.trim(),
+      mainHtmlWithSummaryParagraphRemoved: joined,
+    };
+  }
+
+  return { summaryHtml: undefined, mainHtmlWithSummaryParagraphRemoved: trimmed };
+}
+
 export function splitRssMainHtmlAfterSummaryHeading(mainHtml: string | undefined): {
   summaryParagraphsHtml: string | undefined;
   bodyHtml: string | undefined;
@@ -350,13 +438,117 @@ export function sanitizeRssBodyHtmlForInnerHtml(html: string): string {
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 }
 
+/** Matches a single `<a>…</a>` block (invalid nested anchors are not supported). */
+const RSS_HTML_ANCHOR_BLOCK_RE = /<a\b[^>]*>[\s\S]*?<\/a>/gi;
+
+function escapeHtmlAttrValue(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function escapeHtmlTextContent(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Strips common sentence-ending punctuation from the end of a matched URL string so
+ * `https://example.com.` does not break the link target.
+ */
+function trimTrailingUrlPunctuation(raw: string): { href: string; suffix: string } {
+  let href = raw;
+  while (href.length > 0 && /[.,;:!]$/.test(href)) href = href.slice(0, -1);
+  return { href, suffix: raw.slice(href.length) };
+}
+
+/** Runs `fn` only on segments that are not HTML tags (`<...>`), so `href="…"` is never touched. */
+function linkifyOutsideAngleBracketTags(html: string, fn: (plain: string) => string): string {
+  const parts = html.split(/(<[^>]+>)/g);
+  return parts.map((p, i) => (i % 2 === 0 ? fn(p) : p)).join('');
+}
+
+const HTTPS_URL_RE = /https?:\/\/[^\s<"'<>]+/gi;
+const BITLY_PATH_RE = /\bbit\.ly\/[a-zA-Z0-9_-]+/gi;
+/**
+ * Domains that often appear scheme-less in show notes / default credits (EGGS site, hosts, playlist).
+ * `prepareRssCreditsHtmlForInnerHtml` turns these into real `https://` links.
+ */
+const EGGS_SHOW_WEBSITE_RE =
+  /\b(?:www\.)?(?:eggsthepodcast\.com|eggscast\.com|djontic\.com|rogha\.ar)(?:\/[^\s<"'<>]+)?/gi;
+
+/**
+ * Wraps bare URLs in `<a>` tags (new tab, `noopener`). Handles:
+ * - `https?://…`
+ * - `bit.ly/…` (scheme inserted)
+ * - `eggsthepodcast.com` / `eggscast.com` / `djontic.com` / `rogha.ar` / `www.…` with optional path (scheme inserted)
+ *
+ * Existing `<a>…</a>` blocks from the feed are unchanged. Replacements run in rounds outside
+ * `<…>` chunks so we never linkify inside tag attributes.
+ */
+export function linkifyPlainHttpUrlsInRssHtml(html: string): string {
+  const blocks = html.match(RSS_HTML_ANCHOR_BLOCK_RE) ?? [];
+  const parts = html.split(RSS_HTML_ANCHOR_BLOCK_RE);
+
+  const linkifySegment = (segment: string): string => {
+    let s = segment;
+    s = linkifyOutsideAngleBracketTags(s, (plain) =>
+      plain.replace(HTTPS_URL_RE, (raw) => {
+        const { href, suffix } = trimTrailingUrlPunctuation(raw);
+        if (!href) return raw;
+        return `<a href="${escapeHtmlAttrValue(href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlTextContent(href)}</a>${escapeHtmlTextContent(suffix)}`;
+      }),
+    );
+    s = linkifyOutsideAngleBracketTags(s, (plain) =>
+      plain.replace(BITLY_PATH_RE, (raw) => {
+        const { href, suffix } = trimTrailingUrlPunctuation(raw);
+        if (!href) return raw;
+        const full = `https://${href}`;
+        return `<a href="${escapeHtmlAttrValue(full)}" target="_blank" rel="noopener noreferrer">${escapeHtmlTextContent(href)}</a>${escapeHtmlTextContent(suffix)}`;
+      }),
+    );
+    s = linkifyOutsideAngleBracketTags(s, (plain) =>
+      plain.replace(EGGS_SHOW_WEBSITE_RE, (raw) => {
+        const { href, suffix } = trimTrailingUrlPunctuation(raw);
+        if (!href) return raw;
+        const full = `https://${href}`;
+        return `<a href="${escapeHtmlAttrValue(full)}" target="_blank" rel="noopener noreferrer">${escapeHtmlTextContent(href)}</a>${escapeHtmlTextContent(suffix)}`;
+      }),
+    );
+    return s;
+  };
+
+  let out = '';
+  for (let i = 0; i < parts.length; i++) {
+    out += linkifySegment(parts[i]!);
+    if (i < blocks.length) out += blocks[i]!;
+  }
+  return out;
+}
+
+/** Ensures every `<a>` in RSS credits HTML opens in a new tab with `rel` set. */
+export function ensureRssAnchorTagsOpenInNewTab(html: string): string {
+  return html.replace(/<a\b([^>]*)>/gi, (_, attrs: string) => {
+    const hasTarget = /\btarget\s*=/i.test(attrs);
+    const hasRel = /\brel\s*=/i.test(attrs);
+    let inject = '';
+    if (!hasTarget) inject += ' target="_blank"';
+    if (!hasRel) inject += ' rel="noopener noreferrer"';
+    return `<a${inject}${attrs}>`;
+  });
+}
+
+/** Credits sidebar: sanitize → linkify bare URLs → normalize `<a>` targets. */
+export function prepareRssCreditsHtmlForInnerHtml(html: string): string {
+  const cleaned = sanitizeRssBodyHtmlForInnerHtml(html);
+  return ensureRssAnchorTagsOpenInNewTab(linkifyPlainHttpUrlsInRssHtml(cleaned));
+}
+
 /** Everything the episode detail page needs from `<description>` — all RSS-sourced HTML. */
 export type RssEpisodeDetailDescriptionSplit = {
   /** Main show notes with the trailing Credits block removed (handy for takeaways parsing). */
   mainHtmlWithoutCredits: string | undefined;
   /**
-   * Opening summary paragraphs copied from the feed when the usual Summary heading exists.
-   * If missing, the UI should fall back to the plain `episode.summary` field once.
+   * Opening summary paragraphs from the feed: either the usual `<strong>Summary</strong>` block,
+   * or (for older episodes) the first real paragraph we could infer before Takeaways / Chapters / Credits.
+   * If still missing, the UI may use the plain `episode.summary` field once.
    */
   summaryHtml: string | undefined;
   /** Rest of show notes (still HTML): overview copy, embedded lists, etc. — no Credits tail. */
@@ -366,12 +558,28 @@ export type RssEpisodeDetailDescriptionSplit = {
 };
 
 /**
+ * Sidebar credits when the episode’s RSS description has no **Credits** section (typical of older
+ * EGGS episodes). Plain URLs are linkified the same way as feed HTML (`prepareRssCreditsHtmlForInnerHtml`).
+ */
+export const EGGS_DEFAULT_SHOW_CREDITS_HTML = `
+<p>Hosted by Ryan Roghaar &amp; Mike Smith</p>
+<p>Produced by Ryan Roghaar</p>
+<p>Theme music: &quot;Perfect Day&quot; by OPM</p>
+<p>The EGGS Podcast Spotify playlist: bit.ly/eggstunes</p>
+<p>The show: eggscast.com</p>
+<p>@eggshow on X and Instagram</p>
+<p>Mike &quot;DJ Ontic&quot;: djontic.com</p>
+<p>Ryan Roghaar: rogha.ar</p>
+`.trim();
+
+/**
  * One place to derive summary / body / credits for `EpisodeDetail.tsx`.
  *
  * 1. Cut **Credits** off the end (`splitRssDescriptionAtCredits`).
  * 2. Prefer the structured **Summary** heading in the remaining HTML (Anchor’s usual shape).
- * 3. If that heading is missing, keep the plain RSS `summary` for the short blurb and peel duplicate
- *    opening `<p>` blocks from the HTML body so nothing repeats.
+ * 3. If that heading is missing, try {@link extractFallbackSummaryParagraphFromRssMainHtml} so older
+ *    episodes still get summary HTML from the first real paragraph before Takeaways / Chapters / etc.
+ * 4. Strip duplicate opening paragraphs that match the plain RSS `summary` so the main column does not repeat the blurb.
  */
 export function splitRssEpisodeDescriptionForDetailPage(
   descriptionHtml: string | undefined,
@@ -400,14 +608,19 @@ export function splitRssEpisodeDescriptionForDetailPage(
     };
   }
 
+  const fallback = extractFallbackSummaryParagraphFromRssMainHtml(main);
+  const bodySourceForDedupe = fallback.summaryHtml
+    ? fallback.mainHtmlWithSummaryParagraphRemoved
+    : bodyHtml ?? main;
+
   const bodyStripped = stripLeadingSummaryDuplicateParagraphsFromMainHtml(
-    bodyHtml ?? main,
+    bodySourceForDedupe,
     summaryPlainFromFeed,
   );
 
   return {
     mainHtmlWithoutCredits: main,
-    summaryHtml: undefined,
+    summaryHtml: fallback.summaryHtml?.trim() || undefined,
     bodyHtml: bodyStripped.trim() || undefined,
     creditsHtml,
   };
@@ -530,10 +743,20 @@ function rawItemToEpisode(raw: Record<string, unknown>): Episode {
   const itunesEpisode = raw['itunes:episode'];
   const episodeNumber = resolveEpisodeNumber(itunesEpisode, title);
 
-  const summary =
-    descriptionHtml !== undefined
-      ? extractSummaryFromDescriptionHtml(descriptionHtml)
-      : undefined;
+  /** Newer Anchor notes use a `<strong>Summary</strong>` block inside `<description>`. */
+  const summaryFromDescriptionBlock =
+    descriptionHtml !== undefined ? extractSummaryFromDescriptionHtml(descriptionHtml) : undefined;
+  /**
+   * Older feeds often skip that HTML pattern but still ship a short blurb in `<itunes:summary>`.
+   * Keep it plain and cap length so list cards never inherit a full show-notes wall.
+   */
+  const itunesSummaryRaw = pickString(raw['itunes:summary']);
+  let summaryFromItunes: string | undefined;
+  if (itunesSummaryRaw) {
+    const plain = stripHtmlTags(decodeBasicHtmlEntities(itunesSummaryRaw)).replace(/\s+/g, ' ').trim();
+    if (plain.length > 0 && plain.length <= 600) summaryFromItunes = plain;
+  }
+  const summary = summaryFromDescriptionBlock ?? summaryFromItunes;
 
   const chapters =
     descriptionHtml !== undefined ? extractChaptersFromDescriptionHtml(descriptionHtml) : undefined;
