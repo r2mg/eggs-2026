@@ -27,9 +27,9 @@ import About from './components/About';
 import BeAGuest from './components/BeAGuest';
 import Sponsor from './components/Sponsor';
 
-/** Shared desktop nav link styles (active route = accent). `min-h-12` matches the `xl:h-12` logo for vertical alignment. */
+/** Shared desktop nav link styles (active route = accent). */
 function desktopNavClass(isActive: boolean): string {
-  return `inline-flex items-center min-h-12 text-sm hover:text-accent transition-colors whitespace-nowrap ${isActive ? 'text-accent' : ''}`;
+  return `text-sm hover:text-accent transition-colors whitespace-nowrap ${isActive ? 'text-accent' : ''}`;
 }
 
 /**
@@ -57,7 +57,7 @@ function SiteLayout() {
 
   /** Subscribe CTA: slightly tighter on very narrow phones so it fits beside the menu button. */
   const subscribeBtnClass =
-    'inline-flex items-center justify-center min-h-11 xl:min-h-12 min-w-[4.5rem] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity whitespace-nowrap';
+    'inline-flex items-center justify-center min-h-11 min-w-[4.5rem] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity whitespace-nowrap';
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -72,27 +72,23 @@ function SiteLayout() {
           <Link
             to="/"
             aria-label="EGGS! The Podcast — home"
-            className="shrink-0 inline-flex items-center leading-none h-11 w-auto max-w-[min(42vw,11rem)] xl:h-16 xl:w-[152px] xl:max-w-none xl:hover:w-[520px] overflow-hidden xl:transition-[width] xl:duration-500 xl:ease-out relative"
+            className="shrink-0 block h-9 sm:h-10 w-auto max-w-[min(42vw,11rem)] xl:h-12 xl:w-[152px] xl:max-w-none xl:hover:w-[520px] overflow-hidden xl:transition-[width] xl:duration-500 xl:ease-out relative"
             onClick={() => setMobileNavOpen(false)}
           >
             <img
               src={logoCompactSrc}
               alt=""
-              className="h-full max-h-full w-auto object-left object-contain shrink-0 xl:hidden"
+              className="h-full w-auto object-left object-contain block xl:hidden max-h-10"
             />
-            {/*
-              Full lockup is very wide (821×72). At xl, center a fixed h-12 bitmap inside the same h-16
-              bar as the nav links — avoids the old `min-w-[520px]` img box fighting `inline-flex` + clip.
-            */}
             <img
               src={logoSrc}
               alt=""
-              className="hidden xl:block h-12 w-auto max-h-12 max-w-[520px] object-contain object-left shrink-0"
+              className="h-full w-auto max-w-[520px] object-left object-contain hidden xl:block xl:min-w-[520px]"
             />
           </Link>
 
           {/* Desktop nav — wide screens only; tablets use the same mobile pattern as phones */}
-          <div className="hidden xl:flex h-16 min-h-16 items-center gap-6 2xl:gap-8">
+          <div className="hidden xl:flex items-center gap-6 2xl:gap-8">
             <NavLink to="/episodes" className={({ isActive }) => desktopNavClass(isActive)}>
               Episodes
             </NavLink>
