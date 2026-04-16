@@ -269,6 +269,7 @@ export default function Home() {
                         youtubeVideoId={latest.youtubeVideoId}
                         youtubeThumbnailPreferred={latest.youtubeThumbnail}
                         awaitYoutubeOverlay={awaitYoutubeOverlay}
+                        heroOptimizeFirstPaint
                         imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                       <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50 group-hover:opacity-80 transition-opacity" />

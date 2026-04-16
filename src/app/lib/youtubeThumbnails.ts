@@ -50,6 +50,25 @@ export function youtubeThumbnailFallbackUrls(videoId: string): string[] {
   ];
 }
 
+/**
+ * **Homepage hero only** — skips `maxresdefault` for the first paint path.
+ *
+ * Max resolution is sharper when it exists, but the first request can fail or be slow (404 or a
+ * long wait), so the hero used to “sit” on the skeleton longer than it needed to. This list starts
+ * at `hqdefault` (480×360), which is almost always available quickly, then steps down if needed.
+ *
+ * Cards and episode pages still use {@link youtubeThumbnailFallbackUrls} (sharp-first chain).
+ */
+export function youtubeHeroFirstPaintThumbnailUrls(videoId: string): string[] {
+  const id = videoId.trim();
+  if (id.length !== 11) return [];
+  return [
+    youtubeHqThumbnailUrl(id),
+    youtubeMqThumbnailUrl(id),
+    youtubeDefaultThumbnailUrl(id),
+  ];
+}
+
 /** Pull the 11-character id from a `watch?v=` or `youtu.be` URL. */
 export function videoIdFromYouTubeWatchUrl(url: string | undefined): string | undefined {
   if (!url?.trim()) return undefined;
