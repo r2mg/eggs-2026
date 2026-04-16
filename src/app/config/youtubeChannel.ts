@@ -1,14 +1,19 @@
 /**
- * EGGS! YouTube channel — one place for IDs and editorial playlist *names*
- * ========================================================================
+ * EGGS! YouTube channel — editorial playlists (IDs + titles)
+ * ===========================================================
  *
- * **Playlist IDs:** You do *not* have to paste IDs here. The app loads every public
- * playlist on the channel and finds the right ones by **matching these titles** (case
- * and extra spaces are ignored).
+ * **Featured playlist (recommended):** Paste the real playlist id below in
+ * `KNOWN_PLAYLIST_IDS.featured`. That id is the **source of truth** for:
+ * - Homepage “Featured Conversations” order
+ * - Archive “Featured” sort and `featured` badges
  *
- * **What you should do in YouTube Studio:**
- * 1. Create playlists whose titles match the constants below (exact wording helps).
- * 2. Add videos to those playlists in the order you want (Featured order = `featuredRank`).
+ * The id works even if the playlist is **Unlisted** (it may not appear in the channel’s
+ * public playlist list — the app still fetches it by id). If you leave `featured` empty,
+ * the app falls back to finding a playlist whose **title** matches `PLAYLIST_TITLE_FEATURED`
+ * (e.g. `EGGS Featured`) among playlists returned for the channel.
+ *
+ * **Other playlists:** You can still rely on **title** matching for lists that appear in
+ * the channel playlist list, or add optional ids in `KNOWN_PLAYLIST_IDS` the same way.
  *
  * **Where your API key goes:** *not* in this file. Put `VITE_YOUTUBE_API_KEY=...` in a
  * file named `.env` in the **project root** (same folder as `package.json`). Never commit
@@ -25,8 +30,8 @@ export const YOUTUBE_CHANNEL_HANDLE_URL = 'https://www.youtube.com/@EggsThePodca
 export const YOUTUBE_CHANNEL_PAGE_URL = 'https://www.youtube.com/EggsThePodcast';
 
 /**
- * Editorial playlists — the app finds them by **title** after listing all channel playlists.
- * Rename your YouTube playlists to match (or change these strings to match your playlists).
+ * **Fallback** titles — used only when no `KNOWN_PLAYLIST_IDS.*` is set for that slot.
+ * Title matching is case-insensitive; extra spaces are normalized.
  */
 export const PLAYLIST_TITLE_FEATURED = 'EGGS Featured';
 export const PLAYLIST_TITLE_START_HERE = 'EGGS Start Here';
@@ -47,12 +52,22 @@ export const EGGS_TOPIC_PLAYLIST_TITLES = [
   'EGGS Expertise',
 ] as const;
 
-/** Optional: paste a playlist ID here later if you prefer ID-based matching for that list */
+/**
+ * **Deterministic playlist ids** (optional but recommended for Featured).
+ * Paste the id from the playlist URL: `youtube.com/playlist?list=THIS_PART`
+ *
+ * - `featured` — editorial “EGGS Featured” list (homepage Featured row + archive Featured logic).
+ * - `startHere` — optional; same idea for “EGGS Start Here” if you want id-based resolution.
+ * - `uploads` — rarely needed; only if you must override the channel uploads playlist id.
+ */
 export const KNOWN_PLAYLIST_IDS: Partial<{
   featured: string;
   startHere: string;
   uploads: string;
-}> = {};
+}> = {
+  /** EGGS Featured — https://www.youtube.com/playlist?list=PLkk4WlaE-9QQGk6LvEo3iltt5qFs28JQ7 */
+  featured: 'PLkk4WlaE-9QQGk6LvEo3iltt5qFs28JQ7',
+};
 
 /** Normalize playlist titles for comparison (lowercase, single spaces) */
 export function normalizePlaylistTitle(title: string): string {

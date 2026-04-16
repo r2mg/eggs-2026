@@ -1,6 +1,6 @@
 /**
- * Orders RSS episodes to match the **EGGS Featured** YouTube playlist order.
- * Uses the same matching rules as the rest of the site (`resolveYouTubeForEpisode`).
+ * Orders RSS episodes to match the **EGGS Featured** playlist (same playlist id as everywhere:
+ * `KNOWN_PLAYLIST_IDS.featured` in `youtubeChannel.ts`, else title `EGGS Featured`).
  */
 
 import type { Episode } from '../types/episode';

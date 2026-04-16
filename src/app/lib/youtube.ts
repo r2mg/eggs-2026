@@ -594,17 +594,27 @@ export async function fetchYouTubeChannelHomeLite(
   };
 }
 
-/** Resolve special playlist ids (featured / start here) for enrichment */
+/** Non-empty trimmed id, or null (so empty config strings fall back to title matching). */
+function knownPlaylistIdOrNull(id: string | undefined): string | null {
+  const t = id?.trim();
+  return t && t.length > 0 ? t : null;
+}
+
+/**
+ * Featured + Start Here playlist ids — **same function** for homepage lite snapshot, full
+ * channel merge, featured episode ordering, and overlay `featured` / `featuredRank`.
+ * Priority: `KNOWN_PLAYLIST_IDS` in config, then title match on the channel playlist list.
+ */
 export function resolveEditorialPlaylistIds(playlists: YouTubePlaylist[]): {
   featuredId: string | null;
   startHereId: string | null;
 } {
   const featured =
-    KNOWN_PLAYLIST_IDS.featured ??
+    knownPlaylistIdOrNull(KNOWN_PLAYLIST_IDS.featured) ??
     playlists.find((p) => titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, p.title))?.id ??
     null;
   const startHere =
-    KNOWN_PLAYLIST_IDS.startHere ??
+    knownPlaylistIdOrNull(KNOWN_PLAYLIST_IDS.startHere) ??
     playlists.find((p) => titleMatchesPlaylist(PLAYLIST_TITLE_START_HERE, p.title))?.id ??
     null;
   return { featuredId: featured, startHereId: startHere };
