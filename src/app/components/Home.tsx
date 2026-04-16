@@ -9,7 +9,7 @@
  * 2. Black brand strip — one-line positioning statement (replaces the old full-screen hero tagline).
  * 3. Everything else — Featured, Topics, Newsletter, Guest/Sponsor (unchanged in role).
  */
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
@@ -23,7 +23,10 @@ import { mergeYoutubeCatalogForMatching } from '../lib/youtubeChannelCache';
 import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
+import { extractAllYouTubeVideoIdsFromHtml } from '../lib/rss';
+import { youtubeHqThumbnailUrl } from '../lib/youtubeThumbnails';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
+import HomeHeroYoutubeThumb from './HomeHeroYoutubeThumb';
 
 /** Same idea as the archive page — turns `01:04:14` into a short label */
 function formatDurationLabel(raw: string | undefined): string {
@@ -64,6 +67,32 @@ export default function Home() {
     if (loading || error || rssData.length === 0) return null;
     return rssData[0];
   }, [rssData, loading, error]);
+
+  /**
+   * While the YouTube channel is still loading, we **do not** paint RSS art in the hero (that rule
+   * lives in `HomeHeroYoutubeThumb`). If the episode show notes already link to a YouTube video,
+   * we can still **warm the network** for that video’s small `hqdefault` image — often the same id
+   * the matcher will pick — so the file may be cached the moment the skeleton disappears.
+   */
+  useLayoutEffect(() => {
+    if (!awaitYoutubeOverlay || !latestBase?.descriptionHtml) return;
+    const ids = extractAllYouTubeVideoIdsFromHtml(latestBase.descriptionHtml);
+    const guessedId = ids[0];
+    if (!guessedId) return;
+    const href = youtubeHqThumbnailUrl(guessedId);
+    const linkId = 'eggs-home-hero-early-warm-hq';
+    if (document.getElementById(linkId)) return;
+    const link = document.createElement('link');
+    link.id = linkId;
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    link.setAttribute('fetchpriority', 'high');
+    document.head.appendChild(link);
+    return () => {
+      document.getElementById(linkId)?.remove();
+    };
+  }, [awaitYoutubeOverlay, latestBase?.descriptionHtml, latestBase?.slug]);
 
   /**
    * Featured row order comes from the **EGGS Featured** YouTube playlist when the API
@@ -258,18 +287,17 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Large 16:9 art — same PreferredYoutubeImageSlot + await contract as the old “Latest” block */}
+                {/* Large 16:9 art — hero-only progressive YouTube loader (cards still use PreferredYoutubeImageSlot) */}
                 <div className="min-w-0">
                   <Link to={episodePathFromSlug(latest.slug)} className="block group">
                     <div className="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">
-                      <PreferredYoutubeImageSlot
+                      <HomeHeroYoutubeThumb
                         key={latest.slug}
                         resetKey={latest.slug}
                         rssImage={latest.image}
                         youtubeVideoId={latest.youtubeVideoId}
                         youtubeThumbnailPreferred={latest.youtubeThumbnail}
                         awaitYoutubeOverlay={awaitYoutubeOverlay}
-                        heroOptimizeFirstPaint
                         imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                       <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50 group-hover:opacity-80 transition-opacity" />

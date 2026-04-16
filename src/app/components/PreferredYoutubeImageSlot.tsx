@@ -1,33 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { youtubeHeroFirstPaintThumbnailUrls, youtubeThumbnailFallbackUrls } from '../lib/youtubeThumbnails';
-
-/**
- * Shimmer while episode art resolves (YouTube overlay + thumbnail chain).
- * - Keyframes: `eggs-media-shimmer` in `src/styles/tailwind.css`.
- * - Colors: `--eggs-media-shimmer-*` in `src/styles/theme.css` (darker base + brighter band than before).
- * - `z-[5]` keeps this **above** card scrim gradients (`z-[2]`) on Home / archive so the motion is not washed out.
- */
-function MediaLoadingShimmer({ retreating }: { retreating: boolean }) {
-  return (
-    <div
-      className={`absolute inset-0 z-[5] overflow-hidden transition-opacity duration-500 ease-out ${
-        retreating ? 'pointer-events-none opacity-0' : 'opacity-100'
-      }`}
-      aria-hidden
-    >
-      <div className="absolute inset-0" style={{ backgroundColor: 'var(--eggs-media-shimmer-base)' }} />
-      <div
-        className="pointer-events-none absolute inset-y-[-38%] w-[56%]"
-        style={{
-          opacity: 0.94,
-          background:
-            'linear-gradient(90deg, transparent 0%, var(--eggs-media-shimmer-highlight) 50%, transparent 100%)',
-          animation: 'eggs-media-shimmer 1.35s cubic-bezier(0.42, 0, 0.58, 1) infinite',
-        }}
-      />
-    </div>
-  );
-}
+import { useEffect, useMemo, useState } from 'react';
+import { youtubeThumbnailFallbackUrls } from '../lib/youtubeThumbnails';
+import { MediaLoadingShimmer } from './MediaLoadingShimmer';
 
 type Props = {
   /**
@@ -49,16 +22,6 @@ type Props = {
   awaitYoutubeOverlay: boolean;
   /** Extra classes for the final `<img>` (for example `object-cover` and hover zoom). Opacity is handled here. */
   imageClassName?: string;
-  /**
-   * **Homepage “latest episode” hero only** (keep archive / cards on the default behavior):
-   * - If the Data API gave a `youtubeThumbnailPreferred` URL, we still try that first (when present).
-   * - Otherwise we **do not** start at `maxresdefault` — we go straight to a reliable `hqdefault`
-   *   URL so the first successful paint happens sooner.
-   * - The browser is also asked to load that image with higher priority, and we add a one-time
-   *   `<link rel="preload">` in the document head for the first URL we try (warms the network
-   *   request as soon as the address is known).
-   */
-  heroOptimizeFirstPaint?: boolean;
 };
 
 /**
@@ -67,6 +30,9 @@ type Props = {
  * - Then load the YouTube poster first and fade it in when the browser has the pixels.
  * - If every YouTube URL fails, fall back to the RSS image the same way.
  * - If there is no matched video after loading finishes, show RSS (or an empty muted block).
+ *
+ * The homepage **latest-episode hero** uses `HomeHeroYoutubeThumb` instead — it has a
+ * faster, progressive loading path. Cards and the archive use this component.
  *
  * The parent should keep `aspect-video` (or any fixed ratio) on the outer box; this layer
  * fills it with `absolute inset-0`.
@@ -78,20 +44,17 @@ export default function PreferredYoutubeImageSlot({
   youtubeThumbnailPreferred,
   awaitYoutubeOverlay,
   imageClassName = '',
-  heroOptimizeFirstPaint = false,
 }: Props) {
   const rss = rssImage?.trim() ?? '';
 
   const ytUrls = useMemo(() => {
     const id = youtubeVideoId?.trim();
     if (!id || id.length !== 11) return [];
-    const chain = heroOptimizeFirstPaint
-      ? youtubeHeroFirstPaintThumbnailUrls(id)
-      : youtubeThumbnailFallbackUrls(id);
+    const chain = youtubeThumbnailFallbackUrls(id);
     const p = youtubeThumbnailPreferred?.trim();
     if (!p) return chain;
     return [p, ...chain.filter((u) => u !== p)];
-  }, [youtubeVideoId, youtubeThumbnailPreferred, heroOptimizeFirstPaint]);
+  }, [youtubeVideoId, youtubeThumbnailPreferred]);
 
   // --- “Try YouTube, then RSS” branch ---
   const [useRssFallback, setUseRssFallback] = useState(false);
@@ -103,30 +66,6 @@ export default function PreferredYoutubeImageSlot({
     setYtIndex(0);
     setPixelsReady(false);
   }, [resetKey, youtubeVideoId, awaitYoutubeOverlay]);
-
-  /**
-   * Hero-only: tell the browser to start downloading the first thumbnail URL as early as this
-   * component allows (right after we know the URL and are no longer in the “wait for YouTube”
-   * skeleton state). The `<img>` below requests the same URL; matching preload + `fetchPriority`
-   * helps the first paint win the network queue.
-   */
-  useLayoutEffect(() => {
-    if (!heroOptimizeFirstPaint || awaitYoutubeOverlay) return;
-    const href = ytUrls[0];
-    if (!href) return;
-    const linkId = `eggs-hero-thumb-preload-${resetKey}`;
-    if (document.getElementById(linkId)) return;
-    const link = document.createElement('link');
-    link.id = linkId;
-    link.rel = 'preload';
-    link.as = 'image';
-    link.href = href;
-    link.setAttribute('fetchpriority', 'high');
-    document.head.appendChild(link);
-    return () => {
-      document.getElementById(linkId)?.remove();
-    };
-  }, [heroOptimizeFirstPaint, awaitYoutubeOverlay, resetKey, ytUrls]);
 
   // --- Branch 1: YouTube is still “on its way” from the server ---
   // We deliberately do **not** paint the RSS image here, because that is what caused the
@@ -152,8 +91,6 @@ export default function PreferredYoutubeImageSlot({
           key={`yt-${ytIndex}-${src}`}
           src={src}
           alt=""
-          loading={heroOptimizeFirstPaint ? 'eager' : undefined}
-          fetchPriority={heroOptimizeFirstPaint ? 'high' : undefined}
           className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
             pixelsReady ? 'opacity-100' : 'opacity-0'
           } ${imageClassName}`}
@@ -181,8 +118,6 @@ export default function PreferredYoutubeImageSlot({
         <img
           src={rss}
           alt=""
-          loading={heroOptimizeFirstPaint ? 'eager' : undefined}
-          fetchPriority={heroOptimizeFirstPaint ? 'high' : undefined}
           className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
             pixelsReady ? 'opacity-100' : 'opacity-0'
           } ${imageClassName}`}

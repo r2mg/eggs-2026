@@ -69,6 +69,26 @@ export function youtubeHeroFirstPaintThumbnailUrls(videoId: string): string[] {
   ];
 }
 
+/**
+ * **Homepage hero “sharp layer”** — loaded *after* the fast `hqdefault` image is shown.
+ *
+ * We prefer the Data API’s `youtubeThumbnailPreferred` when it is present and not the same URL
+ * as `hqdefault` (often that URL is `maxresdefault` or a high-quality `yt3` host). If there is
+ * no separate preferred URL, we upgrade to `maxresdefault` on `i.ytimg.com` when available.
+ */
+export function youtubeHeroSharperUpgradeUrl(
+  videoId: string,
+  youtubeThumbnailPreferred: string | undefined,
+): string | undefined {
+  const id = videoId.trim();
+  if (id.length !== 11) return undefined;
+  const hq = youtubeHqThumbnailUrl(id);
+  const p = youtubeThumbnailPreferred?.trim();
+  if (p && p !== hq) return p;
+  const max = youtubeMaxresThumbnailUrl(id);
+  return max !== hq ? max : undefined;
+}
+
 /** Pull the 11-character id from a `watch?v=` or `youtu.be` URL. */
 export function videoIdFromYouTubeWatchUrl(url: string | undefined): string | undefined {
   if (!url?.trim()) return undefined;
