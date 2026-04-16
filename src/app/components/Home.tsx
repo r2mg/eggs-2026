@@ -49,6 +49,38 @@ function orderedSlugKey(slugs: string[]): string {
   return [...slugs].filter(Boolean).sort().join('|');
 }
 
+/**
+ * Which YouTube video id the **hero** should load thumbnails for.
+ *
+ * - Prefer the **official** id from the channel overlay when present.
+ * - While the channel is still loading and show notes contain a guessed id, use that guess so the
+ *   hero does not wait on the full pipeline (still YouTube CDN — not RSS artwork).
+ * - After the overlay finishes with **no** match and an API key exists, **drop** the guess and let
+ *   the hero fall back to RSS-only (do not keep a possibly wrong embed from show notes).
+ * - With **no** API key, the overlay never runs — keep using a guess from show notes if present.
+ */
+function heroEffectiveYoutubeVideoId(
+  latest: { youtubeVideoId?: string } | null,
+  guessedFromRss: string | undefined,
+  youtubeChannelStillLoading: boolean,
+  hasApiKey: boolean,
+): string | undefined {
+  const confirmed = latest?.youtubeVideoId?.trim();
+  const cOk = confirmed && confirmed.length === 11;
+
+  if (cOk) return confirmed!;
+
+  if (youtubeChannelStillLoading && guessedFromRss) return guessedFromRss;
+
+  if (!youtubeChannelStillLoading && hasApiKey && !cOk) {
+    return undefined;
+  }
+
+  if (guessedFromRss) return guessedFromRss;
+
+  return undefined;
+}
+
 export default function Home() {
   const { data: rssData, loading, error } = useRssEpisodes();
   /**
@@ -69,14 +101,20 @@ export default function Home() {
     return rssData[0];
   }, [rssData, loading, error]);
 
+  /** First id found in latest episode HTML — same signal we trust for preload + early hero paint. */
+  const guessedYoutubeVideoId = useMemo(() => {
+    if (!latestBase?.descriptionHtml) return undefined;
+    const ids = extractAllYouTubeVideoIdsFromHtml(latestBase.descriptionHtml);
+    const id = ids[0]?.trim();
+    return id && id.length === 11 ? id : undefined;
+  }, [latestBase?.descriptionHtml]);
+
   /**
-   * While the YouTube channel is still loading, we **do not** paint RSS art in the hero (that rule
-   * lives in `HomeHeroYoutubeThumb`). If the episode show notes already link to a YouTube video,
-   * we can still **warm the network** for that video’s `mqdefault` image (same first-paint tier as
-   * the hero) — often the same id the matcher will pick.
+   * Preload `mqdefault` as soon as we know a guessed id (do not wait on `awaitYoutubeOverlay`).
+   * Warms cache for the hero’s first paint.
    */
   useLayoutEffect(() => {
-    if (!awaitYoutubeOverlay || !latestBase?.descriptionHtml) return;
+    if (!latestBase?.descriptionHtml) return;
     const ids = extractAllYouTubeVideoIdsFromHtml(latestBase.descriptionHtml);
     const guessedId = ids[0];
     if (!guessedId) return;
@@ -93,7 +131,7 @@ export default function Home() {
     return () => {
       document.getElementById(linkId)?.remove();
     };
-  }, [awaitYoutubeOverlay, latestBase?.descriptionHtml, latestBase?.slug]);
+  }, [latestBase?.descriptionHtml, latestBase?.slug]);
 
   /**
    * Featured row order comes from the **EGGS Featured** YouTube playlist when the API
@@ -126,6 +164,17 @@ export default function Home() {
   const latest = useMemo(
     () => (latestBase ? mergeEpisodeForDisplay(latestBase, heroOverlays[latestBase.slug] ?? null) : null),
     [latestBase, heroOverlays],
+  );
+
+  /**
+   * Hero-only: if show notes already give us an id, do **not** keep the hero on the skeleton until
+   * the channel snapshot finishes — `HomeHeroYoutubeThumb` can paint YouTube thumbs immediately.
+   */
+  const heroAwaitYoutubeOverlay = awaitYoutubeOverlay && !guessedYoutubeVideoId;
+
+  const heroYoutubeVideoId = useMemo(
+    () => heroEffectiveYoutubeVideoId(latest, guessedYoutubeVideoId, awaitYoutubeOverlay, hasApiKey),
+    [latest, guessedYoutubeVideoId, awaitYoutubeOverlay, hasApiKey],
   );
 
   const featuredList = useMemo(
@@ -296,9 +345,9 @@ export default function Home() {
                         key={latest.slug}
                         resetKey={latest.slug}
                         rssImage={latest.image}
-                        youtubeVideoId={latest.youtubeVideoId}
+                        youtubeVideoId={heroYoutubeVideoId}
                         youtubeThumbnailPreferred={latest.youtubeThumbnail}
-                        awaitYoutubeOverlay={awaitYoutubeOverlay}
+                        awaitYoutubeOverlay={heroAwaitYoutubeOverlay}
                         imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                       <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50 group-hover:opacity-80 transition-opacity" />

@@ -24,9 +24,18 @@ function writeCachedHeroThumbUrl(slug: string, url: string) {
 type Props = {
   resetKey: string;
   rssImage?: string;
+  /**
+   * Resolved id for thumbnail URLs — from the parent. Usually the overlay match; while the channel
+   * is still loading it may be an id parsed from RSS show notes (still `i.ytimg.com`, not podcast art).
+   */
   youtubeVideoId?: string;
   /** Data API URL — never the first `<img>` src; only the optional sharp upgrade layer. */
   youtubeThumbnailPreferred?: string;
+  /**
+   * When true, show skeleton (or session-cached YouTube URL) — hero is still waiting for a usable
+   * id. Parent sets this to **false** when an RSS-derived guess exists so the hero need not wait on
+   * the full YouTube channel pipeline.
+   */
   awaitYoutubeOverlay: boolean;
   imageClassName?: string;
 };
@@ -36,8 +45,9 @@ type Props = {
  *
  * One strategy: **small first paint** (`mqdefault` → `default`), then **one** sharper layer
  * (`youtubeHeroSharpUpgradeUrl` — API thumb when it differs from mq/hq, else `hqdefault`).
- * No RSS image until YouTube is resolved or all URLs fail. Session cache can show a previous
- * YouTube URL while the overlay loads (still not RSS).
+ * No RSS image until all YouTube URLs fail or the parent decides there is no id (see `Home.tsx`).
+ * Session cache can show a previous YouTube URL only while the hero is still blocked on overlay
+ * **without** a guessed id (still not RSS artwork).
  *
  * Featured grid and `/episodes` use `PreferredYoutubeImageSlot` (maxres-first chain) — unchanged.
  */
