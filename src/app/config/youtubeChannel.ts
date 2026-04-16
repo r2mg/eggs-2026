@@ -40,6 +40,7 @@ export const EGGS_TOPIC_PLAYLIST_TITLES = [
   'EGGS Branding',
   'EGGS Creativity',
   'EGGS Business Growth',
+  'EGGS Featured',
   'EGGS Technology',
   'EGGS Culture',
   'EGGS Leadership',
