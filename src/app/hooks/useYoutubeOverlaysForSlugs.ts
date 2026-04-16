@@ -64,7 +64,7 @@ export function useYoutubeOverlaysForSlugs(rssEpisodes: Episode[] | null, slugs:
   return {
     overlays,
     mergedCatalog,
-    /** When true, homepage hero (`HomeHeroYoutubeThumb`) / cards (`PreferredYoutubeImageSlot`) wait with no RSS image yet. */
+    /** When true, `PreferredYoutubeImageSlot` (hero / cards) should wait with no RSS image yet. */
     awaitYoutubeCatalog,
     hasApiKey,
     channelLoading: full.loading || lite.loading,

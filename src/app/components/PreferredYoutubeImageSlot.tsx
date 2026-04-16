@@ -25,11 +25,10 @@ type Props = {
 };
 
 /**
- * Shared YouTube/RSS episode image slot for **featured cards, archive, episode detail**, etc.
- * Chain: Data API `youtubeThumbnailPreferred` (if any) **then** maxres → hq → mq → default.
- *
- * The **homepage latest-episode hero** does **not** use this — it uses `HomeHeroYoutubeThumb`
- * (mq first, then one sharp layer; no “preferred” as first paint).
+ * Shared YouTube/RSS episode image slot for **homepage hero, featured cards, archive, episode
+ * detail**, etc. One behavior everywhere: shimmer while YouTube metadata is loading (when
+ * configured), then `youtubeThumbnailPreferred` if available **then** maxres → hq → mq → default,
+ * then RSS if needed — fade in on load.
  *
  * The parent should keep `aspect-video` (or any fixed ratio) on the outer box; this layer
  * fills it with `absolute inset-0`.

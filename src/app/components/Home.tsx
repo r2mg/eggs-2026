@@ -5,12 +5,11 @@
  * (shared global cache — often free if you already visited the archive this session).
  *
  * **Top of page (what you’ll edit most):**
- * 1. Orange “latest episode” hero — art uses `HomeHeroYoutubeThumb` only (fast mq → sharp upgrade). Featured row below uses `PreferredYoutubeImageSlot`.
- *    One viewport (`100dvh`), then black strip below the fold; presenter eyebrow, title, summary, meta, CTAs, art.
+ * 1. Orange “latest episode” hero — large art uses the **same** `PreferredYoutubeImageSlot` as featured/archive (stable shimmer → YouTube → RSS). One viewport (`100dvh`), then black strip; eyebrow, title, summary, meta, CTAs.
  * 2. Black brand strip — one-line positioning statement (replaces the old full-screen hero tagline).
  * 3. Everything else — Featured, Topics, Newsletter, Guest/Sponsor (unchanged in role).
  */
-import { useLayoutEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
@@ -24,10 +23,7 @@ import { mergeYoutubeCatalogForMatching } from '../lib/youtubeChannelCache';
 import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
-import { extractAllYouTubeVideoIdsFromHtml } from '../lib/rss';
-import { youtubeMqThumbnailUrl } from '../lib/youtubeThumbnails';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
-import HomeHeroYoutubeThumb from './HomeHeroYoutubeThumb';
 
 /** Same idea as the archive page — turns `01:04:14` into a short label */
 function formatDurationLabel(raw: string | undefined): string {
@@ -49,38 +45,6 @@ function orderedSlugKey(slugs: string[]): string {
   return [...slugs].filter(Boolean).sort().join('|');
 }
 
-/**
- * Which YouTube video id the **hero** should load thumbnails for.
- *
- * - Prefer the **official** id from the channel overlay when present.
- * - While the channel is still loading and show notes contain a guessed id, use that guess so the
- *   hero does not wait on the full pipeline (still YouTube CDN — not RSS artwork).
- * - After the overlay finishes with **no** match and an API key exists, **drop** the guess and let
- *   the hero fall back to RSS-only (do not keep a possibly wrong embed from show notes).
- * - With **no** API key, the overlay never runs — keep using a guess from show notes if present.
- */
-function heroEffectiveYoutubeVideoId(
-  latest: { youtubeVideoId?: string } | null,
-  guessedFromRss: string | undefined,
-  youtubeChannelStillLoading: boolean,
-  hasApiKey: boolean,
-): string | undefined {
-  const confirmed = latest?.youtubeVideoId?.trim();
-  const cOk = confirmed && confirmed.length === 11;
-
-  if (cOk) return confirmed!;
-
-  if (youtubeChannelStillLoading && guessedFromRss) return guessedFromRss;
-
-  if (!youtubeChannelStillLoading && hasApiKey && !cOk) {
-    return undefined;
-  }
-
-  if (guessedFromRss) return guessedFromRss;
-
-  return undefined;
-}
-
 export default function Home() {
   const { data: rssData, loading, error } = useRssEpisodes();
   /**
@@ -100,38 +64,6 @@ export default function Home() {
     if (loading || error || rssData.length === 0) return null;
     return rssData[0];
   }, [rssData, loading, error]);
-
-  /** First id found in latest episode HTML — same signal we trust for preload + early hero paint. */
-  const guessedYoutubeVideoId = useMemo(() => {
-    if (!latestBase?.descriptionHtml) return undefined;
-    const ids = extractAllYouTubeVideoIdsFromHtml(latestBase.descriptionHtml);
-    const id = ids[0]?.trim();
-    return id && id.length === 11 ? id : undefined;
-  }, [latestBase?.descriptionHtml]);
-
-  /**
-   * Preload `mqdefault` as soon as we know a guessed id (do not wait on `awaitYoutubeOverlay`).
-   * Warms cache for the hero’s first paint.
-   */
-  useLayoutEffect(() => {
-    if (!latestBase?.descriptionHtml) return;
-    const ids = extractAllYouTubeVideoIdsFromHtml(latestBase.descriptionHtml);
-    const guessedId = ids[0];
-    if (!guessedId) return;
-    const href = youtubeMqThumbnailUrl(guessedId);
-    const linkId = 'eggs-home-hero-early-warm-mq';
-    if (document.getElementById(linkId)) return;
-    const link = document.createElement('link');
-    link.id = linkId;
-    link.rel = 'preload';
-    link.as = 'image';
-    link.href = href;
-    link.setAttribute('fetchpriority', 'high');
-    document.head.appendChild(link);
-    return () => {
-      document.getElementById(linkId)?.remove();
-    };
-  }, [latestBase?.descriptionHtml, latestBase?.slug]);
 
   /**
    * Featured row order comes from the **EGGS Featured** YouTube playlist when the API
@@ -164,17 +96,6 @@ export default function Home() {
   const latest = useMemo(
     () => (latestBase ? mergeEpisodeForDisplay(latestBase, heroOverlays[latestBase.slug] ?? null) : null),
     [latestBase, heroOverlays],
-  );
-
-  /**
-   * Hero-only: if show notes already give us an id, do **not** keep the hero on the skeleton until
-   * the channel snapshot finishes — `HomeHeroYoutubeThumb` can paint YouTube thumbs immediately.
-   */
-  const heroAwaitYoutubeOverlay = awaitYoutubeOverlay && !guessedYoutubeVideoId;
-
-  const heroYoutubeVideoId = useMemo(
-    () => heroEffectiveYoutubeVideoId(latest, guessedYoutubeVideoId, awaitYoutubeOverlay, hasApiKey),
-    [latest, guessedYoutubeVideoId, awaitYoutubeOverlay, hasApiKey],
   );
 
   const featuredList = useMemo(
@@ -337,17 +258,17 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Large 16:9 art — `HomeHeroYoutubeThumb` only (not PreferredYoutubeImageSlot) */}
+                {/* Large 16:9 art — same `PreferredYoutubeImageSlot` as featured/archive (stable, predictable). */}
                 <div className="min-w-0">
                   <Link to={episodePathFromSlug(latest.slug)} className="block group">
                     <div className="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">
-                      <HomeHeroYoutubeThumb
+                      <PreferredYoutubeImageSlot
                         key={latest.slug}
                         resetKey={latest.slug}
                         rssImage={latest.image}
-                        youtubeVideoId={heroYoutubeVideoId}
+                        youtubeVideoId={latest.youtubeVideoId}
                         youtubeThumbnailPreferred={latest.youtubeThumbnail}
-                        awaitYoutubeOverlay={heroAwaitYoutubeOverlay}
+                        awaitYoutubeOverlay={awaitYoutubeOverlay}
                         imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                       <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50 group-hover:opacity-80 transition-opacity" />

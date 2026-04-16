@@ -50,40 +50,6 @@ export function youtubeThumbnailFallbackUrls(videoId: string): string[] {
   ];
 }
 
-/**
- * **Homepage hero only — first paint (smallest / fastest).**
- *
- * We intentionally start at **`mqdefault`** (320×180), then **`default`** (120×90) on error.
- * We do **not** start at `hqdefault` or the Data API’s `youtubeThumbnailPreferred` here — the
- * **sharp** upgrade (see `youtubeHeroSharpUpgradeUrl`) loads in a **second** `<img>` after this.
- *
- * Cards and episode pages still use `youtubeThumbnailFallbackUrls` (maxres-first chain).
- */
-export function youtubeHeroFirstPaintThumbnailUrls(videoId: string): string[] {
-  const id = videoId.trim();
-  if (id.length !== 11) return [];
-  return [youtubeMqThumbnailUrl(id), youtubeDefaultThumbnailUrl(id)];
-}
-
-/**
- * **Homepage hero — single “sharp” upgrade** (second layer after mq/default).
- *
- * Uses the Data API URL when it is a **different** file than mq/hq (often maxres or yt3); otherwise
- * **`hqdefault`** — reliable and much smaller than starting with maxres. Never used as first paint.
- */
-export function youtubeHeroSharpUpgradeUrl(
-  videoId: string,
-  youtubeThumbnailPreferred: string | undefined,
-): string | undefined {
-  const id = videoId.trim();
-  if (id.length !== 11) return undefined;
-  const mq = youtubeMqThumbnailUrl(id);
-  const hq = youtubeHqThumbnailUrl(id);
-  const p = youtubeThumbnailPreferred?.trim();
-  if (p && p !== mq && p !== hq) return p;
-  return hq;
-}
-
 /** Pull the 11-character id from a `watch?v=` or `youtu.be` URL. */
 export function videoIdFromYouTubeWatchUrl(url: string | undefined): string | undefined {
   if (!url?.trim()) return undefined;
