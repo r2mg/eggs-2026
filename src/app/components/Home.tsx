@@ -5,7 +5,8 @@
  * (shared global cache — often free if you already visited the archive this session).
  *
  * **Top of page (what you’ll edit most):**
- * 1. Orange “latest episode” hero — one viewport (`100dvh`), then black strip below the fold; presenter eyebrow, title, summary, meta, CTAs, art.
+ * 1. Orange “latest episode” hero — art uses `HomeHeroYoutubeThumb` only (fast mq → sharp upgrade). Featured row below uses `PreferredYoutubeImageSlot`.
+ *    One viewport (`100dvh`), then black strip below the fold; presenter eyebrow, title, summary, meta, CTAs, art.
  * 2. Black brand strip — one-line positioning statement (replaces the old full-screen hero tagline).
  * 3. Everything else — Featured, Topics, Newsletter, Guest/Sponsor (unchanged in role).
  */
@@ -287,7 +288,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Large 16:9 art — hero-only progressive YouTube loader (cards still use PreferredYoutubeImageSlot) */}
+                {/* Large 16:9 art — `HomeHeroYoutubeThumb` only (not PreferredYoutubeImageSlot) */}
                 <div className="min-w-0">
                   <Link to={episodePathFromSlug(latest.slug)} className="block group">
                     <div className="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">

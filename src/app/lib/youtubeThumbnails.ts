@@ -54,9 +54,8 @@ export function youtubeThumbnailFallbackUrls(videoId: string): string[] {
  * **Homepage hero only — first paint (smallest / fastest).**
  *
  * We intentionally start at **`mqdefault`** (320×180), then **`default`** (120×90) on error.
- * We do **not** start at `hqdefault` or the Data API’s `youtubeThumbnailPreferred` here — those
- * are used only as **later upgrade layers** in `HomeHeroYoutubeThumb` so the hero can show
- * something meaningful as soon as possible.
+ * We do **not** start at `hqdefault` or the Data API’s `youtubeThumbnailPreferred` here — the
+ * **sharp** upgrade (see `youtubeHeroSharpUpgradeUrl`) loads in a **second** `<img>` after this.
  *
  * Cards and episode pages still use `youtubeThumbnailFallbackUrls` (maxres-first chain).
  */
@@ -67,29 +66,22 @@ export function youtubeHeroFirstPaintThumbnailUrls(videoId: string): string[] {
 }
 
 /**
- * **Hero mid upgrade** — `hqdefault` (480×360), loaded after the tiny first paint is visible.
+ * **Homepage hero — single “sharp” upgrade** (second layer after mq/default).
+ *
+ * Uses the Data API URL when it is a **different** file than mq/hq (often maxres or yt3); otherwise
+ * **`hqdefault`** — reliable and much smaller than starting with maxres. Never used as first paint.
  */
-export function youtubeHeroMidUpgradeUrl(videoId: string): string | undefined {
-  const id = videoId.trim();
-  if (id.length !== 11) return undefined;
-  return youtubeHqThumbnailUrl(id);
-}
-
-/**
- * **Hero finest upgrade** — `youtubeThumbnailPreferred` (Data API) or `maxresdefault`.
- * Never used as the first paint; crossfades in after lower layers when ready.
- */
-export function youtubeHeroFinestUpgradeUrl(
+export function youtubeHeroSharpUpgradeUrl(
   videoId: string,
   youtubeThumbnailPreferred: string | undefined,
 ): string | undefined {
   const id = videoId.trim();
   if (id.length !== 11) return undefined;
-  const hq = youtubeHqThumbnailUrl(id);
   const mq = youtubeMqThumbnailUrl(id);
+  const hq = youtubeHqThumbnailUrl(id);
   const p = youtubeThumbnailPreferred?.trim();
-  if (p && p !== hq && p !== mq) return p;
-  return youtubeMaxresThumbnailUrl(id);
+  if (p && p !== mq && p !== hq) return p;
+  return hq;
 }
 
 /** Pull the 11-character id from a `watch?v=` or `youtu.be` URL. */

@@ -25,14 +25,11 @@ type Props = {
 };
 
 /**
- * Homepage-style episode image area:
- * - Skeleton while YouTube metadata is still loading (when configured).
- * - Then load the YouTube poster first and fade it in when the browser has the pixels.
- * - If every YouTube URL fails, fall back to the RSS image the same way.
- * - If there is no matched video after loading finishes, show RSS (or an empty muted block).
+ * Shared YouTube/RSS episode image slot for **featured cards, archive, episode detail**, etc.
+ * Chain: Data API `youtubeThumbnailPreferred` (if any) **then** maxres → hq → mq → default.
  *
- * The homepage **latest-episode hero** uses `HomeHeroYoutubeThumb` instead — it has a
- * faster, progressive loading path. Cards and the archive use this component.
+ * The **homepage latest-episode hero** does **not** use this — it uses `HomeHeroYoutubeThumb`
+ * (mq first, then one sharp layer; no “preferred” as first paint).
  *
  * The parent should keep `aspect-video` (or any fixed ratio) on the outer box; this layer
  * fills it with `absolute inset-0`.
