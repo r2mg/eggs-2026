@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Episode } from '../types/episode';
 import type { YoutubeEpisodeOverlay } from '../types/youtubeOverlay';
 import type { YouTubeChannelData } from '../lib/youtube';
@@ -15,11 +15,17 @@ import {
  */
 export type ArchiveYoutubeOverlayMap = Record<string, YoutubeEpisodeOverlay | null>;
 
+/** How many episodes we match synchronously before yielding so clicks/scroll stay responsive. */
+const OVERLAY_CHUNK_SIZE = 40;
+
 type Params = {
   /**
    * Episodes in a **stable** order for enrichment (on the archive page this is the search-filtered
-   * list). We only match YouTube for `filteredEpisodes.slice(0, visibleCount)` — align
-   * `visibleCount` with `ARCHIVE_INITIAL_PAGE_SIZE` / `ARCHIVE_LOAD_MORE_SIZE` on the caller.
+   * list). We only match YouTube for `filteredEpisodes.slice(0, visibleCount)`.
+   *
+   * Callers usually pass `visibleCount` = paging size. For **Featured** sort/topic on `/episodes`,
+   * pass `visibleCount === filteredEpisodes.length` so every row gets an overlay and `featured`
+   * flags are complete for the current search.
    */
   filteredEpisodes: Episode[];
   /** How many rows from the top of `filteredEpisodes` get YouTube matching on this pass. */
@@ -43,6 +49,10 @@ type Params = {
  * Walks `filteredEpisodes.slice(0, visibleCount)` **from top to bottom** once per relevant
  * change, and only calls `computeEpisodeYoutubeOverlay` for slugs that are not already in the
  * map. That keeps thumbnail work aligned with visible paging and preserves earlier results.
+ *
+ * **Why `useEffect` (not `useLayoutEffect`):** matching many rows synchronously blocked the main
+ * thread before paint, so the page felt frozen / unclickable. We run **after** paint and, for
+ * large slices, **chunk** work with short timeouts so the browser can still handle input.
  */
 export function useYoutubeArchiveBatchOverlays({
   filteredEpisodes,
@@ -52,29 +62,56 @@ export function useYoutubeArchiveBatchOverlays({
 }: Params): { overlayBySlug: ArchiveYoutubeOverlayMap } {
   const [overlayBySlug, setOverlayBySlug] = useState<ArchiveYoutubeOverlayMap>({});
   const lastResetTokenRef = useRef(resetToken);
+  /** Cancels in-flight chunked work when deps change or unmount. */
+  const runGenerationRef = useRef(0);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!catalog) return;
 
     const slice = filteredEpisodes.slice(0, Math.min(visibleCount, filteredEpisodes.length));
     const candidateList = youtubeCandidatesFromChannelData(catalog);
+    const resetHappened = lastResetTokenRef.current !== resetToken;
+    if (resetHappened) {
+      lastResetTokenRef.current = resetToken;
+    }
 
-    setOverlayBySlug((prev) => {
-      const resetHappened = lastResetTokenRef.current !== resetToken;
-      if (resetHappened) {
-        lastResetTokenRef.current = resetToken;
+    const gen = ++runGenerationRef.current;
+    let cancelled = false;
+    let chunkIndex = 0;
+
+    const processRange = (from: number, to: number) => {
+      setOverlayBySlug((prev) => {
+        const base =
+          from === 0 && resetHappened ? {} : { ...prev };
+        for (let i = from; i < to; i++) {
+          const ep = slice[i];
+          if (Object.prototype.hasOwnProperty.call(base, ep.slug)) continue;
+          base[ep.slug] = computeEpisodeYoutubeOverlay(ep, catalog, candidateList);
+        }
+        return base;
+      });
+    };
+
+    const scheduleNext = () => {
+      if (cancelled || gen !== runGenerationRef.current) return;
+      const from = chunkIndex * OVERLAY_CHUNK_SIZE;
+      if (from >= slice.length) return;
+      const to = Math.min(from + OVERLAY_CHUNK_SIZE, slice.length);
+      processRange(from, to);
+      chunkIndex += 1;
+      if (to < slice.length) {
+        window.setTimeout(scheduleNext, 0);
       }
-      const base: ArchiveYoutubeOverlayMap = resetHappened ? {} : { ...prev };
+    };
 
-      let changed = resetHappened;
-      for (const ep of slice) {
-        if (Object.prototype.hasOwnProperty.call(base, ep.slug)) continue;
-        base[ep.slug] = computeEpisodeYoutubeOverlay(ep, catalog, candidateList);
-        changed = true;
-      }
+    if (slice.length === 0) return;
 
-      return changed ? base : prev;
-    });
+    // First chunk runs after paint; further chunks yield with setTimeout(0) so clicks aren’t stuck.
+    window.setTimeout(scheduleNext, 0);
+
+    return () => {
+      cancelled = true;
+    };
   }, [catalog, filteredEpisodes, visibleCount, resetToken]);
 
   return { overlayBySlug };

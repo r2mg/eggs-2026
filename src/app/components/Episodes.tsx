@@ -40,8 +40,9 @@ function formatDurationLabel(raw: string | undefined): string {
 
 export default function Episodes() {
   /**
-   * RSS rows stay stable (`useRssEpisodes`). YouTube is merged **per slug** only for batches
-   * of rows you actually see (see `useYoutubeArchiveBatchOverlays`) — no whole-archive overlay pass.
+   * RSS rows stay stable (`useRssEpisodes`). YouTube overlays are usually batched to the
+   * visible page (`useYoutubeArchiveBatchOverlays`), except when Featured sort/topic needs a
+   * full pass over the current search list — see `youtubeOverlayBatchCount`.
    */
   const { data: episodes, loading, error, retry: retryRss } = useRssEpisodes();
   /** Full channel (slow) — used as the catalog for matching once it exists; until then we use lite. */
@@ -108,13 +109,28 @@ export default function Episodes() {
   }, [sortedRssOnly, searchQuery]);
 
   /**
-   * Step 3 — YouTube match **only** for the first `visibleCount` rows of **search order**
-   * (not the re-ordered “featured” view). That keeps work predictable and avoids a dependency cycle:
-   * we enrich in search-result order first, then re-sort for display.
+   * Featured topic filter and “Featured” **sort** both need `merged.featured` for every row in the
+   * current search list. Default batching only enriches `visibleCount` rows — fine for normal
+   * topics/cards, but wrong here (un-enriched slugs would be treated as not featured).
+   */
+  const isFeaturedTopicFilter = useMemo(
+    () =>
+      selectedTopic === ARCHIVE_TOPIC_FILTER_FEATURED ||
+      titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, selectedTopic),
+    [selectedTopic],
+  );
+
+  const youtubeOverlayBatchCount =
+    isFeaturedTopicFilter || sortBy === 'featured' ? searchFiltered.length : visibleCount;
+
+  /**
+   * Step 3 — YouTube overlays for `searchFiltered.slice(0, youtubeOverlayBatchCount)`.
+   * Usually that count is `visibleCount` (efficient). For Featured sort/topic it is the full
+   * search list so featured flags are complete for the current query.
    */
   const { overlayBySlug } = useYoutubeArchiveBatchOverlays({
     filteredEpisodes: searchFiltered,
-    visibleCount,
+    visibleCount: youtubeOverlayBatchCount,
     catalog: youtubeCatalog,
     resetToken: youtubeOverlayResetToken,
   });
@@ -139,10 +155,6 @@ export default function Episodes() {
   const topicFiltered = useMemo(() => {
     if (selectedTopic === 'All Episodes') return sortedDisplay;
 
-    const isFeaturedTopicFilter =
-      selectedTopic === ARCHIVE_TOPIC_FILTER_FEATURED ||
-      titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, selectedTopic);
-
     if (isFeaturedTopicFilter) {
       return sortedDisplay.filter((episode) => {
         if (!Object.prototype.hasOwnProperty.call(overlayBySlug, episode.slug)) return false;
@@ -158,7 +170,7 @@ export default function Episodes() {
       const merged = mergeEpisodeForDisplay(episode, overlayBySlug[episode.slug] ?? null);
       return merged.collections?.includes(selectedTopic) ?? false;
     });
-  }, [sortedDisplay, selectedTopic, overlayBySlug]);
+  }, [sortedDisplay, selectedTopic, overlayBySlug, isFeaturedTopicFilter]);
 
   const displayedEpisodes = useMemo(
     () => topicFiltered.slice(0, visibleCount),
