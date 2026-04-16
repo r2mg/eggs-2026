@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { ARCHIVE_INITIAL_PAGE_SIZE, ARCHIVE_LOAD_MORE_SIZE } from '../config/archiveUi';
-import { PLAYLIST_TITLE_FEATURED, titleMatchesPlaylist } from '../config/youtubeChannel';
+import {
+  isAllowedTopicPlaylistTitleForCollections,
+  PLAYLIST_TITLE_FEATURED,
+  titleMatchesPlaylist,
+} from '../config/youtubeChannel';
 import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
 import { useYoutubeArchiveBatchOverlays } from '../hooks/useYoutubeArchiveBatchOverlays';
 import { useYoutubeLiteChannelData } from '../hooks/useYoutubeLiteChannelData';
@@ -135,6 +139,42 @@ export default function Episodes() {
     resetToken: youtubeOverlayResetToken,
   });
 
+  /**
+   * Pills = All + **Featured** + RSS / YouTube topic labels that match `EGGS_TOPIC_PLAYLIST_TITLES`
+   * only (same as merge + `collections`). No stray channel playlists.
+   */
+  const topicFiltersWithYoutube = useMemo(() => {
+    const unique = new Set<string>(['All Episodes', ARCHIVE_TOPIC_FILTER_FEATURED]);
+    for (const ep of episodes) {
+      const t = ep.topic ?? FALLBACK_TOPIC;
+      if (titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, t)) continue;
+      if (t === FALLBACK_TOPIC) continue;
+      if (!isAllowedTopicPlaylistTitleForCollections(t)) continue;
+      unique.add(t);
+    }
+    for (const o of Object.values(overlayBySlug)) {
+      if (!o?.collections) continue;
+      for (const c of o.collections) {
+        if (titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, c)) continue;
+        if (!isAllowedTopicPlaylistTitleForCollections(c)) continue;
+        unique.add(c);
+      }
+    }
+    return Array.from(unique).sort((a, b) => {
+      if (a === 'All Episodes') return -1;
+      if (b === 'All Episodes') return 1;
+      if (a === ARCHIVE_TOPIC_FILTER_FEATURED) return -1;
+      if (b === ARCHIVE_TOPIC_FILTER_FEATURED) return 1;
+      return a.localeCompare(b);
+    });
+  }, [episodes, overlayBySlug]);
+
+  useEffect(() => {
+    if (!topicFiltersWithYoutube.includes(selectedTopic)) {
+      setSelectedTopic('All Episodes');
+    }
+  }, [topicFiltersWithYoutube, selectedTopic]);
+
   /** Step 4 — “Featured” re-orders the search list using batch overlays (runs after step 3). */
   const sortedDisplay = useMemo(() => {
     if (sortBy !== 'featured') return searchFiltered;
@@ -176,33 +216,6 @@ export default function Episodes() {
     () => topicFiltered.slice(0, visibleCount),
     [topicFiltered, visibleCount],
   );
-
-  /**
-   * Pills = All + **Featured** (editorial, not a collection) + RSS topics + playlist titles from
-   * `collections`. We never add the real playlist title `EGGS Featured` as a second pill — that
-   * would duplicate the **Featured** filter, which uses `featured`, not `collections`.
-   */
-  const topicFiltersWithYoutube = useMemo(() => {
-    const unique = new Set<string>(['All Episodes', ARCHIVE_TOPIC_FILTER_FEATURED]);
-    for (const ep of episodes) {
-      const t = ep.topic ?? FALLBACK_TOPIC;
-      if (!titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, t)) unique.add(t);
-    }
-    for (const o of Object.values(overlayBySlug)) {
-      if (!o?.collections) continue;
-      for (const c of o.collections) {
-        if (titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, c)) continue;
-        unique.add(c);
-      }
-    }
-    return Array.from(unique).sort((a, b) => {
-      if (a === 'All Episodes') return -1;
-      if (b === 'All Episodes') return 1;
-      if (a === ARCHIVE_TOPIC_FILTER_FEATURED) return -1;
-      if (b === ARCHIVE_TOPIC_FILTER_FEATURED) return 1;
-      return a.localeCompare(b);
-    });
-  }, [episodes, overlayBySlug]);
 
   /**
    * Shimmer until we have a catalog **and** this slug has been through batch matching

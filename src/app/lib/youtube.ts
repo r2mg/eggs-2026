@@ -25,6 +25,7 @@ import {
   PLAYLIST_TITLE_FEATURED,
   PLAYLIST_TITLE_START_HERE,
   YOUTUBE_CHANNEL_ID,
+  isAllowedPlaylistForMerge,
   isPlaylistExcludedFromYouTubeMerge,
   titleMatchesPlaylist,
 } from '../config/youtubeChannel';
@@ -302,8 +303,8 @@ export type YouTubeChannelData = {
 };
 
 /**
- * Fetches uploads + all “EGGS …” playlists (and always the uploads list), merges videos,
- * and returns a map you can match RSS episodes against.
+ * Fetches uploads + playlists allowed by `isAllowedPlaylistForMerge` (see `EGGS_TOPIC_PLAYLIST_TITLES`
+ * and Start Here), merges videos, and returns a map you can match RSS episodes against.
  */
 export async function fetchYouTubeChannelData(
   channelId: string = YOUTUBE_CHANNEL_ID,
@@ -345,8 +346,7 @@ export async function fetchYouTubeChannelData(
 
   for (const p of playlists) {
     if (isPlaylistExcludedFromYouTubeMerge(p.title)) continue;
-    const t = p.title.trim();
-    if (t.toLowerCase().startsWith('eggs')) {
+    if (isAllowedPlaylistForMerge(p.title)) {
       playlistIdsToLoad.add(p.id);
     }
   }

@@ -5,6 +5,7 @@
 
 import type { Episode } from '../types/episode';
 import type { YoutubeEpisodeOverlay } from '../types/youtubeOverlay';
+import { isAllowedTopicPlaylistTitleForCollections } from '../config/youtubeChannel';
 import {
   pickBestThumbnailUrl,
   resolveEditorialPlaylistIds,
@@ -34,7 +35,7 @@ function collectionsForVideo(
   for (const id of yv.playlistIds ?? []) {
     if (id === uploadsId || id === featuredId || id === startHereId) continue;
     const t = titleById.get(id);
-    if (t) out.push(t);
+    if (t && isAllowedTopicPlaylistTitleForCollections(t)) out.push(t);
   }
   return out;
 }

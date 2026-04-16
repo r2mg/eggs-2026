@@ -62,6 +62,7 @@ export function useYoutubeArchiveBatchOverlays({
 }: Params): { overlayBySlug: ArchiveYoutubeOverlayMap } {
   const [overlayBySlug, setOverlayBySlug] = useState<ArchiveYoutubeOverlayMap>({});
   const lastResetTokenRef = useRef(resetToken);
+  const catalogRef = useRef(catalog);
   /** Cancels in-flight chunked work when deps change or unmount. */
   const runGenerationRef = useRef(0);
 
@@ -74,6 +75,9 @@ export function useYoutubeArchiveBatchOverlays({
     if (resetHappened) {
       lastResetTokenRef.current = resetToken;
     }
+    const catalogChanged = catalogRef.current !== catalog;
+    catalogRef.current = catalog;
+    const shouldClearAll = resetHappened || catalogChanged;
 
     const gen = ++runGenerationRef.current;
     let cancelled = false;
@@ -82,7 +86,7 @@ export function useYoutubeArchiveBatchOverlays({
     const processRange = (from: number, to: number) => {
       setOverlayBySlug((prev) => {
         const base =
-          from === 0 && resetHappened ? {} : { ...prev };
+          from === 0 && shouldClearAll ? {} : { ...prev };
         for (let i = from; i < to; i++) {
           const ep = slice[i];
           if (Object.prototype.hasOwnProperty.call(base, ep.slug)) continue;

@@ -121,3 +121,19 @@ export function isEpisodeTitleExcludedFromSite(episodeTitle: string): boolean {
   const t = episodeTitle.toLowerCase();
   return EPISODE_TITLE_SUBSTRINGS_EXCLUDE_FROM_SITE.some((frag) => t.includes(frag.toLowerCase()));
 }
+
+/**
+ * Playlists whose **items** we merge in `fetchYouTubeChannelData` (in addition to uploads and
+ * `KNOWN_PLAYLIST_IDS`). Replaces a loose “title starts with EGGS” rule so one-off channel
+ * playlists do not inflate matching or archive filters.
+ */
+export function isAllowedPlaylistForMerge(playlistTitle: string): boolean {
+  if (isPlaylistExcludedFromYouTubeMerge(playlistTitle)) return false;
+  if (titleMatchesPlaylist(PLAYLIST_TITLE_START_HERE, playlistTitle)) return true;
+  return EGGS_TOPIC_PLAYLIST_TITLES.some((expected) => titleMatchesPlaylist(expected, playlistTitle));
+}
+
+/** Topic labels allowed in `collections[]` and episode topic pills (editorial lists use `featured` / Start Here flags). */
+export function isAllowedTopicPlaylistTitleForCollections(playlistTitle: string): boolean {
+  return EGGS_TOPIC_PLAYLIST_TITLES.some((expected) => titleMatchesPlaylist(expected, playlistTitle));
+}

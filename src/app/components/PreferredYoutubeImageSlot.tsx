@@ -32,6 +32,9 @@ type Props = {
  *
  * The parent should keep `aspect-video` (or any fixed ratio) on the outer box; this layer
  * fills it with `absolute inset-0`.
+ *
+ * **Stacking:** Thumbnails stay at **z-0** so sibling overlays in the parent (gradients, play
+ * buttons, badges — usually `z-[2]` and up) always paint **on top** of the video art.
  */
 export default function PreferredYoutubeImageSlot({
   resetKey,
@@ -81,13 +84,13 @@ export default function PreferredYoutubeImageSlot({
 
     return (
       <>
-        {/* Shimmer (z-5) under the photo (z-10) until pixels load; card scrims stay at z-2 */}
+        {/* Shimmer (z-1) above the photo (z-0) until pixels load; parent UI stays z-2+ */}
         <MediaLoadingShimmer retreating={pixelsReady} />
         <img
           key={`yt-${ytIndex}-${src}`}
           src={src}
           alt=""
-          className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 z-0 h-full w-full object-cover transition-opacity duration-500 ${
             pixelsReady ? 'opacity-100' : 'opacity-0'
           } ${imageClassName}`}
           onLoad={() => setPixelsReady(true)}
@@ -114,7 +117,7 @@ export default function PreferredYoutubeImageSlot({
         <img
           src={rss}
           alt=""
-          className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 z-0 h-full w-full object-cover transition-opacity duration-500 ${
             pixelsReady ? 'opacity-100' : 'opacity-0'
           } ${imageClassName}`}
           onLoad={() => setPixelsReady(true)}
@@ -123,5 +126,5 @@ export default function PreferredYoutubeImageSlot({
     );
   }
 
-  return <div className="absolute inset-0 z-[5] eggs-skeleton-block" aria-hidden />;
+  return <div className="absolute inset-0 z-0 eggs-skeleton-block" aria-hidden />;
 }
