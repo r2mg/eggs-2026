@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { ARCHIVE_INITIAL_PAGE_SIZE, ARCHIVE_LOAD_MORE_SIZE } from '../config/archiveUi';
+import { PLAYLIST_TITLE_FEATURED, titleMatchesPlaylist } from '../config/youtubeChannel';
 import { clearRssEpisodesCache, useRssEpisodes } from '../hooks/useRssEpisodes';
 import { useYoutubeArchiveBatchOverlays } from '../hooks/useYoutubeArchiveBatchOverlays';
 import { useYoutubeLiteChannelData } from '../hooks/useYoutubeLiteChannelData';
@@ -15,6 +16,13 @@ import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 
 /** RSS items do not include iTunes-style topics yet — used for filters and labels */
 const FALLBACK_TOPIC = 'Episodes';
+
+/**
+ * Topic pill for “in the EGGS Featured **YouTube playlist**” — **not** a `collections[]` label.
+ * `computeEpisodeYoutubeOverlay` omits the featured playlist from `collections`, so this filter
+ * must use the overlay `featured` flag instead of `collections.includes(...)`.
+ */
+const ARCHIVE_TOPIC_FILTER_FEATURED = 'Featured';
 
 /** Turn `<itunes:duration>` like `01:04:14` into a short human-readable label. */
 function formatDurationLabel(raw: string | undefined): string {
@@ -123,9 +131,26 @@ export default function Episodes() {
     return list;
   }, [searchFiltered, sortBy, overlayBySlug]);
 
-  /** Step 5 — topic pill filter (YouTube collections only count after that slug has been batch-enriched). */
+  /**
+   * Step 5 — topic pill filter.
+   * - **Featured** uses `merged.featured` (YouTube editorial playlist), not `collections`.
+   * - Other topics use RSS `topic` or `collections` after that slug has been batch-enriched.
+   */
   const topicFiltered = useMemo(() => {
     if (selectedTopic === 'All Episodes') return sortedDisplay;
+
+    const isFeaturedTopicFilter =
+      selectedTopic === ARCHIVE_TOPIC_FILTER_FEATURED ||
+      titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, selectedTopic);
+
+    if (isFeaturedTopicFilter) {
+      return sortedDisplay.filter((episode) => {
+        if (!Object.prototype.hasOwnProperty.call(overlayBySlug, episode.slug)) return false;
+        const merged = mergeEpisodeForDisplay(episode, overlayBySlug[episode.slug] ?? null);
+        return merged.featured === true;
+      });
+    }
+
     return sortedDisplay.filter((episode) => {
       const rssTopic = episode.topic ?? FALLBACK_TOPIC;
       if (rssTopic === selectedTopic) return true;
@@ -140,19 +165,29 @@ export default function Episodes() {
     [topicFiltered, visibleCount],
   );
 
-  /** Pills = RSS topics + any playlist names we have seen on enriched overlays (grows as you scroll / load more). */
+  /**
+   * Pills = All + **Featured** (editorial, not a collection) + RSS topics + playlist titles from
+   * `collections`. We never add the real playlist title `EGGS Featured` as a second pill — that
+   * would duplicate the **Featured** filter, which uses `featured`, not `collections`.
+   */
   const topicFiltersWithYoutube = useMemo(() => {
-    const unique = new Set<string>(['All Episodes']);
+    const unique = new Set<string>(['All Episodes', ARCHIVE_TOPIC_FILTER_FEATURED]);
     for (const ep of episodes) {
-      unique.add(ep.topic ?? FALLBACK_TOPIC);
+      const t = ep.topic ?? FALLBACK_TOPIC;
+      if (!titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, t)) unique.add(t);
     }
     for (const o of Object.values(overlayBySlug)) {
       if (!o?.collections) continue;
-      for (const c of o.collections) unique.add(c);
+      for (const c of o.collections) {
+        if (titleMatchesPlaylist(PLAYLIST_TITLE_FEATURED, c)) continue;
+        unique.add(c);
+      }
     }
     return Array.from(unique).sort((a, b) => {
       if (a === 'All Episodes') return -1;
       if (b === 'All Episodes') return 1;
+      if (a === ARCHIVE_TOPIC_FILTER_FEATURED) return -1;
+      if (b === ARCHIVE_TOPIC_FILTER_FEATURED) return 1;
       return a.localeCompare(b);
     });
   }, [episodes, overlayBySlug]);
