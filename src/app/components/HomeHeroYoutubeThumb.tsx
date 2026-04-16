@@ -1,22 +1,46 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
+  youtubeHeroFinestUpgradeUrl,
   youtubeHeroFirstPaintThumbnailUrls,
-  youtubeHeroSharperUpgradeUrl,
+  youtubeHeroMidUpgradeUrl,
 } from '../lib/youtubeThumbnails';
 import { MediaLoadingShimmer } from './MediaLoadingShimmer';
+
+const HERO_THUMB_SESSION_PREFIX = 'eggs-hero-thumb-url:';
+
+function readCachedHeroThumbUrl(slug: string): string | undefined {
+  try {
+    const u = sessionStorage.getItem(HERO_THUMB_SESSION_PREFIX + slug)?.trim();
+    return u || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeCachedHeroThumbUrl(slug: string, url: string) {
+  try {
+    sessionStorage.setItem(HERO_THUMB_SESSION_PREFIX + slug, url);
+  } catch {
+    /* storage full or disabled — ignore */
+  }
+}
 
 type Props = {
   /** Changes when the episode changes (RSS slug) so loading state resets cleanly. */
   resetKey: string;
-  /** Podcast artwork from RSS — only used when YouTube has no match or every URL fails (never shown during the “wait for YouTube” phase). */
+  /** Podcast artwork from RSS — only when YouTube has no match or every URL fails (never during skeleton / cache-only phase). */
   rssImage?: string;
   /** Set when the app matched this episode to a YouTube upload. */
   youtubeVideoId?: string;
-  /** Optional high-quality URL from the YouTube Data API — used for the *sharp upgrade* layer, not as the first paint. */
+  /**
+   * Data API thumbnail URL — **never** used as the first paint. It is only a *finest* upgrade layer
+   * after mq → hq have had a chance to show.
+   */
   youtubeThumbnailPreferred?: string;
   /**
    * True while the YouTube channel snapshot is still loading (when an API key exists).
-   * We show only the skeleton — never the RSS image — so there is no RSS-to-YouTube flash.
+   * We never show RSS art here — only skeleton, or a **session-cached YouTube URL** for this slug
+   * (still YouTube, not RSS — avoids the old RSS→YouTube flash).
    */
   awaitYoutubeOverlay: boolean;
   /** Passed through to the `<img>` tags (e.g. hover zoom). */
@@ -24,17 +48,19 @@ type Props = {
 };
 
 /**
- * **Homepage latest-episode hero only** — tuned for speed:
+ * **Homepage latest-episode hero only** — perceived speed first:
  *
- * 1. **Skeleton first** while `awaitYoutubeOverlay` is true (same rule as the rest of the site).
- * 2. **First paint** uses a small, reliable YouTube file (`hqdefault.jpg`), *not* `maxresdefault`,
- *    which is often slower or missing.
- * 3. **Progressive upgrade**: after the quick image is showing, we optionally load a sharper URL
- *    (Data API thumbnail if we have it, otherwise `maxresdefault`) and fade it in on top — no layout change.
- * 4. **Browser hints**: high priority + preload for the first-paint URL; the upgrade uses lower priority
- *    so it does not compete with the image you see first.
+ * 1. **Skeleton** while `awaitYoutubeOverlay`, **unless** we have a **session-cached YouTube URL**
+ *    for this slug — then we paint that immediately (still not RSS).
+ * 2. **First paint** is always a **small** CDN file: `mqdefault.jpg`, then `default.jpg` on error.
+ *    We never start with `youtubeThumbnailPreferred` or `maxresdefault` — that was the old bug
+ *    when “preferred” was merged into the first chain.
+ * 3. **Upgrade A (`hqdefault`)** loads in parallel and crossfades in over the tiny image.
+ * 4. **Upgrade B** — Data API `youtubeThumbnailPreferred` if it is a different URL, else
+ *    `maxresdefault.jpg` — crossfades in last when ready.
+ * 5. The **best** URL we successfully show is saved to `sessionStorage` for the next visit.
  *
- * Archive cards and other pages keep using `PreferredYoutubeImageSlot` (maxres-first chain).
+ * Featured rows and the archive still use `PreferredYoutubeImageSlot` (unchanged).
  */
 export default function HomeHeroYoutubeThumb({
   resetKey,
@@ -47,36 +73,40 @@ export default function HomeHeroYoutubeThumb({
   const rss = rssImage?.trim() ?? '';
   const id = youtubeVideoId?.trim() ?? '';
 
-  /** Step 1 for the hero: `hqdefault` → `mqdefault` → `default` (no maxres in this list). */
+  const cachedWhileWaiting = useMemo(() => readCachedHeroThumbUrl(resetKey), [resetKey]);
+
+  /** Smallest first: mq → default (never hq or “preferred” here). */
   const baseUrls = useMemo(() => {
     if (!id || id.length !== 11) return [];
     return youtubeHeroFirstPaintThumbnailUrls(id);
   }, [id]);
 
-  /** Step 2: sharper image on top when it finishes loading (optional). */
-  const upgradeUrl = useMemo(
-    () => (id.length === 11 ? youtubeHeroSharperUpgradeUrl(id, youtubeThumbnailPreferred) : undefined),
+  const hqUrl = useMemo(() => (id.length === 11 ? youtubeHeroMidUpgradeUrl(id) : undefined), [id]);
+
+  const finestUrl = useMemo(
+    () => (id.length === 11 ? youtubeHeroFinestUpgradeUrl(id, youtubeThumbnailPreferred) : undefined),
     [id, youtubeThumbnailPreferred],
   );
 
   const [ytIndex, setYtIndex] = useState(0);
   const [useRssFallback, setUseRssFallback] = useState(false);
   const [baseReady, setBaseReady] = useState(false);
-  const [upgradeReady, setUpgradeReady] = useState(false);
-  const [upgradeFailed, setUpgradeFailed] = useState(false);
+  const [hqReady, setHqReady] = useState(false);
+  const [hqFailed, setHqFailed] = useState(false);
+  const [finestReady, setFinestReady] = useState(false);
+  const [finestFailed, setFinestFailed] = useState(false);
 
   useEffect(() => {
     setYtIndex(0);
     setUseRssFallback(false);
     setBaseReady(false);
-    setUpgradeReady(false);
-    setUpgradeFailed(false);
+    setHqReady(false);
+    setHqFailed(false);
+    setFinestReady(false);
+    setFinestFailed(false);
   }, [resetKey, id, awaitYoutubeOverlay]);
 
-  /**
-   * Ask the browser to start fetching the first-paint URL as soon as we leave the skeleton state.
-   * The `<img>` below requests the same URL; together this helps the hero win the network queue.
-   */
+  /** First-paint URL only — `mqdefault` (or `default` after errors). */
   useLayoutEffect(() => {
     if (awaitYoutubeOverlay || baseUrls.length === 0) return;
     const href = baseUrls[0];
@@ -94,7 +124,22 @@ export default function HomeHeroYoutubeThumb({
     };
   }, [awaitYoutubeOverlay, resetKey, baseUrls]);
 
+  /**
+   * Still waiting on YouTube channel data: show skeleton, **or** a cached YouTube thumbnail for this
+   * slug so repeat visits feel instant (not RSS — avoids the ugly swap).
+   */
   if (awaitYoutubeOverlay) {
+    if (cachedWhileWaiting) {
+      return (
+        <img
+          src={cachedWhileWaiting}
+          alt=""
+          loading="eager"
+          fetchPriority="high"
+          className={`absolute inset-0 z-[10] h-full w-full object-cover ${imageClassName}`}
+        />
+      );
+    }
     return (
       <>
         <MediaLoadingShimmer retreating={false} />
@@ -105,22 +150,33 @@ export default function HomeHeroYoutubeThumb({
 
   if (baseUrls.length > 0 && !useRssFallback) {
     const baseSrc = baseUrls[Math.min(ytIndex, baseUrls.length - 1)];
-    const showUpgrade = Boolean(upgradeUrl && !upgradeFailed && upgradeUrl !== baseSrc);
+    const showHq = Boolean(hqUrl && !hqFailed);
+    const showFinest = Boolean(
+      finestUrl && !finestFailed && finestUrl !== baseSrc && finestUrl !== hqUrl,
+    );
+
+    /** Softer look on the tiny mq layer until hq, finest, or “give up on hq with no finest” kicks in. */
+    const sharpVisible =
+      hqReady || finestReady || (Boolean(hqFailed) && !showFinest);
+    const blurBase = baseReady && !sharpVisible;
 
     return (
       <>
         <MediaLoadingShimmer retreating={baseReady} />
-        {/* Layer A — fast, reliable thumbnail (never starts with maxresdefault.jpg) */}
+        {/* Layer 1 — fastest file size (mq / default). Never youtubeThumbnailPreferred. */}
         <img
           key={`hero-base-${ytIndex}-${baseSrc}`}
           src={baseSrc}
           alt=""
           loading="eager"
           fetchPriority="high"
-          className={`absolute inset-0 z-[10] h-full w-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 z-[10] h-full w-full object-cover transition-all duration-500 ${
             baseReady ? 'opacity-100' : 'opacity-0'
-          } ${imageClassName}`}
-          onLoad={() => setBaseReady(true)}
+          } ${blurBase ? 'blur-sm scale-[1.02]' : ''} ${imageClassName}`}
+          onLoad={() => {
+            setBaseReady(true);
+            writeCachedHeroThumbUrl(resetKey, baseSrc);
+          }}
           onError={() => {
             setBaseReady(false);
             if (ytIndex < baseUrls.length - 1) {
@@ -130,19 +186,40 @@ export default function HomeHeroYoutubeThumb({
             }
           }}
         />
-        {/* Layer B — optional sharper image; stays invisible until both it and the base have loaded */}
-        {showUpgrade && (
+        {/* Layer 2 — hq (parallel); not the first paint, but much sharper than mq */}
+        {showHq && hqUrl && (
           <img
-            key={`hero-upgrade-${upgradeUrl}`}
-            src={upgradeUrl}
+            key={`hero-hq-${hqUrl}`}
+            src={hqUrl}
+            alt=""
+            loading="eager"
+            fetchPriority="auto"
+            className={`absolute inset-0 z-[11] h-full w-full object-cover transition-opacity duration-500 ${
+              baseReady && hqReady ? 'opacity-100' : 'opacity-0'
+            } ${imageClassName}`}
+            onLoad={() => {
+              setHqReady(true);
+              writeCachedHeroThumbUrl(resetKey, hqUrl);
+            }}
+            onError={() => setHqFailed(true)}
+          />
+        )}
+        {/* Layer 3 — API preferred or maxres; never competes with first paint */}
+        {showFinest && finestUrl && (
+          <img
+            key={`hero-finest-${finestUrl}`}
+            src={finestUrl}
             alt=""
             loading="eager"
             fetchPriority="low"
             className={`absolute inset-0 z-[12] h-full w-full object-cover transition-opacity duration-700 ${
-              baseReady && upgradeReady ? 'opacity-100' : 'opacity-0'
+              baseReady && finestReady ? 'opacity-100' : 'opacity-0'
             } ${imageClassName}`}
-            onLoad={() => setUpgradeReady(true)}
-            onError={() => setUpgradeFailed(true)}
+            onLoad={() => {
+              setFinestReady(true);
+              writeCachedHeroThumbUrl(resetKey, finestUrl);
+            }}
+            onError={() => setFinestFailed(true)}
           />
         )}
       </>

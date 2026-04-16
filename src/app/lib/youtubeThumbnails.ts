@@ -51,42 +51,45 @@ export function youtubeThumbnailFallbackUrls(videoId: string): string[] {
 }
 
 /**
- * **Homepage hero only** — skips `maxresdefault` for the first paint path.
+ * **Homepage hero only — first paint (smallest / fastest).**
  *
- * Max resolution is sharper when it exists, but the first request can fail or be slow (404 or a
- * long wait), so the hero used to “sit” on the skeleton longer than it needed to. This list starts
- * at `hqdefault` (480×360), which is almost always available quickly, then steps down if needed.
+ * We intentionally start at **`mqdefault`** (320×180), then **`default`** (120×90) on error.
+ * We do **not** start at `hqdefault` or the Data API’s `youtubeThumbnailPreferred` here — those
+ * are used only as **later upgrade layers** in `HomeHeroYoutubeThumb` so the hero can show
+ * something meaningful as soon as possible.
  *
- * Cards and episode pages still use {@link youtubeThumbnailFallbackUrls} (sharp-first chain).
+ * Cards and episode pages still use `youtubeThumbnailFallbackUrls` (maxres-first chain).
  */
 export function youtubeHeroFirstPaintThumbnailUrls(videoId: string): string[] {
   const id = videoId.trim();
   if (id.length !== 11) return [];
-  return [
-    youtubeHqThumbnailUrl(id),
-    youtubeMqThumbnailUrl(id),
-    youtubeDefaultThumbnailUrl(id),
-  ];
+  return [youtubeMqThumbnailUrl(id), youtubeDefaultThumbnailUrl(id)];
 }
 
 /**
- * **Homepage hero “sharp layer”** — loaded *after* the fast `hqdefault` image is shown.
- *
- * We prefer the Data API’s `youtubeThumbnailPreferred` when it is present and not the same URL
- * as `hqdefault` (often that URL is `maxresdefault` or a high-quality `yt3` host). If there is
- * no separate preferred URL, we upgrade to `maxresdefault` on `i.ytimg.com` when available.
+ * **Hero mid upgrade** — `hqdefault` (480×360), loaded after the tiny first paint is visible.
  */
-export function youtubeHeroSharperUpgradeUrl(
+export function youtubeHeroMidUpgradeUrl(videoId: string): string | undefined {
+  const id = videoId.trim();
+  if (id.length !== 11) return undefined;
+  return youtubeHqThumbnailUrl(id);
+}
+
+/**
+ * **Hero finest upgrade** — `youtubeThumbnailPreferred` (Data API) or `maxresdefault`.
+ * Never used as the first paint; crossfades in after lower layers when ready.
+ */
+export function youtubeHeroFinestUpgradeUrl(
   videoId: string,
   youtubeThumbnailPreferred: string | undefined,
 ): string | undefined {
   const id = videoId.trim();
   if (id.length !== 11) return undefined;
   const hq = youtubeHqThumbnailUrl(id);
+  const mq = youtubeMqThumbnailUrl(id);
   const p = youtubeThumbnailPreferred?.trim();
-  if (p && p !== hq) return p;
-  const max = youtubeMaxresThumbnailUrl(id);
-  return max !== hq ? max : undefined;
+  if (p && p !== hq && p !== mq) return p;
+  return youtubeMaxresThumbnailUrl(id);
 }
 
 /** Pull the 11-character id from a `watch?v=` or `youtu.be` URL. */

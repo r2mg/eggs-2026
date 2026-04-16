@@ -24,7 +24,7 @@ import { getFeaturedEpisodesInPlaylistOrder } from '../lib/youtubeFeaturedOrder'
 import { mergeEpisodeForDisplay } from '../types/youtubeOverlay';
 import { episodePathFromSlug } from '../episodePaths';
 import { extractAllYouTubeVideoIdsFromHtml } from '../lib/rss';
-import { youtubeHqThumbnailUrl } from '../lib/youtubeThumbnails';
+import { youtubeMqThumbnailUrl } from '../lib/youtubeThumbnails';
 import PreferredYoutubeImageSlot from './PreferredYoutubeImageSlot';
 import HomeHeroYoutubeThumb from './HomeHeroYoutubeThumb';
 
@@ -71,16 +71,16 @@ export default function Home() {
   /**
    * While the YouTube channel is still loading, we **do not** paint RSS art in the hero (that rule
    * lives in `HomeHeroYoutubeThumb`). If the episode show notes already link to a YouTube video,
-   * we can still **warm the network** for that video’s small `hqdefault` image — often the same id
-   * the matcher will pick — so the file may be cached the moment the skeleton disappears.
+   * we can still **warm the network** for that video’s `mqdefault` image (same first-paint tier as
+   * the hero) — often the same id the matcher will pick.
    */
   useLayoutEffect(() => {
     if (!awaitYoutubeOverlay || !latestBase?.descriptionHtml) return;
     const ids = extractAllYouTubeVideoIdsFromHtml(latestBase.descriptionHtml);
     const guessedId = ids[0];
     if (!guessedId) return;
-    const href = youtubeHqThumbnailUrl(guessedId);
-    const linkId = 'eggs-home-hero-early-warm-hq';
+    const href = youtubeMqThumbnailUrl(guessedId);
+    const linkId = 'eggs-home-hero-early-warm-mq';
     if (document.getElementById(linkId)) return;
     const link = document.createElement('link');
     link.id = linkId;
