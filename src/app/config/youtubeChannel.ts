@@ -37,19 +37,31 @@ export const PLAYLIST_TITLE_FEATURED = 'EGGS Featured';
 export const PLAYLIST_TITLE_START_HERE = 'EGGS Start Here';
 
 /**
- * Topic / category playlists. Each title should match a YouTube playlist.
- * Episode `collections` will include the full title string (e.g. "EGGS Entrepreneurship").
+ * Topic / category playlists — the **source of truth** for the homepage "Explore by Topic"
+ * cards and the `/topics/<slug>` pages.
+ *
+ * HOW TO MANAGE TOPICS (no other code changes needed):
+ * - Each entry below must match a **public** playlist title on the EGGS YouTube channel
+ *   **exactly** (case- and extra-space-insensitive). An episode is tagged with a topic when
+ *   its matched YouTube video belongs to that playlist, so you curate topics simply by adding
+ *   videos to the matching playlist on YouTube — the next site build picks it up.
+ * - To add a new topic: create the public playlist on YouTube, then add its exact title here.
+ * - To remove a topic from the site: delete its title here (the playlist can stay on YouTube).
+ * - The card order on the homepage follows the order of this list.
+ *
+ * NOTE: "Featured" is NOT a topic — it is resolved separately by playlist id via
+ * `KNOWN_PLAYLIST_IDS.featured`, so it must not be listed here.
+ *
+ * Episode `collections` will include the full title string (e.g. "Technology").
  */
 export const EGGS_TOPIC_PLAYLIST_TITLES = [
-  'EGGS Entrepreneurship',
-  'EGGS Branding',
-  'EGGS Creativity',
-  'EGGS Business Growth',
-  'EGGS Featured',
-  'EGGS Technology',
-  'EGGS Culture',
-  'EGGS Leadership',
-  'EGGS Expertise',
+  'Technology',
+  'Marketing',
+  'Real Estate',
+  'Business Leadership',
+  'Personal Finance',
+  'Personal Growth and Development',
+  'Sports, Music, and Entertainment',
 ] as const;
 
 /**
