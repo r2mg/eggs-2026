@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { episodePath, episodeEyebrow } from '../lib/display';
 
 /** Slim episode projection passed from the Astro page (keeps the hydration payload small). */
@@ -55,11 +55,34 @@ export default function EpisodesArchive({ episodes, topics, initialPageSize = 16
   const [sort, setSort] = useState<'newest' | 'oldest' | 'featured'>('newest');
   const [visible, setVisible] = useState(initialPageSize);
 
+  const pillsRef = useRef<HTMLDivElement>(null);
+  const [topicsExpanded, setTopicsExpanded] = useState(false);
+  const [pillsOverflow, setPillsOverflow] = useState(false);
+  const [rowHeight, setRowHeight] = useState(0);
+
   useEffect(() => {
     setVisible(initialPageSize);
   }, [query, topic, sort, initialPageSize]);
 
   const topicPills = useMemo(() => [ALL, FEATURED, ...topics], [topics]);
+
+  // Measure whether the pills wrap onto more than one row so we know when to show the toggle.
+  // `scrollHeight` still reports full content height even while the row is clamped, so this
+  // stays accurate in both the collapsed and expanded states.
+  useEffect(() => {
+    const el = pillsRef.current;
+    if (!el) return;
+    const measure = () => {
+      const first = el.firstElementChild as HTMLElement | null;
+      const rh = first ? first.offsetHeight : 0;
+      setRowHeight(rh);
+      setPillsOverflow(rh > 0 && el.scrollHeight > rh + 4);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [topicPills]);
 
   const filtered = useMemo(() => {
     let list = [...episodes];
@@ -93,27 +116,43 @@ export default function EpisodesArchive({ episodes, topics, initialPageSize = 16
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-6">
             <div className="w-full min-w-0 lg:flex-1 lg:max-w-md">
-              <input
-                type="text"
-                placeholder="Search episodes..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full min-h-12 px-4 sm:px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors text-base max-w-full"
-              />
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 sm:pl-5 text-muted-foreground">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search episodes..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full min-h-12 pl-11 sm:pl-12 pr-4 sm:pr-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors text-base max-w-full"
+                />
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full min-w-0 lg:w-auto lg:shrink-0">
+            <div className="flex flex-row items-center gap-2 sm:gap-3 w-full min-w-0 lg:w-auto lg:shrink-0 lg:ml-auto">
+              <label htmlFor="episode-sort" className="text-sm text-muted-foreground whitespace-nowrap shrink-0">
+                Sort by:
+              </label>
               <select
+                id="episode-sort"
                 value={sort}
                 onChange={(e) => setSort(e.target.value as typeof sort)}
-                className="w-full sm:min-w-[11rem] sm:w-auto min-h-12 px-4 sm:px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors text-base max-w-full"
+                className="flex-1 lg:flex-none sm:min-w-[11rem] min-h-12 px-4 sm:px-6 py-3 bg-muted border border-border focus:outline-none focus:border-accent transition-colors text-base max-w-full"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="featured">Featured</option>
               </select>
-              <span className="text-xs sm:text-sm text-muted-foreground sm:whitespace-nowrap lg:ml-2 py-1">
-                {filtered.length} {filtered.length === 1 ? 'episode' : 'episodes'}
-              </span>
             </div>
           </div>
         </div>
@@ -122,13 +161,17 @@ export default function EpisodesArchive({ episodes, topics, initialPageSize = 16
       {/* Topic pills */}
       <section className="py-3 sm:py-6 md:py-8 border-b border-border">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory touch-pan-x">
+          <div
+            ref={pillsRef}
+            className="flex flex-wrap gap-2 sm:gap-3 overflow-hidden transition-[max-height] duration-300 ease-in-out"
+            style={!topicsExpanded && rowHeight ? { maxHeight: rowHeight } : undefined}
+          >
             {topicPills.map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTopic(t)}
-                className={`shrink-0 snap-start min-h-11 px-4 sm:px-6 py-2.5 text-sm font-medium whitespace-nowrap transition-all rounded-sm ${
+                className={`shrink-0 min-h-11 px-4 sm:px-6 py-2.5 text-sm font-medium whitespace-nowrap transition-all rounded-sm ${
                   topic === t ? 'bg-accent text-accent-foreground' : 'bg-muted text-foreground hover:bg-accent/10'
                 }`}
               >
@@ -136,6 +179,26 @@ export default function EpisodesArchive({ episodes, topics, initialPageSize = 16
               </button>
             ))}
           </div>
+          {pillsOverflow && (
+            <button
+              type="button"
+              onClick={() => setTopicsExpanded((v) => !v)}
+              aria-expanded={topicsExpanded}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+            >
+              {topicsExpanded ? 'Show less' : 'Show all topics'}
+              <svg
+                className={`w-4 h-4 transition-transform duration-200 ${topicsExpanded ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          )}
         </div>
       </section>
 
