@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EpisodeCard from '../../components/EpisodeCard.astro';
+import { getSiteContent } from '../../data/content';
+import { topicPath } from '../../lib/display';
+
+export async function getStaticPaths() {
+  const { topics } = await getSiteContent();
+  return topics.map((topic) => ({ params: { slug: topic.slug }, props: { topic } }));
+}
+
+const { topic } = Astro.props;
+const count = topic.episodes.length;
+const canonical = new URL(topicPath(topic.slug), Astro.site ?? 'https://eggscast.com').href;
+const description = `${count} EGGS! Podcast ${count === 1 ? 'episode' : 'episodes'} on ${topic.label} — conversations with creative professionals and entrepreneurs.`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${topic.label} — EGGS! The Podcast`,
+  description,
+  url: canonical,
+};
+---
+
+<BaseLayout title={topic.label} description={description} jsonLd={jsonLd}>
+  <main class="min-h-screen bg-background pt-16">
+    <section class="pt-12 sm:pt-20 md:pt-24 pb-8 sm:pb-12 bg-gradient-to-b from-accent/5 to-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground mb-6">
+          <a href="/topics" class="inline-flex min-h-11 items-center py-1 -ml-1 px-1 rounded-sm hover:text-foreground transition-colors">← All Topics</a>
+        </div>
+        <p class="text-[0.65rem] sm:text-sm text-accent font-medium mb-2 sm:mb-4 tracking-wider uppercase">Topic</p>
+        <h1 class="text-4xl sm:text-6xl md:text-7xl mb-3 sm:mb-5 break-words" style="font-family: var(--font-display); font-weight: 700;">{topic.label}</h1>
+        <p class="text-base sm:text-xl text-muted-foreground">{count} {count === 1 ? 'episode' : 'episodes'}</p>
+      </div>
+    </section>
+
+    <section class="py-8 sm:py-14 md:py-16">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
+          {topic.episodes.map((ep) => <EpisodeCard episode={ep} />)}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

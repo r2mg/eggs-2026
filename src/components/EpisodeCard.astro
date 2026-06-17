@@ -1,0 +1,54 @@
+---
+/** Reusable episode card used on Home (featured), Episodes archive, Topics, Guests, and Related. */
+import type { Episode } from '../app/types/episode';
+import EpisodeImage from './EpisodeImage.astro';
+import { episodePath, episodeEyebrow } from '../lib/display';
+
+interface Props {
+  episode: Episode;
+  /** Show the FEATURED badge (archive). */
+  showFeaturedBadge?: boolean;
+}
+
+const { episode, showFeaturedBadge = false } = Astro.props;
+const eyebrow = episodeEyebrow(episode.episodeNumber, episode.publishedAt, episode.duration);
+const numberLabel = episode.episodeNumber !== undefined ? String(episode.episodeNumber) : episode.id.slice(0, 8);
+const summary = episode.summary?.trim() || 'Show notes are available on the episode page.';
+---
+
+<a href={episodePath(episode.slug)} class="group block">
+  <div class="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 mb-5 relative overflow-hidden">
+    <EpisodeImage episode={episode} class="group-hover:scale-105 transition-transform duration-500" />
+    <div class="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent"></div>
+
+    <div class="absolute inset-0 z-[15] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+      <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center">
+        <svg class="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+      </div>
+    </div>
+
+    <div class="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-[6] pointer-events-none">
+      <span class="text-3xl sm:text-5xl text-white/20 group-hover:text-white/30 transition-all tabular-nums" style="font-family: var(--font-display); font-weight: 700;">
+        {numberLabel}
+      </span>
+    </div>
+
+    {
+      showFeaturedBadge && episode.featured && (
+        <div class="absolute top-4 left-4 z-[8]">
+          <span class="px-3 py-1 bg-accent text-white text-xs font-medium tracking-wider">FEATURED</span>
+        </div>
+      )
+    }
+  </div>
+
+  <div class="min-w-0">
+    <p class="text-[0.65rem] sm:text-xs text-accent font-medium mb-3 tracking-wide sm:tracking-wider break-words leading-snug">
+      {eyebrow}
+    </p>
+    <h3 class="text-lg sm:text-2xl mb-3 leading-snug group-hover:text-accent transition-colors break-words" style="font-family: var(--font-display); font-weight: 600;">
+      {episode.title}
+    </h3>
+    <p class="text-base text-muted-foreground leading-relaxed line-clamp-4">{summary}</p>
+  </div>
+</a>

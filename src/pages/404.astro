@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Page Not Found" noindex>
+  <main class="min-h-screen bg-background pt-16 flex items-center justify-center px-4">
+    <div class="max-w-2xl mx-auto text-center py-16 sm:py-24">
+      <p class="text-[0.65rem] sm:text-sm text-accent font-medium mb-4 tracking-wider uppercase">404</p>
+      <h1 class="text-4xl sm:text-6xl mb-6" style="font-family: var(--font-display); font-weight: 700;">Page not found</h1>
+      <p class="text-lg text-muted-foreground mb-8 leading-relaxed">The page you're looking for doesn't exist or may have moved.</p>
+      <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+        <a href="/" class="inline-flex justify-center items-center min-h-12 bg-accent text-accent-foreground px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity">Go Home</a>
+        <a href="/episodes" class="inline-flex justify-center items-center min-h-12 border-2 border-foreground px-8 py-3.5 text-sm font-medium hover:bg-foreground hover:text-background transition-colors">Browse Episodes</a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

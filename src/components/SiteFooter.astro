@@ -1,0 +1,66 @@
+---
+/** Shared footer. Topics + Guests are now real pages; social links remain placeholders for now. */
+import footerLogo from '../imports/eggs-transparent-org@4x.png';
+import { SITE } from '../data/content';
+
+const listen = SITE.listen;
+const linkClass =
+  'inline-flex min-h-10 items-center justify-center md:justify-start w-full md:w-auto py-1 hover:text-foreground transition-colors';
+const placeholderClass =
+  'inline-flex min-h-10 items-center justify-center md:justify-start w-full md:w-auto py-1 text-muted-foreground/70 cursor-default border-b border-dotted border-muted-foreground/40';
+---
+
+<footer class="border-t border-border py-10 sm:py-14 md:py-16 bg-background">
+  <div class="max-w-[1400px] mx-auto px-4 sm:px-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 lg:gap-24 mb-10 md:mb-12">
+      <div class="flex justify-center md:justify-start">
+        <img src={footerLogo.src} alt="EGGS! The Podcast" class="h-20 sm:h-24 md:h-28 lg:h-32 w-auto max-w-full object-contain" />
+      </div>
+
+      <div class="grid grid-cols-1 gap-10 text-center md:text-left">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 md:gap-10">
+          <div>
+            <h4 class="font-medium mb-3 sm:mb-4 text-base">Episodes</h4>
+            <ul class="space-y-1 sm:space-y-2 text-sm text-muted-foreground">
+              <li><a href="/" class={linkClass}>Latest</a></li>
+              <li><a href="/episodes" class={linkClass}>Archive</a></li>
+              <li><a href="/topics" class={linkClass}>Topics</a></li>
+              <li><a href="/guests" class={linkClass}>Guests</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-medium mb-3 sm:mb-4 text-base">About</h4>
+            <ul class="space-y-1 sm:space-y-2 text-sm text-muted-foreground">
+              <li><a href="/about" class={linkClass}>About the Show</a></li>
+              <li><a href="/be-a-guest" class={linkClass}>Be a Guest</a></li>
+              <li><a href="/sponsor" class={linkClass}>Sponsor</a></li>
+              <li><span class={placeholderClass} title="Placeholder — add a contact page later">Contact</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-medium mb-3 sm:mb-4 text-base">Listen</h4>
+            <ul class="space-y-1 sm:space-y-2 text-sm text-muted-foreground">
+              <li><a href={listen.spotify} target="_blank" rel="noopener noreferrer" class={linkClass}>Spotify</a></li>
+              <li><a href={listen.apple} target="_blank" rel="noopener noreferrer" class={linkClass}>Apple Podcasts</a></li>
+              <li><span class={placeholderClass} title="Placeholder — no single YouTube channel link in the feed yet">YouTube</span></li>
+              <li><a href={listen.rss} target="_blank" rel="noopener noreferrer" class={linkClass}>RSS Feed</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 pt-8 border-t border-border">
+      <p class="text-sm text-muted-foreground text-center sm:text-left order-2 sm:order-1">
+        © 2026 EGGS! The Podcast. All rights reserved.
+      </p>
+      <div class="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 sm:gap-x-6 gap-y-2 order-1 sm:order-2">
+        <span class="inline-flex min-h-10 items-center text-sm text-muted-foreground/70 cursor-default border-b border-dotted border-muted-foreground/40 px-1" title="Placeholder — social links not wired yet">Twitter</span>
+        <span class="inline-flex min-h-10 items-center text-sm text-muted-foreground/70 cursor-default border-b border-dotted border-muted-foreground/40 px-1" title="Placeholder — social links not wired yet">Instagram</span>
+        <span class="inline-flex min-h-10 items-center text-sm text-muted-foreground/70 cursor-default border-b border-dotted border-muted-foreground/40 px-1" title="Placeholder — social links not wired yet">LinkedIn</span>
+      </div>
+    </div>
+  </div>
+</footer>

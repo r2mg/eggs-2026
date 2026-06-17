@@ -19,6 +19,7 @@
  * logs a clear message and returns empty results.
  */
 
+import { request as httpsRequest } from 'node:https';
 import {
   EGGS_TOPIC_PLAYLIST_TITLES,
   KNOWN_PLAYLIST_IDS,
@@ -98,11 +99,22 @@ type ApiPage<T> = {
 let loggedMissingKey = false;
 
 /**
- * Reads `import.meta.env.VITE_YOUTUBE_API_KEY` (set from root `.env` in Vite).
- * Returns `null` if unset — callers should fall back to RSS-only behaviour.
+ * Resolves the YouTube Data API key for both runtimes:
+ *
+ * - **Astro build (server / Node):** prefers a non-public `YOUTUBE_API_KEY` from `process.env`
+ *   so the secret never ships in any client bundle. Falls back to the legacy `VITE_YOUTUBE_API_KEY`.
+ * - **Legacy browser bundle (if ever imported client-side):** `import.meta.env.VITE_YOUTUBE_API_KEY`.
+ *
+ * Returns `null` if unset — callers fall back to RSS-only behaviour.
  */
 export function getYouTubeApiKey(): string | null {
-  const raw = import.meta.env.VITE_YOUTUBE_API_KEY;
+  const fromProcess =
+    typeof process !== 'undefined' && process.env
+      ? process.env.YOUTUBE_API_KEY ?? process.env.VITE_YOUTUBE_API_KEY
+      : undefined;
+  const fromImportMeta =
+    typeof import.meta !== 'undefined' ? (import.meta as ImportMeta).env?.VITE_YOUTUBE_API_KEY : undefined;
+  const raw = fromProcess ?? fromImportMeta;
   if (typeof raw !== 'string' || !raw.trim()) {
     if (!loggedMissingKey) {
       loggedMissingKey = true;
@@ -120,6 +132,44 @@ export function getYouTubeApiKey(): string | null {
     return null;
   }
   return raw.trim();
+}
+
+/**
+ * Referer sent with server-side YouTube requests so HTTP-referrer-restricted keys are accepted.
+ * Defaults to the production site; override with `YOUTUBE_API_REFERER`. Set to empty to disable.
+ */
+function getYouTubeApiReferer(): string | null {
+  const fromProcess =
+    typeof process !== 'undefined' && process.env ? process.env.YOUTUBE_API_REFERER : undefined;
+  const fromImportMeta =
+    typeof import.meta !== 'undefined'
+      ? (import.meta as ImportMeta).env?.YOUTUBE_API_REFERER
+      : undefined;
+  const raw = fromProcess ?? fromImportMeta ?? 'https://eggsthepodcast.netlify.app/';
+  const trimmed = raw.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
+ * GET JSON over node:https. Unlike global `fetch` (undici), this transmits a `Referer` header,
+ * which is required for HTTP-referrer-restricted YouTube API keys when called server-side.
+ */
+function httpsGetJson(
+  urlString: string,
+  headers: Record<string, string>,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = httpsRequest(urlString, { method: 'GET', headers }, (res) => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, body: data }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -141,12 +191,21 @@ async function youtubeGet<T extends Record<string, unknown>>(
     if (v !== undefined && v !== '') url.searchParams.set(k, v);
   }
 
-  const res = await fetch(url.toString());
-  const json = (await res.json()) as T & { error?: { message?: string } };
+  // Existing keys are typically restricted to HTTP referrers (they were created for the old
+  // browser build). Build-time requests have no referrer, so Google rejects them. We send a
+  // `Referer` header matching the allowed domain — but Node's global `fetch` SILENTLY DROPS
+  // `Referer` (it's a "forbidden header"), so we use the lower-level node:https client, which
+  // actually transmits it. Override the domain with `YOUTUBE_API_REFERER`.
+  const referer = getYouTubeApiReferer();
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (referer) headers.Referer = referer;
 
-  if (!res.ok) {
-    const msg = json.error?.message ?? res.statusText;
-    console.error('[EGGS YouTube API] Request failed:', endpoint, res.status, msg, url.pathname);
+  const { status, body } = await httpsGetJson(url.toString(), headers);
+  const json = (body ? (JSON.parse(body) as T & { error?: { message?: string } }) : ({} as T));
+
+  if (status < 200 || status >= 300) {
+    const msg = (json as { error?: { message?: string } }).error?.message ?? `HTTP ${status}`;
+    console.error('[EGGS YouTube API] Request failed:', endpoint, status, msg, url.pathname);
     throw new Error(msg);
   }
 

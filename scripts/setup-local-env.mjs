@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * One-time local setup: create `.env` from `.env.example` if missing.
- * You still paste `VITE_YOUTUBE_API_KEY` yourself (see README).
+ * You still paste `YOUTUBE_API_KEY` yourself (see README).
  */
 import { copyFile, access, constants } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -19,6 +19,6 @@ try {
   await copyFile(example, target);
   console.log('Created `.env` from `.env.example`.');
   console.log('');
-  console.log('Next: open `.env` in an editor, set VITE_YOUTUBE_API_KEY= (your key), save, then run npm run dev.');
+  console.log('Next: open `.env` in an editor, set YOUTUBE_API_KEY= (your key), save, then run npm run dev.');
   process.exit(0);
 }

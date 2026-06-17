@@ -1,0 +1,39 @@
+---
+/**
+ * Base page layout: HTML shell + <head> SEO + shared nav/footer chrome.
+ * Every page wraps its content in this. Page content goes in the default <slot/>.
+ */
+import '../styles/index.css';
+import Seo from '../components/Seo.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  noindex?: boolean;
+}
+
+const { title, description, image, type, jsonLd, noindex } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://i.ytimg.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <Seo title={title} description={description} image={image} type={type} jsonLd={jsonLd} noindex={noindex} />
+  </head>
+  <body class="min-h-screen bg-background overflow-x-hidden">
+    <SiteHeader />
+    <slot />
+    <SiteFooter />
+  </body>
+</html>

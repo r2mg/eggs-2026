@@ -1,0 +1,172 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import EpisodeImage from '../components/EpisodeImage.astro';
+import EpisodeCard from '../components/EpisodeCard.astro';
+import { getSiteContent, SITE } from '../data/content';
+import { episodePath, episodeEyebrow } from '../lib/display';
+import { EGGS_TOPIC_PLAYLIST_TITLES } from '../app/config/youtubeChannel';
+
+const { latest, featured, topics } = await getSiteContent();
+
+// Topic cards: prefer derived topics with counts; otherwise show the canonical labels.
+const topicCards =
+  topics.length > 0
+    ? topics.map((t) => ({ name: t.label, count: t.episodes.length, slug: t.slug }))
+    : EGGS_TOPIC_PLAYLIST_TITLES.filter((t) => t !== 'EGGS Featured').map((t) => ({
+        name: t.replace(/^EGGS\s+/i, '').trim(),
+        count: 0,
+        slug: '',
+      }));
+
+const BRAND_LINE = SITE.description;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'PodcastSeries',
+  name: SITE.name,
+  description: SITE.description,
+  url: (Astro.site ?? new URL('https://eggscast.com')).href,
+  webFeed: SITE.listen.rss,
+};
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <main>
+    {/* Orange hero — latest episode */}
+    <section id="home-hero" class="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-accent text-white pt-16">
+      <div class="pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden="true" style="background: radial-gradient(ellipse 80% 60% at 20% 0%, rgb(255 255 255 / 0.35), transparent 55%), radial-gradient(circle at 90% 80%, rgb(0 0 0 / 0.06), transparent 45%);"></div>
+
+      <div class="relative z-10 flex min-h-0 flex-1 flex-col justify-center max-w-[1400px] w-full mx-auto px-4 py-6 sm:px-6 sm:py-8">
+        <p class="text-[0.65rem] sm:text-xs md:text-sm font-medium text-white tracking-wide sm:tracking-wider uppercase mb-6 sm:mb-8">
+          Presented by <a href="https://taelor.style" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2">Taelor Style</a>
+        </p>
+
+        {
+          latest ? (
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 lg:items-center">
+              <div class="min-w-0">
+                <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] lg:leading-tight text-white mb-4 sm:mb-5 break-words" style="font-family: var(--font-display); font-weight: 600;">
+                  {latest.title}
+                </h1>
+                <p class="text-base sm:text-lg text-white/90 leading-relaxed mb-5 sm:mb-6 max-w-xl">
+                  {latest.summary?.trim() || 'Open the episode for full show notes.'}
+                </p>
+                <p class="text-[0.65rem] sm:text-xs md:text-sm font-medium text-black tracking-wide sm:tracking-wider break-words leading-snug mb-8">
+                  {episodeEyebrow(latest.episodeNumber, latest.publishedAt, latest.duration)}
+                </p>
+                <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
+                  <a href={episodePath(latest.slug)} class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-black text-white px-6 sm:px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity text-center">Show Details</a>
+                  {
+                    latest.youtubeUrl && latest.youtubeVideoId ? (
+                      <a href={latest.youtubeUrl} target="_blank" rel="noopener noreferrer" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-white text-white px-6 sm:px-8 py-3.5 text-sm font-medium hover:bg-white hover:text-accent transition-all text-center">Watch on YouTube</a>
+                    ) : null
+                  }
+                  {
+                    latest.spotifyUrl ? (
+                      <a href={latest.spotifyUrl} target="_blank" rel="noopener noreferrer" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-white text-black px-6 sm:px-8 py-3.5 text-sm font-medium hover:bg-white/90 transition-colors text-center">Listen on Spotify</a>
+                    ) : null
+                  }
+                </div>
+              </div>
+
+              <div class="min-w-0">
+                <a href={episodePath(latest.slug)} class="block group">
+                  <div class="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">
+                    <EpisodeImage episode={latest} loading="eager" class="transition-transform duration-300 group-hover:scale-[1.02]" />
+                    <div class="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50"></div>
+                  </div>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <p class="text-lg text-white/90">Episodes are loading from the feed.</p>
+          )
+        }
+      </div>
+
+      <a href="#home-brand" class="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 sm:bottom-8 flex flex-col items-center rounded-full p-1 text-white/70 hover:text-white" aria-label="Scroll down to continue">
+        <span class="w-6 h-10 border-2 border-current rounded-full flex items-start justify-center p-2">
+          <span class="w-1 h-2 bg-current rounded-full"></span>
+        </span>
+      </a>
+    </section>
+
+    {/* Black brand strip */}
+    <section id="home-brand" class="bg-black text-white py-10 sm:py-14 md:py-16 scroll-mt-16" aria-label="About the show">
+      <div class="max-w-[1100px] mx-auto px-4 sm:px-6 text-center min-w-0">
+        <p class="text-lg sm:text-xl md:text-2xl leading-snug sm:leading-relaxed text-white/95 tracking-tight" style="font-family: var(--font-display); font-weight: 600;">{BRAND_LINE}</p>
+      </div>
+    </section>
+
+    {/* Featured */}
+    <section class="py-12 sm:py-24 md:py-32 bg-[#FFF5EE]">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6">
+        <h2 class="text-3xl sm:text-5xl md:text-6xl mb-8 sm:mb-16 md:mb-20" style="font-family: var(--font-display); font-weight: 600;">Featured Conversations</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
+          {featured.map((ep) => <EpisodeCard episode={ep} />)}
+        </div>
+        <div class="text-center mt-16">
+          <a href="/episodes" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border border-foreground px-8 py-3.5 sm:py-4 text-sm sm:text-base font-medium hover:bg-foreground hover:text-background transition-colors">Browse All Episodes</a>
+        </div>
+      </div>
+    </section>
+
+    {/* Topics */}
+    <section class="py-12 sm:py-24 md:py-32 bg-background relative overflow-hidden">
+      <div class="absolute bottom-0 left-0 w-[min(100vw,600px)] h-[min(100vw,600px)] max-w-full bg-accent/5 rounded-full blur-3xl"></div>
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-24 items-center">
+          <div>
+            <h2 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl mb-5 sm:mb-8 leading-tight" style="font-family: var(--font-display); font-weight: 600;">Explore by Topic</h2>
+            <p class="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-12 leading-relaxed">Dive into conversations organized around the themes that matter most to creative professionals and entrepreneurs.</p>
+            <div class="w-24 h-1 bg-accent"></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {
+              topicCards.map((topic) => {
+                const inner = `<div class="flex flex-col gap-2"><span class="text-lg font-medium group-hover:text-accent transition-colors">${topic.name}</span><span class="text-sm text-muted-foreground">${topic.count} ${topic.count === 1 ? 'episode' : 'episodes'}</span></div>`;
+                return topic.slug ? (
+                  <a href={`/topics/${topic.slug}`} class="group text-left min-h-[3.5rem] sm:min-h-[4.5rem] p-4 sm:p-8 border-2 border-border hover:border-accent hover:bg-accent/5 transition-all duration-300 relative overflow-hidden" set:html={inner} />
+                ) : (
+                  <div class="group min-h-[3.5rem] sm:min-h-[4.5rem] p-4 sm:p-8 border-2 border-border relative overflow-hidden" set:html={inner} />
+                );
+              })
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* Newsletter */}
+    <section class="py-12 sm:py-24 md:py-32 bg-foreground text-background">
+      <div class="max-w-[1000px] mx-auto px-4 sm:px-6 text-center">
+        <h2 class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-6" style="font-family: var(--font-display); font-weight: 600;">Never Miss an Episode</h2>
+        <p class="text-base sm:text-lg md:text-xl opacity-70 mb-8 sm:mb-12 leading-relaxed max-w-xl mx-auto">Get episode updates, key insights, and exclusive content delivered to your inbox.</p>
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-md mx-auto">
+          <input type="email" placeholder="Enter your email" class="flex-1 min-h-12 px-4 sm:px-6 py-3 sm:py-4 bg-background text-foreground border border-background/20 focus:outline-none focus:border-accent text-base w-full" />
+          <a href="mailto:eggsthepodcast@gmail.com?subject=EGGS%20Newsletter" class="inline-flex items-center justify-center min-h-12 bg-accent text-accent-foreground px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium hover:opacity-90 transition-opacity whitespace-nowrap shrink-0 w-full sm:w-auto">Subscribe</a>
+        </div>
+      </div>
+    </section>
+
+    {/* Be a Guest / Sponsor */}
+    <section class="py-12 sm:py-24 md:py-32 bg-[#FFF5EE]">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
+          <a href="/be-a-guest" class="block p-6 sm:p-12 md:p-16 bg-white border-2 border-accent relative overflow-hidden group h-full">
+            <div class="absolute -top-12 -right-12 w-48 h-48 bg-accent/10 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+            <h3 class="text-2xl sm:text-4xl md:text-5xl mb-3 sm:mb-6 relative z-10" style="font-family: var(--font-display); font-weight: 600;">Be a Guest</h3>
+            <p class="text-base sm:text-lg text-muted-foreground mb-8 sm:mb-10 leading-relaxed relative z-10">Share your story and expertise with our community of creative professionals.</p>
+            <span class="text-accent font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">Apply Now →</span>
+          </a>
+          <a href="/sponsor" class="block p-6 sm:p-12 md:p-16 bg-accent text-white relative overflow-hidden group h-full">
+            <div class="absolute -bottom-12 -left-12 w-64 h-64 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+            <h3 class="text-2xl sm:text-4xl md:text-5xl mb-3 sm:mb-6 relative z-10" style="font-family: var(--font-display); font-weight: 600;">Sponsor the Show</h3>
+            <p class="text-base sm:text-lg text-white/90 mb-8 sm:mb-10 leading-relaxed relative z-10">Reach an engaged audience of entrepreneurs, creatives, and decision-makers.</p>
+            <span class="text-white font-medium inline-flex items-center gap-2 text-lg relative z-10 group-hover:gap-4 transition-all">Learn More →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

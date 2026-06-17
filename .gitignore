@@ -27,3 +27,6 @@ yarn-error.log*
 # Optional tooling
 coverage/
 .turbo/
+
+# Local Netlify folder
+.netlify

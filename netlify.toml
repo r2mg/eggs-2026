@@ -1,23 +1,31 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
+#
+# EGGS! runs as a STATIC Astro site. Every page (home, ~470 episodes, guests, topics)
+# is prerendered to HTML at build time, so there is no SPA fallback and no client-side
+# RSS proxy — the RSS + YouTube data is fetched once during `astro build`.
 
 [build]
   command = "npm run build"
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
-  # Same-origin RSS path the app fetches in production (see `resolvePodcastRssUrl` + redirect below).
-  VITE_PODCAST_RSS_URL = "/podcast-rss.xml"
+  NODE_VERSION = "22"
+  # Canonical production origin used for sitemap URLs, canonical tags, and Open Graph.
+  # Set this to the real domain in the Netlify UI (Site settings → Environment variables) if different.
+  PUBLIC_SITE_URL = "https://eggscast.com"
+  # YouTube Data API key for build-time enrichment (thumbnails, topics, featured order).
+  # Set the SECRET value in the Netlify UI as YOUTUBE_API_KEY (do NOT commit it).
+  # Without it the site still builds (RSS-only).
 
-# Proxy podcast RSS so the browser never hits Anchor cross-origin on Netlify.
-[[redirects]]
-  from = "/podcast-rss.xml"
-  to = "https://anchor.fm/s/fc17887c/podcast/rss"
-  status = 200
-  force = true
+# --- Keeping content fresh -------------------------------------------------------------
+# Because the site is static, new episodes appear after a rebuild. Two good options:
+#   1. Build hook + Zapier/Make watching the RSS feed (or a weekly schedule) to POST the hook.
+#      Create one under: Site settings → Build & deploy → Build hooks, then POST to that URL.
+#   2. Netlify Scheduled Functions / a cron that triggers the build hook on a schedule.
+# See README "Keeping the site up to date" for the step-by-step.
 
-# Client-side routing (e.g. React Router): every path serves index.html
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Static asset caching for hashed build output.
+[[headers]]
+  for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

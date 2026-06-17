@@ -1,0 +1,38 @@
+---
+/**
+ * Episode artwork resolved at BUILD time (no client-side shimmer/fallback race).
+ * Prefers the YouTube thumbnail baked onto the episode, then RSS artwork. A light `onerror`
+ * swaps to RSS art as insurance if a YouTube CDN URL ever 404s in the browser.
+ */
+import type { Episode } from '../app/types/episode';
+
+interface Props {
+  episode: Episode;
+  /** Extra classes for the <img>. */
+  class?: string;
+  /** "eager" for above-the-fold hero art; defaults to lazy. */
+  loading?: 'eager' | 'lazy';
+}
+
+const { episode, class: className = '', loading = 'lazy' } = Astro.props;
+const yt = episode.youtubeThumbnail?.trim();
+const rss = episode.image?.trim();
+const primary = yt || rss || '';
+const fallback = yt && rss ? rss : '';
+---
+
+{
+  primary ? (
+    <img
+      src={primary}
+      alt=""
+      loading={loading}
+      decoding="async"
+      data-fallback={fallback}
+      class={`absolute inset-0 h-full w-full object-cover ${className}`}
+      onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}"
+    />
+  ) : (
+    <div class="absolute inset-0 bg-gradient-to-br from-accent/15 to-accent/5" aria-hidden="true"></div>
+  )
+}

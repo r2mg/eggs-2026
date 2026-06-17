@@ -1,0 +1,255 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EpisodeImage from '../../components/EpisodeImage.astro';
+import EpisodeCard from '../../components/EpisodeCard.astro';
+import { getSiteContent, SITE } from '../../data/content';
+import { episodePath, guestPath, formatDate, formatDurationLabel, episodeEyebrow } from '../../lib/display';
+import {
+  EGGS_DEFAULT_SHOW_CREDITS_HTML,
+  extractTakeawaysFromDescriptionHtml,
+  prepareRssCreditsHtmlForInnerHtml,
+  sanitizeRssBodyHtmlForInnerHtml,
+  splitRssEpisodeDescriptionForDetailPage,
+  stripHtmlTags,
+} from '../../app/lib/rss';
+import { slugify } from '../../app/lib/rss';
+
+export async function getStaticPaths() {
+  const { episodes } = await getSiteContent();
+  return episodes.map((episode) => ({ params: { slug: episode.slug }, props: { episode } }));
+}
+
+const { episode } = Astro.props;
+const { episodes } = await getSiteContent();
+
+// Related: next 3 older episodes (fall back to other recent ones).
+const idx = episodes.findIndex((e) => e.id === episode.id);
+let related = idx >= 0 ? episodes.slice(idx + 1, idx + 4) : [];
+if (related.length === 0) related = episodes.filter((e) => e.id !== episode.id).slice(0, 3);
+
+// RSS-derived show-notes split (summary / body / credits) + takeaways.
+const desc = splitRssEpisodeDescriptionForDetailPage(episode.descriptionHtml, episode.summary);
+const takeaways =
+  extractTakeawaysFromDescriptionHtml(desc.mainHtmlWithoutCredits ?? episode.descriptionHtml ?? '') ?? [];
+const summaryHtml = desc.summaryHtml;
+const summaryPlain = episode.summary?.trim() || 'No short summary was extracted for this episode.';
+const creditsHtml = desc.creditsHtml ?? EGGS_DEFAULT_SHOW_CREDITS_HTML;
+const chapters = episode.chapters ?? [];
+const guestName = episode.guest?.trim();
+
+const eyebrow = episodeEyebrow(episode.episodeNumber, episode.publishedAt, episode.duration);
+const embedSrc =
+  episode.youtubeEmbedUrl?.trim() ||
+  (episode.youtubeVideoId ? `https://www.youtube.com/embed/${episode.youtubeVideoId}` : '');
+
+// SEO description: prefer the plain summary, stripped of HTML, capped.
+const seoDescription = (episode.summary?.trim() || stripHtmlTags(episode.descriptionHtml ?? '') || SITE.description)
+  .slice(0, 300)
+  .trim();
+const canonicalUrl = new URL(episodePath(episode.slug), Astro.site ?? 'https://eggscast.com').href;
+
+// --- Structured data (JSON-LD) ---
+const podcastEpisodeLd: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'PodcastEpisode',
+  url: canonicalUrl,
+  name: episode.title,
+  datePublished: episode.publishedAt,
+  description: seoDescription,
+  ...(episode.episodeNumber !== undefined ? { episodeNumber: episode.episodeNumber } : {}),
+  ...(episode.youtubeThumbnail || episode.image ? { image: episode.youtubeThumbnail || episode.image } : {}),
+  partOfSeries: {
+    '@type': 'PodcastSeries',
+    name: SITE.name,
+    url: (Astro.site ?? new URL('https://eggscast.com')).href,
+  },
+  ...(episode.audioUrl
+    ? { associatedMedia: { '@type': 'MediaObject', contentUrl: episode.audioUrl } }
+    : {}),
+  ...(guestName
+    ? { actor: { '@type': 'Person', name: guestName, url: new URL(guestPath(slugify(guestName, 80)), Astro.site ?? 'https://eggscast.com').href } }
+    : {}),
+};
+
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: (Astro.site ?? new URL('https://eggscast.com')).href },
+    { '@type': 'ListItem', position: 2, name: 'Episodes', item: new URL('/episodes', Astro.site ?? 'https://eggscast.com').href },
+    { '@type': 'ListItem', position: 3, name: episode.title, item: canonicalUrl },
+  ],
+};
+
+const RSS_HTML_CLASS =
+  'episode-rss-html [&_p]:mb-4 [&_p:last-child]:mb-0 [&_br]:block [&_strong]:font-semibold [&_strong]:text-foreground [&_b]:font-semibold [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-1';
+---
+
+<BaseLayout
+  title={episode.title}
+  description={seoDescription}
+  image={episode.youtubeThumbnail || episode.image}
+  type="article"
+  jsonLd={[podcastEpisodeLd, breadcrumbLd]}
+>
+  <main class="min-h-screen bg-background pt-16 overflow-x-hidden">
+    {/* Header */}
+    <section class="py-8 sm:py-14 md:py-16 bg-gradient-to-b from-accent/5 to-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted-foreground mb-6 sm:mb-8">
+          <a href="/episodes" class="inline-flex min-h-11 items-center py-1 -ml-1 px-1 rounded-sm hover:text-foreground transition-colors">← Back to Episodes</a>
+        </div>
+        <div class="mb-5 sm:mb-8 min-w-0">
+          <p class="text-[0.65rem] sm:text-xs md:text-sm text-accent font-medium mb-2 sm:mb-4 tracking-wide sm:tracking-wider break-words leading-snug">{eyebrow}</p>
+          <h1 class="text-[clamp(1.375rem,5.5vw,2.75rem)] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-3 sm:mb-6 leading-[1.12] sm:leading-tight break-words" style="font-family: var(--font-display); font-weight: 700;">
+            {episode.title}
+          </h1>
+          {
+            guestName && (
+              <p class="text-base sm:text-lg text-muted-foreground">
+                with <a href={guestPath(slugify(guestName, 80))} class="text-accent hover:underline">{guestName}</a>
+              </p>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    {/* Media */}
+    <section class="py-6 sm:py-10 md:py-12 bg-background">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
+        {
+          embedSrc ? (
+            <div class="aspect-video w-full rounded-sm overflow-hidden border border-border bg-black">
+              <iframe
+                src={embedSrc}
+                title="Episode video on YouTube"
+                class="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                referrerpolicy="strict-origin-when-cross-origin"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div class="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 rounded-sm overflow-hidden relative">
+              <EpisodeImage episode={episode} loading="eager" />
+              <div class="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/50 via-transparent to-transparent" />
+            </div>
+          )
+        }
+
+        {
+          !embedSrc && episode.audioUrl && (
+            <div class="mt-6 p-4 rounded-sm border border-border bg-muted/20">
+              <p class="text-sm text-muted-foreground mb-3">Podcast audio (RSS feed)</p>
+              <audio controls class="w-full" preload="metadata">
+                <source src={episode.audioUrl} />
+              </audio>
+            </div>
+          )
+        }
+
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3 sm:gap-4 mt-5 sm:mt-8 w-full max-w-xl mx-auto min-w-0">
+          {
+            episode.spotifyUrl ? (
+              <a href={episode.spotifyUrl} target="_blank" rel="noopener noreferrer" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity text-center">Listen on Spotify</a>
+            ) : (
+              <span class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium opacity-50 cursor-not-allowed">Listen on Spotify</span>
+            )
+          }
+          {
+            episode.youtubeUrl ? (
+              <a href={episode.youtubeUrl} target="_blank" rel="noopener noreferrer" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium hover:border-foreground transition-colors text-center">Watch on YouTube</a>
+            ) : (
+              <span class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium opacity-50 cursor-not-allowed">Watch on YouTube</span>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    {/* Body + sidebar */}
+    <section class="py-8 sm:py-12 md:py-16">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 sm:gap-12 lg:gap-14 xl:gap-16">
+          <div class="lg:col-span-2 min-w-0 order-1">
+            <div class="mb-10 sm:mb-16">
+              <h2 class="text-xl sm:text-3xl mb-3 sm:mb-6" style="font-family: var(--font-display); font-weight: 600;">Episode Summary</h2>
+              {
+                summaryHtml ? (
+                  <div class={`text-[0.9375rem] sm:text-lg md:text-xl text-muted-foreground leading-relaxed mb-6 break-words ${RSS_HTML_CLASS}`} set:html={sanitizeRssBodyHtmlForInnerHtml(summaryHtml)} />
+                ) : (
+                  <p class="text-[0.9375rem] sm:text-lg md:text-xl text-muted-foreground leading-relaxed mb-6 break-words">{summaryPlain}</p>
+                )
+              }
+            </div>
+
+            {
+              takeaways.length > 0 && (
+                <div class="mb-10 sm:mb-16 p-4 sm:p-8 md:p-10 bg-accent/5 border-l-4 border-accent">
+                  <h2 class="text-lg sm:text-2xl mb-3 sm:mb-6" style="font-family: var(--font-display); font-weight: 600;">Key Takeaways</h2>
+                  <ul class="space-y-3 sm:space-y-4">
+                    {takeaways.map((t) => (
+                      <li class="flex items-start gap-3 sm:gap-4">
+                        <div class="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-1">
+                          <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <span class="text-base sm:text-lg leading-relaxed">{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            }
+
+            {
+              chapters.length > 0 && (
+                <div class="mb-10 sm:mb-16">
+                  <h2 class="text-xl sm:text-3xl mb-4 sm:mb-8" style="font-family: var(--font-display); font-weight: 600;">Chapters</h2>
+                  <div class="space-y-2 sm:space-y-3">
+                    {chapters.map((chapter) => (
+                      <div class="w-full min-h-[3.5rem] flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-4 md:gap-6 p-4 sm:p-5 bg-muted text-left">
+                        <span class="text-sm font-medium text-accent shrink-0 min-w-[3.5rem] sm:min-w-[4rem]">{chapter.time}</span>
+                        <span class="text-sm sm:text-base break-words">{chapter.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+          </div>
+
+          {/* Sidebar */}
+          <div class="lg:col-span-1 min-w-0 order-2 space-y-6 sm:space-y-8 lg:space-y-0">
+            <div class="lg:mb-12 p-5 sm:p-8 bg-muted/30 border border-border">
+              <h3 class="text-lg sm:text-xl mb-3 sm:mb-4" style="font-family: var(--font-display); font-weight: 600;">Show Credits</h3>
+              {guestName && <p class="text-xs text-muted-foreground uppercase tracking-wider mb-3">Guest: {guestName}</p>}
+              <div class={`text-sm text-muted-foreground leading-relaxed mb-4 ${RSS_HTML_CLASS} [&_a]:text-accent [&_a]:underline hover:[&_a]:opacity-90`} set:html={prepareRssCreditsHtmlForInnerHtml(creditsHtml)} />
+            </div>
+
+            <div class="lg:mb-12 p-5 sm:p-8 bg-foreground text-background">
+              <h3 class="text-lg sm:text-xl mb-3 sm:mb-4" style="font-family: var(--font-display); font-weight: 600;">Never Miss an Episode</h3>
+              <p class="text-sm opacity-80 mb-6 leading-relaxed">Get new episodes delivered to your inbox every week.</p>
+              <a href="mailto:eggsthepodcast@gmail.com?subject=EGGS%20Podcast" class="inline-flex justify-center w-full min-h-11 bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity">Subscribe</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* Related */}
+    {
+      related.length > 0 && (
+        <section class="py-10 sm:py-16 md:py-20 bg-muted/30">
+          <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+            <h2 class="text-2xl sm:text-4xl md:text-5xl mb-6 sm:mb-10 md:mb-12" style="font-family: var(--font-display); font-weight: 600;">Related Episodes</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
+              {related.map((rel) => <EpisodeCard episode={rel} />)}
+            </div>
+          </div>
+        </section>
+      )
+    }
+  </main>
+</BaseLayout>

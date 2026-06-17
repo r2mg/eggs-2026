@@ -1,0 +1,122 @@
+---
+/**
+ * Top navigation — static HTML with a tiny vanilla-JS mobile menu toggle (no React island needed).
+ * Mirrors the old SPA chrome: compact wordmark + hamburger below `xl`, full lockup + links at `xl`.
+ */
+import logoFull from '../imports/eggs_logo_full.png';
+import logoCompact from '../imports/eggs-text-logo.png';
+
+const links = [
+  { href: '/episodes', label: 'Episodes' },
+  { href: '/topics', label: 'Topics' },
+  { href: '/guests', label: 'Guests' },
+  { href: '/about', label: 'About' },
+  { href: '/be-a-guest', label: 'Be a Guest' },
+  { href: '/sponsor', label: 'Sponsor' },
+];
+
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const isActive = (href: string) => path === href || path.startsWith(href + '/');
+
+const subscribeBtn =
+  'inline-flex items-center justify-center min-h-11 min-w-[4.5rem] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity whitespace-nowrap';
+const subscribeHref = 'mailto:eggsthepodcast@gmail.com?subject=EGGS%20Podcast';
+---
+
+<nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
+  <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-h-16 flex items-center justify-between gap-2 sm:gap-3">
+    <a
+      href="/"
+      aria-label="EGGS! The Podcast — home"
+      class="shrink-0 block h-9 sm:h-10 w-auto max-w-[min(42vw,11rem)] xl:h-12 xl:w-[152px] xl:max-w-none xl:hover:w-[520px] overflow-hidden xl:transition-[width] xl:duration-500 xl:ease-out relative"
+    >
+      <img src={logoCompact.src} alt="" class="h-full w-auto object-left object-contain block xl:hidden max-h-10" />
+      <img src={logoFull.src} alt="" class="h-full w-auto max-w-[520px] object-left object-contain hidden xl:block xl:min-w-[520px]" />
+    </a>
+
+    {/* Desktop nav */}
+    <div class="hidden xl:flex items-center gap-6 2xl:gap-8">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            class={`text-sm hover:text-accent transition-colors whitespace-nowrap ${isActive(link.href) ? 'text-accent' : ''}`}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+      <a href={subscribeHref} class={subscribeBtn}>Subscribe</a>
+    </div>
+
+    {/* Mobile/tablet controls */}
+    <div class="flex xl:hidden items-center gap-1.5 sm:gap-2 shrink-0">
+      <a href={subscribeHref} class={subscribeBtn}>Subscribe</a>
+      <button
+        type="button"
+        id="mobile-nav-toggle"
+        class="min-h-11 min-w-11 inline-flex items-center justify-center rounded-md border border-border text-foreground hover:bg-muted transition-colors"
+        aria-expanded="false"
+        aria-controls="site-mobile-nav"
+        aria-label="Open menu"
+      >
+        <svg id="mobile-nav-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <svg id="mobile-nav-icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+{/* Mobile/tablet menu panel + backdrop */}
+<div id="mobile-nav-backdrop" class="fixed inset-0 top-16 z-[55] bg-black/50 xl:hidden hidden"></div>
+<div
+  id="site-mobile-nav"
+  class="fixed inset-x-0 bottom-0 top-16 z-[60] xl:hidden bg-background border-t border-border flex-col px-4 sm:px-6 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain shadow-lg hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Site navigation"
+>
+  <nav class="flex flex-col gap-0" aria-label="Primary">
+    {
+      links.map((link) => (
+        <a
+          href={link.href}
+          class={`min-h-[3.25rem] flex items-center py-3 text-lg border-b border-border ${isActive(link.href) ? 'text-accent font-medium' : 'text-foreground'}`}
+        >
+          {link.label}
+        </a>
+      ))
+    }
+    <a href="/" class="min-h-[3.25rem] flex items-center py-3 text-lg border-b border-border text-foreground">Home</a>
+  </nav>
+</div>
+
+<script>
+  const toggle = document.getElementById('mobile-nav-toggle');
+  const panel = document.getElementById('site-mobile-nav');
+  const backdrop = document.getElementById('mobile-nav-backdrop');
+  const iconOpen = document.getElementById('mobile-nav-icon-open');
+  const iconClose = document.getElementById('mobile-nav-icon-close');
+
+  function setOpen(open: boolean) {
+    if (!panel || !backdrop || !toggle) return;
+    panel.classList.toggle('hidden', !open);
+    panel.classList.toggle('flex', open);
+    backdrop.classList.toggle('hidden', !open);
+    iconOpen?.classList.toggle('hidden', open);
+    iconClose?.classList.toggle('hidden', !open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+
+  toggle?.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') === 'true';
+    setOpen(!open);
+  });
+  backdrop?.addEventListener('click', () => setOpen(false));
+</script>

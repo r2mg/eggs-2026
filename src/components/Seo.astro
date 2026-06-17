@@ -1,0 +1,61 @@
+---
+/**
+ * Centralized <head> SEO for every page.
+ * Emits: title, description, canonical, Open Graph, Twitter cards, and optional JSON-LD.
+ *
+ * `Astro.site` (set in astro.config.ts) is the canonical origin, so canonical/OG URLs are absolute.
+ */
+import { SITE } from '../data/content';
+
+interface Props {
+  /** Page-specific title. Rendered as "{title} — EGGS! The Podcast". Omit on the homepage. */
+  title?: string;
+  /** Meta description / OG description. Falls back to the site description. */
+  description?: string;
+  /** Absolute or root-relative image for social cards. Defaults to the site share image. */
+  image?: string;
+  /** og:type — "website" for most pages, "article" for episodes. */
+  type?: 'website' | 'article';
+  /** JSON-LD structured data object(s). Serialized into <script type="application/ld+json">. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  /** When true, ask crawlers not to index this page. */
+  noindex?: boolean;
+}
+
+const { title, description, image, type = 'website', jsonLd, noindex = false } = Astro.props;
+
+const siteOrigin = Astro.site ?? new URL('https://eggscast.com');
+const canonical = new URL(Astro.url.pathname, siteOrigin).href;
+
+const fullTitle = title ? `${title} — ${SITE.name}` : `${SITE.name} — Official Site`;
+const metaDescription = (description ?? SITE.description).trim();
+const ogImage = new URL(image ?? '/og-default.png', siteOrigin).href;
+
+const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={metaDescription} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+{/* Open Graph */}
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={metaDescription} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImage} />
+
+{/* Twitter */}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={metaDescription} />
+<meta name="twitter:image" content={ogImage} />
+
+{/* Structured data for search engines + LLMs */}
+{
+  jsonLdBlocks.map((block) => (
+    <script type="application/ld+json" set:html={JSON.stringify(block)} />
+  ))
+}

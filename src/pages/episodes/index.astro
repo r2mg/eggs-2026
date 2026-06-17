@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EpisodesArchive, { type ArchiveEpisode } from '../../components/EpisodesArchive';
+import { getSiteContent } from '../../data/content';
+
+const { episodes, topics } = await getSiteContent();
+
+// Slim projection so we don't ship full show-notes HTML into the hydrated island.
+const slim: ArchiveEpisode[] = episodes.map((e) => ({
+  id: e.id,
+  slug: e.slug,
+  title: e.title,
+  guest: e.guest,
+  summary: e.summary,
+  publishedAt: e.publishedAt,
+  duration: e.duration,
+  episodeNumber: e.episodeNumber,
+  image: e.image,
+  youtubeThumbnail: e.youtubeThumbnail,
+  featured: e.featured,
+  collections: e.collections,
+}));
+
+const topicLabels = topics.map((t) => t.label);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'All Episodes — EGGS! The Podcast',
+  description: `The complete archive of ${episodes.length} EGGS! The Podcast episodes.`,
+  url: new URL('/episodes', Astro.site ?? 'https://eggscast.com').href,
+};
+---
+
+<BaseLayout
+  title="All Episodes"
+  description={`Browse the complete archive of ${episodes.length} EGGS! The Podcast conversations with creative professionals, entrepreneurs, and industry leaders.`}
+  jsonLd={jsonLd}
+>
+  <main class="min-h-screen bg-background pt-16">
+    <section class="pt-8 sm:pt-16 md:pt-20 pb-6 sm:pb-12 bg-gradient-to-b from-accent/5 to-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <h1 class="text-3xl sm:text-6xl md:text-7xl lg:text-8xl mb-3 sm:mb-6 break-words" style="font-family: var(--font-display); font-weight: 700;">All Episodes</h1>
+        <p class="text-sm sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-3xl leading-relaxed">
+          Browse our complete archive of conversations with creative professionals, entrepreneurs, and industry leaders.
+        </p>
+      </div>
+    </section>
+
+    <EpisodesArchive client:load episodes={slim} topics={topicLabels} />
+  </main>
+</BaseLayout>

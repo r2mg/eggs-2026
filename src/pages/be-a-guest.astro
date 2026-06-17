@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BeAGuest from '../app/components/BeAGuest';
+---
+
+<BaseLayout
+  title="Be a Guest"
+  description="Apply to be a guest on EGGS! The Podcast, nominate someone, or reach out as a publicist. We feature creative professionals, entrepreneurs, and builders with stories worth sharing."
+>
+  <main>
+    <BeAGuest client:load />
+  </main>
+</BaseLayout>

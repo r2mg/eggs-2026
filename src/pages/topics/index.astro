@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSiteContent } from '../../data/content';
+import { topicPath } from '../../lib/display';
+
+const { topics, youtubeEnabled } = await getSiteContent();
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'EGGS! Podcast Topics',
+  description: 'Browse EGGS! The Podcast by topic: entrepreneurship, branding, creativity, leadership, and more.',
+  url: new URL('/topics', Astro.site ?? 'https://eggscast.com').href,
+};
+---
+
+<BaseLayout
+  title="Topics"
+  description="Browse EGGS! The Podcast by topic — entrepreneurship, branding, creativity, business growth, technology, culture, leadership, and expertise."
+  jsonLd={jsonLd}
+>
+  <main class="min-h-screen bg-background pt-16">
+    <section class="pt-12 sm:pt-20 md:pt-24 pb-8 sm:pb-12 bg-gradient-to-b from-accent/5 to-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <h1 class="text-4xl sm:text-6xl md:text-7xl lg:text-8xl mb-3 sm:mb-6 break-words" style="font-family: var(--font-display); font-weight: 700;">Topics</h1>
+        <p class="text-sm sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-3xl leading-relaxed">
+          Conversations organized around the themes that matter most to creative professionals and entrepreneurs.
+        </p>
+      </div>
+    </section>
+
+    <section class="py-8 sm:py-14 md:py-16">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        {
+          topics.length === 0 ? (
+            <p class="text-muted-foreground">
+              {youtubeEnabled
+                ? 'No topics found in the YouTube playlists yet.'
+                : 'Topics are sourced from YouTube playlists and appear once a YouTube API key is configured for the build.'}
+            </p>
+          ) : (
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {topics.map((topic) => (
+                <a href={topicPath(topic.slug)} class="group p-6 sm:p-8 border-2 border-border hover:border-accent hover:bg-accent/5 transition-all relative overflow-hidden">
+                  <h2 class="text-xl sm:text-2xl mb-2 group-hover:text-accent transition-colors" style="font-family: var(--font-display); font-weight: 600;">{topic.label}</h2>
+                  <p class="text-sm text-muted-foreground">{topic.episodes.length} {topic.episodes.length === 1 ? 'episode' : 'episodes'}</p>
+                </a>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </section>
+  </main>
+</BaseLayout>
