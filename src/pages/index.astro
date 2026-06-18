@@ -19,6 +19,7 @@ const topicCards =
       }));
 
 const BRAND_LINE = SITE.description;
+const [BRAND_LINE_HEAD, BRAND_LINE_TAIL] = BRAND_LINE.split('branding, ');
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -94,7 +95,7 @@ const jsonLd = {
     {/* Black brand strip */}
     <section id="home-brand" class="bg-black text-white py-10 sm:py-14 md:py-16 scroll-mt-16" aria-label="About the show">
       <div class="max-w-[1100px] mx-auto px-4 sm:px-6 text-center min-w-0">
-        <p class="text-lg sm:text-xl md:text-2xl leading-snug sm:leading-relaxed text-white/95 tracking-tight" style="font-family: var(--font-display); font-weight: 600;">{BRAND_LINE}</p>
+        <p class="text-lg sm:text-xl md:text-2xl leading-snug sm:leading-relaxed text-white/95 tracking-tight" style="font-family: var(--font-display); font-weight: 600;">{BRAND_LINE_HEAD}branding,<br class="hidden md:inline" /> {BRAND_LINE_TAIL}</p>
       </div>
     </section>
 

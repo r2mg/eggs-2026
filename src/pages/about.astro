@@ -1,5 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSiteContent } from '../data/content';
+
+const { episodes, latest } = await getSiteContent();
+
+// Highest episode number we know about, so the hosts blurb stays current.
+// Fall back to the count of episodes (then a static floor) if numbers are missing.
+const latestEpisodeNumber =
+  episodes.reduce((max, ep) => Math.max(max, ep.episodeNumber ?? 0), 0) ||
+  latest?.episodeNumber ||
+  episodes.length ||
+  470;
 
 const differentiators = [
   { title: 'Depth Over Surface', description: 'We go beyond the highlight reel. Our conversations explore the messy middle, the strategic decisions, and the real challenges behind successful creative work.' },
@@ -92,8 +103,7 @@ const jsonLd = {
         <div class="max-w-3xl">
           <p class="text-sm tracking-widest mb-4 text-white/70 uppercase">Hosts</p>
           <h2 class="text-3xl sm:text-4xl md:text-5xl mb-6" style="font-family: var(--font-display); font-weight: 600;">Ryan Roghaar & Mike Smith</h2>
-          <p class="text-xl text-white/90 mb-6 leading-relaxed">EGGS! is hosted by Ryan Roghaar and Mike "DJ Ontic" Smith — bringing curiosity, design and branding expertise, and a love of good conversation to every episode.</p>
-          <p class="text-lg text-white/80 leading-relaxed">The show is an extension of their work helping brands and creative businesses tell better stories — a space to learn from the people shaping creative industries.</p>
+          <p class="text-xl text-white/90 mb-6 leading-relaxed text-pretty">EGGS! The Podcast is hosted by Ryan Roghaar, founder of the brand and design agency R2, and more recently, healthtech commercialization consultancy RŌG Health, and Mike "DJ Ontic" Smith, audio engineer, longtime DJ, and founder of Audiostar Entertainment. They've been recording since 2017 — over {latestEpisodeNumber} long-form conversations with CEOs, startup founders, technologists, athletes, investors, and the occasional rock star, all united by the work of building something real from scratch.</p>
         </div>
       </div>
     </section>
