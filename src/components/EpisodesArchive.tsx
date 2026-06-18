@@ -28,6 +28,15 @@ interface Props {
 const ALL = 'All Episodes';
 const FEATURED = 'Featured';
 
+/** Lowercase + strip diacritics so "jose" matches "José" and search is case/accent-insensitive. */
+function normalizeForSearch(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 function CardImage({ ep }: { ep: ArchiveEpisode }) {
   const primary = ep.youtubeThumbnail?.trim() || ep.image?.trim() || '';
   const fallback = ep.youtubeThumbnail && ep.image ? ep.image : '';
@@ -67,11 +76,21 @@ export default function EpisodesArchive({ episodes, topics, initialPageSize = 16
     if (sort === 'oldest') list.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
     else list.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter((e) =>
-        [e.title, e.guest ?? '', e.summary ?? ''].join(' ').toLowerCase().includes(q),
-      );
+    const terms = normalizeForSearch(query).split(/\s+/).filter(Boolean);
+    if (terms.length) {
+      list = list.filter((e) => {
+        const haystack = normalizeForSearch(
+          [
+            e.title,
+            e.guest ?? '',
+            e.summary ?? '',
+            e.episodeNumber ?? '',
+            e.publishedAt?.slice(0, 4) ?? '',
+            ...(e.collections ?? []),
+          ].join(' '),
+        );
+        return terms.every((t) => haystack.includes(t));
+      });
     }
 
     if (topic === FEATURED) list = list.filter((e) => e.featured);
