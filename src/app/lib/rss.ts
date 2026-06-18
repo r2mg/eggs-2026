@@ -29,9 +29,12 @@ export const ANCHOR_EGGS_RSS_FEED = 'https://anchor.fm/s/fc17887c/podcast/rss';
  */
 export const EGGS_LISTEN_LINKS = {
   rss: ANCHOR_EGGS_RSS_FEED,
-  spotify: 'https://podcasters.spotify.com/pod/show/eggsthepodcast',
-  /** Recurring “On iTunes” short link from episode show notes */
-  apple: 'https://itun.es/i6dX3pCOn',
+  /** Public Spotify show page (listener-facing — not the podcasters.spotify.com dashboard). */
+  spotify: 'https://open.spotify.com/show/3RbVkp9w8NEwIqeVFLnJc9',
+  /** Canonical Apple Podcasts show page */
+  apple: 'https://podcasts.apple.com/us/podcast/eggs-the-podcast/id1245214576',
+  /** EGGS! channel on YouTube */
+  youtube: 'https://www.youtube.com/@EggsThePodcast',
 } as const;
 
 /**

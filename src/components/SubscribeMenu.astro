@@ -1,0 +1,108 @@
+---
+/**
+ * Reusable "Subscribe" dropdown. Renders a trigger button + an animated popover of
+ * listen/follow destinations (Spotify, Apple Podcasts, YouTube). A single hoisted script
+ * wires up every instance on the page (toggle, click-outside, Escape).
+ */
+import { SITE } from '../data/content';
+
+interface Props {
+  /** Tailwind classes for the trigger button (lets each placement keep its own look). */
+  buttonClass: string;
+  /** Horizontal alignment of the popover when not full-width. */
+  align?: 'left' | 'right';
+  /** Full-width trigger + popover (used inside the episode page card). */
+  block?: boolean;
+  /** Extra classes for the popover (e.g. z-index overrides). */
+  menuClass?: string;
+}
+
+const { buttonClass, align = 'right', block = false, menuClass = '' } = Astro.props;
+
+const subscribeLinks = [
+  { id: 'spotify', href: SITE.listen.spotify, label: 'Spotify', color: '#1DB954' },
+  { id: 'apple', href: SITE.listen.apple, label: 'Apple Podcasts', color: 'currentColor' },
+  { id: 'youtube', href: SITE.listen.youtube, label: 'YouTube', color: '#FF0000' },
+];
+
+/** Brand glyphs (Simple Icons paths), 24×24 viewBox, filled with the link's brand color. */
+function iconSvg(id: string): string {
+  const open = '<svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">';
+  const paths: Record<string, string> = {
+    spotify:
+      '<path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/>',
+    apple:
+      '<path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/>',
+    youtube:
+      '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>',
+  };
+  return `${open}${paths[id] ?? ''}</svg>`;
+}
+
+const menuItem =
+  'flex items-center gap-3 min-h-11 px-4 py-2.5 text-sm text-foreground hover:bg-accent/10 hover:text-accent transition-colors';
+const alignClass = block ? 'left-0 right-0' : align === 'right' ? 'right-0' : 'left-0';
+const widthClass = block ? '' : 'w-56';
+---
+
+<div class={`relative ${block ? 'w-full' : ''}`} data-subscribe>
+  <button
+    type="button"
+    class={buttonClass}
+    data-subscribe-toggle
+    aria-haspopup="true"
+    aria-expanded="false"
+  >
+    Subscribe
+  </button>
+  <div
+    class={`absolute ${alignClass} ${widthClass} mt-3 bg-background border border-border shadow-lg py-1 origin-top transition duration-200 ease-out opacity-0 scale-95 invisible pointer-events-none ${menuClass}`}
+    data-subscribe-menu
+    role="menu"
+  >
+    {
+      subscribeLinks.map((s) => (
+        <a href={s.href} target="_blank" rel="noopener noreferrer" class={menuItem} role="menuitem">
+          <span class="shrink-0 inline-flex" style={`color: ${s.color}`} set:html={iconSvg(s.id)} />
+          {s.label}
+        </a>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  const roots = Array.from(document.querySelectorAll<HTMLElement>('[data-subscribe]'));
+
+  function setOpen(root: HTMLElement, open: boolean) {
+    const btn = root.querySelector<HTMLElement>('[data-subscribe-toggle]');
+    const menu = root.querySelector<HTMLElement>('[data-subscribe-menu]');
+    if (!btn || !menu) return;
+    menu.classList.toggle('opacity-0', !open);
+    menu.classList.toggle('scale-95', !open);
+    menu.classList.toggle('invisible', !open);
+    menu.classList.toggle('pointer-events-none', !open);
+    menu.classList.toggle('opacity-100', open);
+    menu.classList.toggle('scale-100', open);
+    btn.setAttribute('aria-expanded', String(open));
+  }
+
+  function closeAll(except?: HTMLElement) {
+    for (const r of roots) if (r !== except) setOpen(r, false);
+  }
+
+  for (const root of roots) {
+    const btn = root.querySelector<HTMLElement>('[data-subscribe-toggle]');
+    btn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      closeAll(root);
+      setOpen(root, !open);
+    });
+  }
+
+  document.addEventListener('click', () => closeAll());
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAll();
+  });
+</script>

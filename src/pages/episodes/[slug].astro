@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EpisodeImage from '../../components/EpisodeImage.astro';
 import EpisodeCard from '../../components/EpisodeCard.astro';
+import SubscribeMenu from '../../components/SubscribeMenu.astro';
 import { getSiteContent, SITE } from '../../data/content';
 import { episodePath, guestPath, formatDate, formatDurationLabel, episodeEyebrow } from '../../lib/display';
 import {
@@ -230,8 +231,11 @@ const RSS_HTML_CLASS =
 
             <div class="lg:mb-12 p-5 sm:p-8 bg-foreground text-background">
               <h3 class="text-lg sm:text-xl mb-3 sm:mb-4" style="font-family: var(--font-display); font-weight: 600;">Never Miss an Episode</h3>
-              <p class="text-sm opacity-80 mb-6 leading-relaxed">Get new episodes delivered to your inbox every week.</p>
-              <a href="mailto:eggsthepodcast@gmail.com?subject=EGGS%20Podcast" class="inline-flex justify-center w-full min-h-11 bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity">Subscribe</a>
+              <p class="text-sm opacity-80 mb-6 leading-relaxed">Follow EGGS! on your favorite platform.</p>
+              <SubscribeMenu
+                block
+                buttonClass="inline-flex justify-center items-center w-full min-h-11 bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
+              />
             </div>
           </div>
         </div>

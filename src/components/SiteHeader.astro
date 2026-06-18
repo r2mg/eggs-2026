@@ -5,6 +5,7 @@
  */
 import logoFull from '../imports/eggs_logo_full.png';
 import logoCompact from '../imports/eggs-text-logo.png';
+import SubscribeMenu from './SubscribeMenu.astro';
 
 const links = [
   { href: '/episodes', label: 'Episodes' },
@@ -18,7 +19,6 @@ const isActive = (href: string) => path === href || path.startsWith(href + '/');
 
 const subscribeBtn =
   'inline-flex items-center justify-center min-h-11 min-w-[4.5rem] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity whitespace-nowrap';
-const subscribeHref = 'mailto:eggsthepodcast@gmail.com?subject=EGGS%20Podcast';
 ---
 
 <nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
@@ -44,12 +44,12 @@ const subscribeHref = 'mailto:eggsthepodcast@gmail.com?subject=EGGS%20Podcast';
           </a>
         ))
       }
-      <a href={subscribeHref} class={subscribeBtn}>Subscribe</a>
+      <SubscribeMenu buttonClass={subscribeBtn} menuClass="z-[70]" />
     </div>
 
     {/* Mobile/tablet controls */}
     <div class="flex xl:hidden items-center gap-1.5 sm:gap-2 shrink-0">
-      <a href={subscribeHref} class={subscribeBtn}>Subscribe</a>
+      <SubscribeMenu buttonClass={subscribeBtn} menuClass="z-[70]" />
       <button
         type="button"
         id="mobile-nav-toggle"
