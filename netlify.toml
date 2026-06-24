@@ -18,11 +18,15 @@
   # Without it the site still builds (RSS-only).
 
 # --- Keeping content fresh -------------------------------------------------------------
-# Because the site is static, new episodes appear after a rebuild. Two good options:
-#   1. Build hook + Zapier/Make watching the RSS feed (or a weekly schedule) to POST the hook.
-#      Create one under: Site settings → Build & deploy → Build hooks, then POST to that URL.
-#   2. Netlify Scheduled Functions / a cron that triggers the build hook on a schedule.
-# See README "Keeping the site up to date" for the step-by-step.
+# Because the site is static, new episodes only appear after a rebuild. Anchor / Spotify
+# for Podcasters does NOT emit a webhook on publish, so we watch the feed ourselves:
+#
+#   netlify/functions/check-new-episode.mjs  (scheduled hourly)
+#     → polls the RSS feed, and ONLY when the newest episode changes it POSTs the
+#       production build hook, triggering a rebuild. Last-seen episode is tracked in
+#       Netlify Blobs so we don't rebuild when nothing is new.
+#
+# The build hook URL is stored as the secret env var BUILD_HOOK_URL (production context).
 
 # Static asset caching for hashed build output.
 [[headers]]
