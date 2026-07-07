@@ -18,13 +18,14 @@
   # Without it the site still builds (RSS-only).
 
 # --- Keeping content fresh -------------------------------------------------------------
-# Because the site is static, new episodes only appear after a rebuild. Anchor / Spotify
-# for Podcasters does NOT emit a webhook on publish, so we watch the feed ourselves:
+# Because the site is static, new episodes only appear after a rebuild. Neither Anchor /
+# Spotify for Podcasters nor YouTube emit a webhook we rely on, so we watch both feeds:
 #
 #   netlify/functions/check-new-episode.mjs  (scheduled hourly)
-#     → polls the RSS feed, and ONLY when the newest episode changes it POSTs the
-#       production build hook, triggering a rebuild. Last-seen episode is tracked in
-#       Netlify Blobs so we don't rebuild when nothing is new.
+#     → polls the Anchor RSS feed and the YouTube uploads Atom feed; when the newest
+#       RSS episode changes, the newest YouTube upload changes, or that upload's Atom
+#       `updated` timestamp changes (e.g. thumbnail swap), it POSTs the production
+#       build hook. Last-seen values are tracked in Netlify Blobs.
 #
 # The build hook URL is stored as the secret env var BUILD_HOOK_URL (production context).
 
