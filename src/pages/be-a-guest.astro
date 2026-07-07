@@ -270,11 +270,11 @@ const labelClass = 'block mb-2 text-sm font-medium';
         <div class="border-t border-border">
           {
             faqs.map((faq) => (
-              <details class="group border-b border-border bg-background">
-                <summary class="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden px-4 sm:px-6 py-5 sm:py-6 text-lg sm:text-xl font-medium hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+              <details class="group border-b border-border bg-background" data-faq>
+                <summary class="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden px-4 sm:px-6 py-5 sm:py-6 text-lg sm:text-xl font-medium hover:text-accent transition-colors duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                   <span>{faq.question}</span>
                   <svg
-                    class="w-5 h-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                    class="w-5 h-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-in-out group-open:rotate-180"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -284,13 +284,80 @@ const labelClass = 'block mb-2 text-sm font-medium';
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
                   </svg>
                 </summary>
-                <div class="px-4 sm:px-6 pb-5 sm:pb-6 -mt-1">
-                  <p class="text-base text-muted-foreground leading-relaxed max-w-3xl">{faq.answer}</p>
+                <div data-faq-panel>
+                  <div class="px-4 sm:px-6 pb-5 sm:pb-6 -mt-1">
+                    <p class="text-base text-muted-foreground leading-relaxed max-w-3xl">{faq.answer}</p>
+                  </div>
                 </div>
               </details>
             ))
           }
         </div>
+
+        <script is:inline>
+          (function () {
+            const durationMs = 300;
+            const faqItems = Array.from(document.querySelectorAll('[data-faq]'));
+
+            faqItems.forEach(function (details) {
+              const summary = details.querySelector('summary');
+              const panel = details.querySelector('[data-faq-panel]');
+              if (!summary || !panel) return;
+
+              summary.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (details.open) {
+                  closePanel(details, panel);
+                } else {
+                  closeOtherPanels(details);
+                  openPanel(details, panel);
+                }
+              });
+            });
+
+            function closeOtherPanels(exceptDetails) {
+              faqItems.forEach(function (other) {
+                if (other === exceptDetails || !other.open) return;
+                const otherPanel = other.querySelector('[data-faq-panel]');
+                if (otherPanel) closePanel(other, otherPanel);
+              });
+            }
+
+            function openPanel(details, panel) {
+              details.open = true;
+              panel.style.overflow = 'hidden';
+              panel.style.height = '0px';
+              panel.style.transition = 'height ' + durationMs + 'ms ease-in-out';
+              requestAnimationFrame(function () {
+                panel.style.height = panel.scrollHeight + 'px';
+              });
+              panel.addEventListener('transitionend', function onEnd(event) {
+                if (event.propertyName !== 'height') return;
+                panel.style.height = 'auto';
+                panel.style.overflow = '';
+                panel.style.transition = '';
+                panel.removeEventListener('transitionend', onEnd);
+              });
+            }
+
+            function closePanel(details, panel) {
+              panel.style.overflow = 'hidden';
+              panel.style.height = panel.scrollHeight + 'px';
+              panel.style.transition = 'height ' + durationMs + 'ms ease-in-out';
+              requestAnimationFrame(function () {
+                panel.style.height = '0px';
+              });
+              panel.addEventListener('transitionend', function onEnd(event) {
+                if (event.propertyName !== 'height') return;
+                details.open = false;
+                panel.style.height = '';
+                panel.style.overflow = '';
+                panel.style.transition = '';
+                panel.removeEventListener('transitionend', onEnd);
+              });
+            }
+          })();
+        </script>
       </div>
     </section>
   </main>
