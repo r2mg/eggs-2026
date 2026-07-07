@@ -5,6 +5,7 @@ import EpisodeCard from '../components/EpisodeCard.astro';
 import { getSiteContent, SITE } from '../data/content';
 import { episodePath, episodeEyebrow } from '../lib/display';
 import { EGGS_TOPIC_PLAYLIST_TITLES } from '../app/config/youtubeChannel';
+import { SHOW_NEWSLETTER_EMAIL_SIGNUP } from '../app/config/siteUi';
 
 const { latest, featured, topics } = await getSiteContent();
 
@@ -138,17 +139,20 @@ const jsonLd = {
       </div>
     </section>
 
-    {/* Newsletter */}
-    <section class="py-12 sm:py-24 md:py-32 bg-foreground text-background">
-      <div class="max-w-[1000px] mx-auto px-4 sm:px-6 text-center">
-        <h2 class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-6" style="font-family: var(--font-display); font-weight: 600;">Never Miss an Episode</h2>
-        <p class="text-base sm:text-lg md:text-xl opacity-70 mb-8 sm:mb-12 leading-relaxed max-w-xl mx-auto">Get episode updates, key insights, and exclusive content delivered to your inbox.</p>
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-md mx-auto">
-          <input type="email" placeholder="Enter your email" class="flex-1 min-h-12 px-4 sm:px-6 py-3 sm:py-4 bg-background text-foreground border border-background/20 focus:outline-none focus:border-accent text-base w-full" />
-          <a href="mailto:eggsthepodcast@gmail.com?subject=EGGS%20Newsletter" class="inline-flex items-center justify-center min-h-12 bg-accent text-accent-foreground px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium hover:opacity-90 transition-opacity whitespace-nowrap shrink-0 w-full sm:w-auto">Subscribe</a>
-        </div>
-      </div>
-    </section>
+    {
+      SHOW_NEWSLETTER_EMAIL_SIGNUP && (
+        <section class="py-12 sm:py-24 md:py-32 bg-foreground text-background">
+          <div class="max-w-[1000px] mx-auto px-4 sm:px-6 text-center">
+            <h2 class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl mb-3 sm:mb-6" style="font-family: var(--font-display); font-weight: 600;">Never Miss an Episode</h2>
+            <p class="text-base sm:text-lg md:text-xl opacity-70 mb-8 sm:mb-12 leading-relaxed max-w-xl mx-auto">Get episode updates, key insights, and exclusive content delivered to your inbox.</p>
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-md mx-auto">
+              <input type="email" placeholder="Enter your email" class="flex-1 min-h-12 px-4 sm:px-6 py-3 sm:py-4 bg-background text-foreground border border-background/20 focus:outline-none focus:border-accent text-base w-full" />
+              <a href="mailto:eggsthepodcast@gmail.com?subject=EGGS%20Newsletter" class="inline-flex items-center justify-center min-h-12 bg-accent text-accent-foreground px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-medium hover:opacity-90 transition-opacity whitespace-nowrap shrink-0 w-full sm:w-auto">Subscribe</a>
+            </div>
+          </div>
+        </section>
+      )
+    }
 
     {/* Be a Guest */}
     <section class="py-12 sm:py-24 md:py-32 bg-[#FFF5EE]">
