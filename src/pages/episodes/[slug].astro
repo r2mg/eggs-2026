@@ -101,17 +101,13 @@ const RSS_HTML_CLASS =
           <a href="/episodes" class="inline-flex min-h-11 items-center py-1 -ml-1 px-1 rounded-sm hover:text-foreground transition-colors">← Back to Episodes</a>
         </div>
         <div class="mb-5 sm:mb-8 min-w-0">
-          <p class="text-[0.65rem] sm:text-xs md:text-sm text-accent font-medium mb-2 sm:mb-4 tracking-wide sm:tracking-wider break-words leading-snug">{eyebrow}</p>
+          <p class="text-[0.65rem] sm:text-xs md:text-sm font-medium text-accent tracking-wide sm:tracking-wider uppercase mb-4 sm:mb-6">
+            Presented by <a href="https://www.roghealth.com" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:opacity-80 transition-opacity">RŌG Health</a>
+          </p>
           <h1 class="text-[clamp(1.375rem,5.5vw,2.75rem)] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-3 sm:mb-6 leading-[1.12] sm:leading-tight break-words" style="font-family: var(--font-display); font-weight: 700;">
             {episode.title}
           </h1>
-          {
-            guestName && (
-              <p class="text-base sm:text-lg text-muted-foreground">
-                with <a href={guestPath(slugify(guestName, 80))} class="text-accent hover:underline">{guestName}</a>
-              </p>
-            )
-          }
+          <p class="text-[0.65rem] sm:text-xs md:text-sm text-accent font-medium tracking-wide sm:tracking-wider break-words leading-snug">{eyebrow}</p>
         </div>
       </div>
     </section>
@@ -225,7 +221,11 @@ const RSS_HTML_CLASS =
           <div class="lg:col-span-1 min-w-0 order-2 space-y-6 sm:space-y-8 lg:space-y-0">
             <div class="lg:mb-12 p-5 sm:p-8 bg-muted/30 border border-border">
               <h3 class="text-lg sm:text-xl mb-3 sm:mb-4" style="font-family: var(--font-display); font-weight: 600;">Show Credits</h3>
-              {guestName && <p class="text-xs text-muted-foreground uppercase tracking-wider mb-3">Guest: {guestName}</p>}
+              {guestName && (
+                <p class="text-sm text-muted-foreground leading-relaxed mb-6">
+                  <strong class="font-semibold text-foreground">Guest</strong>: <a href={guestPath(slugify(guestName, 80))} class="text-accent underline hover:opacity-90">{guestName}</a>
+                </p>
+              )}
               <div class={`text-sm text-muted-foreground leading-relaxed mb-4 ${RSS_HTML_CLASS} [&_a]:text-accent [&_a]:underline hover:[&_a]:opacity-90`} set:html={prepareRssCreditsHtmlForInnerHtml(creditsHtml)} />
             </div>
 
