@@ -141,12 +141,18 @@ const labelClass = 'block mb-2 text-sm font-medium';
             {/* Field 3: Work link */}
             <div>
               <label for="work_link" class={labelClass}>Link to your work *</label>
+              <p class="text-sm text-muted-foreground mb-2">
+                A domain or link is fine — <span class="whitespace-nowrap">r2mg.com</span> works; you don't need
+                <span class="whitespace-nowrap">https://</span> or <span class="whitespace-nowrap">www.</span>
+              </p>
               <input
                 id="work_link"
                 name="work_link"
-                type="url"
+                type="text"
                 required
-                placeholder="Website, portfolio, company page, recent project"
+                inputmode="url"
+                autocomplete="url"
+                placeholder="r2mg.com or https://yoursite.com"
                 class={inputClass}
               />
             </div>
@@ -176,6 +182,49 @@ const labelClass = 'block mb-2 text-sm font-medium';
               Send pitch
             </button>
           </form>
+
+          <script is:inline>
+            (function () {
+              const form = document.querySelector('form[name="guest-pitch"]');
+              const workLink = document.getElementById('work_link');
+              if (!form || !workLink) return;
+
+              function normalizeLink(raw) {
+                const trimmed = raw.trim();
+                if (!trimmed) return trimmed;
+                if (/^https?:\/\//i.test(trimmed)) return trimmed;
+                return 'https://' + trimmed;
+              }
+
+              function isValidWorkLink(raw) {
+                const trimmed = raw.trim();
+                if (!trimmed) return false;
+                try {
+                  const url = new URL(normalizeLink(trimmed));
+                  return Boolean(url.hostname) && url.hostname.includes('.');
+                } catch {
+                  return false;
+                }
+              }
+
+              workLink.addEventListener('input', function () {
+                workLink.setCustomValidity('');
+              });
+
+              form.addEventListener('submit', function (e) {
+                const raw = workLink.value;
+                if (!isValidWorkLink(raw)) {
+                  e.preventDefault();
+                  workLink.setCustomValidity(
+                    'Enter a website or link — e.g. r2mg.com or https://yoursite.com',
+                  );
+                  workLink.reportValidity();
+                  return;
+                }
+                workLink.value = normalizeLink(raw);
+              });
+            })();
+          </script>
         </div>
       </div>
     </section>
