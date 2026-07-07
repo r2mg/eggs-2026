@@ -1,13 +1,239 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import BeAGuest from '../app/components/BeAGuest';
+
+const faqs = [
+  {
+    question: 'How long is the interview?',
+    answer:
+      'All shows are booked in 60-minute blocks, but we won\'t let the clock get in the way of a good conversation. If things are flowing, we might go 65 minutes. If we\'ve covered everything in 45, we\'ll call it a wrap. No pressure. The goal is a great conversation—not filling time.',
+  },
+  {
+    question: 'Remote or in person?',
+    answer:
+      'We record the show remotely using Riverside. It\'s easy to use, so don\'t worry. All you need is a quiet room, a pair of headphones, and a decent microphone. If you have any questions beforehand, just let your booker know.',
+  },
+  {
+    question: 'Do I need to prep?',
+    answer:
+      'Not really. We\'ll come prepared with a few conversation starters and some background notes, but our episodes aren\'t scripted. We\'ll handle the preparation—you just bring your perspective.',
+  },
+  {
+    question: 'When does the episode air?',
+    answer:
+      'Some episodes are published just a few days after they\'re recorded, while others may take up to two or three weeks. We\'ll give you an approximate release window during your recording session.',
+  },
+  {
+    question: 'Can I share it?',
+    answer:
+      'Absolutely. In fact, we\'d be disappointed if you didn\'t. We\'ll send you graphics and video clips that make sharing easy, and with proper attribution, you\'re also welcome to create your own.',
+  },
+];
+
+const inputClass =
+  'w-full px-4 py-3 bg-muted border border-border focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition-colors';
+const labelClass = 'block mb-2 text-sm font-medium';
 ---
 
 <BaseLayout
   title="Be a Guest"
-  description="Apply to be a guest on EGGS! The Podcast, nominate someone, or reach out as a publicist. We feature creative professionals, entrepreneurs, and builders with stories worth sharing."
+  description="Pitch yourself or someone you know for EGGS! The Podcast. One form, four fields, no spam, no follow-up."
 >
-  <main>
-    <BeAGuest client:load />
+  <main class="min-h-screen bg-background pt-16 overflow-x-hidden">
+    {/* Hero */}
+    <section class="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-accent/5 to-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="max-w-4xl">
+          <h1
+            class="text-4xl sm:text-6xl md:text-7xl lg:text-8xl mb-6 sm:mb-8 leading-tight break-words"
+            style="font-family: var(--font-display); font-weight: 700;"
+          >
+            Be a Guest on EGGS!
+          </h1>
+          <p class="text-lg sm:text-2xl md:text-3xl text-muted-foreground leading-relaxed">
+            If you're building something real and you want to talk about how — for an hour, at depth,
+            with two people who'll actually listen — this is the page.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* Before you pitch */}
+    <section class="py-12 sm:py-16 md:py-24 bg-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="max-w-3xl space-y-6">
+          <h2
+            class="text-3xl sm:text-4xl md:text-5xl mb-2"
+            style="font-family: var(--font-display); font-weight: 600;"
+          >
+            Before you pitch
+          </h2>
+          <p class="text-base sm:text-xl text-muted-foreground leading-relaxed">
+            We book people who are actively doing the work. Founders, designers, technologists,
+            athletes, investors, operators, artists — the specific category doesn't matter; what
+            matters is that you're building something and willing to talk about how it really goes.
+          </p>
+          <h3 class="text-lg font-bold pt-2">We don't book:</h3>
+          <ul class="space-y-3 text-base sm:text-xl text-muted-foreground leading-relaxed list-disc pl-5">
+            <li>People whose only credential is having an opinion</li>
+            <li>Generic "thought leadership" pitches</li>
+            <li>Anything that arrived as a blast template (we can usually tell)</li>
+          </ul>
+          <p class="text-base sm:text-xl text-muted-foreground leading-relaxed">
+            If your pitch reads like it could have been sent to 50 other podcasts with the show name
+            swapped out, please don't send it. We won't reply, and you'll have wasted a few minutes
+            you could have spent on a show that's a better fit.
+          </p>
+          <p class="text-base sm:text-xl text-muted-foreground leading-relaxed">
+            If you're a publicist or representative pitching a client, that's fine — just write the
+            pitch in their voice with their specifics, not yours.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* Form */}
+    <section class="py-12 sm:py-16 md:py-24 bg-muted/30">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="max-w-3xl mx-auto">
+          <h2
+            class="text-3xl sm:text-4xl md:text-5xl mb-8 sm:mb-12"
+            style="font-family: var(--font-display); font-weight: 600;"
+          >
+            Send your pitch
+          </h2>
+          {/* TODO: Wire up form submission endpoint later (likely via Resend or similar). */}
+          {/* For now this form is structural only; submitting will not deliver data anywhere. */}
+          <form
+            action=""
+            method="POST"
+            novalidate
+            class="p-6 sm:p-10 md:p-12 bg-background border-2 border-border space-y-6"
+          >
+            {/* Honeypot field — hidden via CSS, never populated by humans */}
+            <div class="sr-only" aria-hidden="true">
+              <label>
+                Don't fill this out if you're human:
+                <input type="text" name="website_url_2" tabindex="-1" autocomplete="off" />
+              </label>
+            </div>
+
+            {/* Field 1: Name */}
+            <div>
+              <label for="name" class={labelClass}>Your name *</label>
+              <input id="name" name="name" type="text" required autocomplete="name" class={inputClass} />
+            </div>
+
+            {/* Field 2: Contact (accepts email or LinkedIn URL) */}
+            <div>
+              <label for="contact" class={labelClass}>How can we reach you? *</label>
+              <input
+                id="contact"
+                name="contact"
+                type="text"
+                required
+                placeholder="Email or LinkedIn URL"
+                class={inputClass}
+              />
+            </div>
+
+            {/* Field 3: Work link */}
+            <div>
+              <label for="work_link" class={labelClass}>Link to your work *</label>
+              <input
+                id="work_link"
+                name="work_link"
+                type="url"
+                required
+                placeholder="Website, portfolio, company page, recent project"
+                class={inputClass}
+              />
+            </div>
+
+            {/* Field 4: The qualifying question */}
+            <div>
+              <label for="pitch" class={labelClass}>
+                What's the conversation you'd want to have on EGGS that you haven't had on another
+                show? *
+              </label>
+              <p class="text-sm text-muted-foreground mb-2">
+                3-5 sentences is plenty. We're looking for the story, not the resume.
+              </p>
+              <textarea
+                id="pitch"
+                name="pitch"
+                rows="6"
+                required
+                minlength="80"
+                class={`${inputClass} resize-none`}></textarea>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full bg-accent text-accent-foreground px-8 py-4 text-base font-medium hover:opacity-90 transition-opacity"
+            >
+              Send pitch
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    {/* After you submit */}
+    <section class="py-12 sm:py-16 md:py-24 bg-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="max-w-3xl space-y-6">
+          <h2
+            class="text-3xl sm:text-4xl md:text-5xl mb-2"
+            style="font-family: var(--font-display); font-weight: 600;"
+          >
+            After you submit
+          </h2>
+          <p class="text-base sm:text-xl text-muted-foreground leading-relaxed">
+            If your pitch resonates, we'll reach out within two weeks to schedule. If you don't hear
+            from us, it simply wasn't the right fit for the show at this time—not a comment on your
+            work. We don't send rejection emails because they tend to start conversations neither of
+            us has time for. If your work evolves or your story changes, feel free to apply again in
+            six months. We don't maintain a waitlist or keep submissions on file.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* FAQ */}
+    <section class="py-12 sm:py-16 md:py-24 bg-muted/30">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <h2
+          class="text-3xl sm:text-4xl md:text-5xl mb-10 sm:mb-16"
+          style="font-family: var(--font-display); font-weight: 600;"
+        >
+          A few common questions
+        </h2>
+
+        <div class="border-t border-border">
+          {
+            faqs.map((faq) => (
+              <details class="group border-b border-border bg-background">
+                <summary class="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden px-4 sm:px-6 py-5 sm:py-6 text-lg sm:text-xl font-medium hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                  <span>{faq.question}</span>
+                  <svg
+                    class="w-5 h-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+                  </svg>
+                </summary>
+                <div class="px-4 sm:px-6 pb-5 sm:pb-6 -mt-1">
+                  <p class="text-base text-muted-foreground leading-relaxed max-w-3xl">{faq.answer}</p>
+                </div>
+              </details>
+            ))
+          }
+        </div>
+      </div>
+    </section>
   </main>
 </BaseLayout>

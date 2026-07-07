@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Thanks for the pitch"
+  description="Pitch yourself or someone you know for EGGS! The Podcast. One form, four fields, no spam, no follow-up."
+  noindex={true}
+>
+  <main class="min-h-screen bg-background pt-16 overflow-x-hidden">
+    <section class="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-accent/5 to-background">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 min-w-0">
+        <div class="max-w-3xl space-y-8">
+          <h1
+            class="text-4xl sm:text-6xl md:text-7xl leading-tight break-words"
+            style="font-family: var(--font-display); font-weight: 700;"
+          >
+            Thanks for the pitch.
+          </h1>
+          <div class="space-y-6">
+            <p class="text-base sm:text-xl text-muted-foreground leading-relaxed">
+              We read every submission that isn't a template. If it resonates, we'll be in touch
+              within two weeks to schedule.
+            </p>
+            <p class="text-base sm:text-xl text-muted-foreground leading-relaxed">
+              If you don't hear from us, the fit wasn't right for what we're recording this season.
+              That's not a comment on your work — it's a comment on what we can fit. Try again in 6
+              months if your work shifts; we don't keep a list.
+            </p>
+          </div>
+          <a
+            href="/"
+            class="inline-flex items-center gap-2 text-accent font-medium text-lg hover:gap-4 transition-all"
+          >
+            Back to the show →
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

@@ -11,14 +11,13 @@ const links = [
   { href: '/episodes', label: 'Episodes' },
   { href: '/about', label: 'About' },
   { href: '/be-a-guest', label: 'Be a Guest' },
-  { href: '/sponsor', label: 'Sponsor' },
 ];
 
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const isActive = (href: string) => path === href || path.startsWith(href + '/');
 
 const subscribeBtn =
-  'inline-flex items-center justify-center min-h-11 min-w-[4.5rem] px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity whitespace-nowrap';
+  'inline-flex items-center justify-center min-h-11 px-2.5 sm:px-4 py-2.5 text-[0.65rem] sm:text-sm font-medium bg-accent text-accent-foreground hover:opacity-90 transition-opacity whitespace-nowrap';
 ---
 
 <nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
