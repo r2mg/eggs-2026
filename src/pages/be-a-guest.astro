@@ -106,18 +106,25 @@ const labelClass = 'block mb-2 text-sm font-medium';
             method="POST"
             action="/be-a-guest/thanks"
             data-netlify="true"
-            data-netlify-honeypot="website_url_2"
+            data-netlify-honeypot="bot-field"
             class="p-6 sm:p-10 md:p-12 bg-background border-2 border-border space-y-6"
           >
             <input type="hidden" name="form-name" value="guest-pitch" />
 
-            {/* Honeypot field — hidden via CSS, never populated by humans */}
-            <div class="sr-only" aria-hidden="true">
+            {/* Honeypot — must stay empty; bots (and autofill) get silently dropped by Netlify */}
+            <p hidden aria-hidden="true">
               <label>
-                Don't fill this out if you're human:
-                <input type="text" name="website_url_2" tabindex="-1" autocomplete="off" />
+                Don't fill this out:
+                <input
+                  type="text"
+                  name="bot-field"
+                  tabindex="-1"
+                  autocomplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                />
               </label>
-            </div>
+            </p>
 
             {/* Field 1: Name */}
             <div>
@@ -142,7 +149,7 @@ const labelClass = 'block mb-2 text-sm font-medium';
             <div>
               <label for="work_link" class={labelClass}>Link to your work *</label>
               <p class="text-sm text-muted-foreground mb-2">
-                A domain or link is fine — <span class="whitespace-nowrap">r2mg.com</span> works; you don't need
+                A domain or link is fine — <span class="whitespace-nowrap">eggscast.com</span> works; you don't need
                 <span class="whitespace-nowrap">https://</span> or <span class="whitespace-nowrap">www.</span>
               </p>
               <input
@@ -152,7 +159,7 @@ const labelClass = 'block mb-2 text-sm font-medium';
                 required
                 inputmode="url"
                 autocomplete="url"
-                placeholder="r2mg.com or https://yoursite.com"
+                placeholder="yoursite.com or https://yoursite.com"
                 class={inputClass}
               />
             </div>
@@ -216,7 +223,7 @@ const labelClass = 'block mb-2 text-sm font-medium';
                 if (!isValidWorkLink(raw)) {
                   e.preventDefault();
                   workLink.setCustomValidity(
-                    'Enter a website or link — e.g. r2mg.com or https://yoursite.com',
+                    'Enter a website or link — e.g. yoursite.com or https://yoursite.com',
                   );
                   workLink.reportValidity();
                   return;
