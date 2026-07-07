@@ -101,14 +101,16 @@ const labelClass = 'block mb-2 text-sm font-medium';
           >
             Send your pitch
           </h2>
-          {/* TODO: Wire up form submission endpoint later (likely via Resend or similar). */}
-          {/* For now this form is structural only; submitting will not deliver data anywhere. */}
           <form
-            action=""
+            name="guest-pitch"
             method="POST"
-            novalidate
+            action="/be-a-guest/thanks"
+            data-netlify="true"
+            data-netlify-honeypot="website_url_2"
             class="p-6 sm:p-10 md:p-12 bg-background border-2 border-border space-y-6"
           >
+            <input type="hidden" name="form-name" value="guest-pitch" />
+
             {/* Honeypot field — hidden via CSS, never populated by humans */}
             <div class="sr-only" aria-hidden="true">
               <label>
