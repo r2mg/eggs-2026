@@ -7,17 +7,21 @@
  * YouTube titles do not always follow the same wording as the RSS title. This module
  * compares an RSS episode to a list of YouTube videos (usually from your channel’s
  * public playlist feed) using several “signals” at once — title similarity, shared
- * words, how close the publish dates are, and (when we can guess a guest name) a small
- * overlap check. The best-scoring video wins if the score is high enough.
+ * words, how close the publish dates are, and guest-name overlap in the YouTube **title
+ * or description** (optimized YouTube uploads often drop the guest from the title but
+ * keep them in the description). The best-scoring video wins if the score is high enough.
  *
  * **Order of decisions:**
  * 1. If the episode slug is listed in the manual map below → use that video id (always wins).
  * 2. Otherwise score every YouTube candidate; a small bonus is added if that video’s id
  *    already appears as a link in show notes (we trust the editor, but still compare titles).
  * 3. If the best score clears a safety threshold → open that video.
- * 4. If not → fall back to the first YouTube link found in show notes (old behavior).
+ * 4. If not, and we know the RSS guest name → try matching by **full guest name in the
+ *    YouTube description** plus publish-date proximity (for re-titled public uploads).
+ * 5. If still nothing → fall back to the first YouTube link found in show notes (old behavior).
  *
- * **“with Guest Name”** is only a tiny optional hint — not required for a match.
+ * **Guest name** comes from the RSS title (“… with Jane Doe”) and is checked in both
+ * the YouTube title and description.
  *
  * **Posters / thumbnails:** Use `resolveYouTubeForEpisode()` — it returns `thumbnailUrl`
  * (playlist image when available, otherwise a public `i.ytimg.com` URL) plus `watchUrl` and `videoId`.
@@ -55,8 +59,12 @@ const WEIGHT_TOKEN_OVERLAP = 0.34;
 const WEIGHT_FUZZY_STRING = 0.26;
 /** How much we trust publish dates being close together */
 const WEIGHT_DATE_PROXIMITY = 0.22;
-/** How much we trust the guest name (from RSS) appearing inside the YouTube title */
+/** How much we trust the guest name (from RSS) appearing in the YouTube title or description */
 const WEIGHT_GUEST_OVERLAP = 0.16;
+
+/** Guest-in-description + date fallback when re-titled uploads miss the title score threshold */
+const MIN_GUEST_IN_DESCRIPTION_FOR_FALLBACK = 1;
+const MIN_DATE_SCORE_FOR_GUEST_DESCRIPTION_FALLBACK = 0.55;
 /** Extra points when this video id is already linked in show notes */
 const BONUS_LINKED_IN_SHOW_NOTES = 0.18;
 
@@ -101,6 +109,8 @@ export type YoutubeCandidate = {
   videoId: string;
   /** Title as YouTube / the playlist feed provides it */
   title: string;
+  /** YouTube description — used for guest-name matching when titles diverge after SEO edits */
+  description?: string;
   /** ISO date when the video went live, if known */
   publishedAt?: string;
   /** From the playlist Atom `<media:thumbnail>` when present; otherwise we use `i.ytimg.com` */
@@ -214,18 +224,18 @@ function dateProximityScore(rssIso: string, ytIso: string | undefined): number {
 }
 
 /**
- * If the RSS title ends with “with Jane Doe”, compare those name tokens to the YouTube title.
+ * Fraction of guest-name tokens found in a YouTube title or description blob.
  * We do **not** require YouTube to use the word “with”.
  */
-function guestOverlapScore(rssGuest: string | undefined, youtubeTitleRaw: string): number {
-  if (!rssGuest?.trim()) return 0;
+export function guestNameOverlapInText(rssGuest: string | undefined, textRaw: string | undefined): number {
+  if (!rssGuest?.trim() || !textRaw?.trim()) return 0;
   const gTokens = meaningfulTokens(normalizeTitleForMatching(rssGuest, { stripLeadingEpisodeNumber: false }));
   if (gTokens.length === 0) return 0;
-  const ytTokens = new Set(meaningfulTokens(normalizeTitleForMatching(youtubeTitleRaw, { stripLeadingEpisodeNumber: false })));
-  if (ytTokens.size === 0) return 0;
+  const textTokens = new Set(meaningfulTokens(normalizeTitleForMatching(textRaw, { stripLeadingEpisodeNumber: false })));
+  if (textTokens.size === 0) return 0;
   let hits = 0;
   for (const t of gTokens) {
-    if (ytTokens.has(t)) hits += 1;
+    if (textTokens.has(t)) hits += 1;
   }
   return hits / gTokens.length;
 }
@@ -266,9 +276,10 @@ function scoreEpisodeAgainstCandidate(
   const dateScore = dateProximityScore(episode.publishedAt, candidate.publishedAt);
 
   const guestFromRss = episode.guest?.trim() || extractGuestFromTitle(episode.title);
-  const guestScore = guestOverlapScore(guestFromRss, candidate.title);
+  const guestInTitle = guestNameOverlapInText(guestFromRss, candidate.title);
+  const guestInDescription = guestNameOverlapInText(guestFromRss, candidate.description);
   const withHintScore = withClauseHintOverlap(rssTitleNorm, candidate.title);
-  const guestBlend = Math.max(guestScore, withHintScore * 0.85);
+  const guestBlend = Math.max(guestInTitle, guestInDescription, withHintScore * 0.85);
 
   let total =
     WEIGHT_TOKEN_OVERLAP * tokenScore +
@@ -290,6 +301,53 @@ function watchUrlFromVideoId(videoId: string): string {
 function posterForCandidate(candidate: YoutubeCandidate | undefined, videoId: string): string {
   if (candidate?.thumbnailUrl?.trim()) return candidate.thumbnailUrl.trim();
   return youtubeHqThumbnailUrl(videoId);
+}
+
+function resolvedYouTubeFromCandidate(
+  catalogById: Map<string, YoutubeCandidate>,
+  videoId: string,
+): ResolvedYouTube {
+  const c = catalogById.get(videoId);
+  return {
+    watchUrl: watchUrlFromVideoId(videoId),
+    videoId,
+    thumbnailUrl: posterForCandidate(c, videoId),
+    youtubeTitle: c?.title,
+  };
+}
+
+/**
+ * When SEO-optimized YouTube titles no longer resemble the RSS title, match on the guest
+ * name appearing in the YouTube description plus a reasonable publish-date window.
+ */
+function resolveByGuestInDescription(
+  episode: Episode,
+  candidateIds: Iterable<string>,
+  catalogById: Map<string, YoutubeCandidate>,
+): ResolvedYouTube {
+  const guestFromRss = episode.guest?.trim() || extractGuestFromTitle(episode.title);
+  if (!guestFromRss) return {};
+
+  let bestId: string | null = null;
+  let bestDateScore = -1;
+
+  for (const videoId of candidateIds) {
+    const candidate = catalogById.get(videoId);
+    if (!candidate?.description?.trim()) continue;
+
+    const guestScore = guestNameOverlapInText(guestFromRss, candidate.description);
+    if (guestScore < MIN_GUEST_IN_DESCRIPTION_FOR_FALLBACK) continue;
+
+    const dateScore = dateProximityScore(episode.publishedAt, candidate.publishedAt);
+    if (dateScore < MIN_DATE_SCORE_FOR_GUEST_DESCRIPTION_FALLBACK) continue;
+
+    if (dateScore > bestDateScore) {
+      bestDateScore = dateScore;
+      bestId = videoId;
+    }
+  }
+
+  return bestId ? resolvedYouTubeFromCandidate(catalogById, bestId) : {};
 }
 
 /**
@@ -351,13 +409,12 @@ export function resolveYouTubeForEpisode(episode: Episode, youtubeCatalog: Youtu
   }
 
   if (bestId && bestScore >= MIN_SCORE_TO_ACCEPT_MATCH) {
-    const c = catalogById.get(bestId);
-    return {
-      watchUrl: watchUrlFromVideoId(bestId),
-      videoId: bestId,
-      thumbnailUrl: posterForCandidate(c, bestId),
-      youtubeTitle: c?.title,
-    };
+    return resolvedYouTubeFromCandidate(catalogById, bestId);
+  }
+
+  const guestDescriptionMatch = resolveByGuestInDescription(episode, candidateIds, catalogById);
+  if (guestDescriptionMatch.videoId) {
+    return guestDescriptionMatch;
   }
 
   const fallbackUrl = extractYouTubeUrl(episode.descriptionHtml);

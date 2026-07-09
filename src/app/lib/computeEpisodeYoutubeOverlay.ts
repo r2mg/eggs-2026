@@ -19,6 +19,7 @@ function toCandidate(v: YouTubeVideo): YoutubeCandidate {
   return {
     videoId: v.videoId,
     title: v.title,
+    description: v.description,
     publishedAt: v.publishedAt,
     thumbnailUrl: pickBestThumbnailUrl(v.thumbnails),
   };
