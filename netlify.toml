@@ -29,6 +29,21 @@
 #
 # The build hook URL is stored as the secret env var BUILD_HOOK_URL (production context).
 
+# Short link for inviting guests into the Riverside recording studio.
+# Requires `studio.eggsthepodcast.com` as a domain alias in Netlify (see README / deploy notes).
+[[redirects]]
+  from = "https://studio.eggsthepodcast.com/*"
+  to = "https://riverside.fm/studio/eggs-the-podcasts-studio?t=0fe1c009761d26116ff2"
+  status = 302
+  force = true
+
+# Same destination on the main domain — works immediately, no subdomain DNS needed.
+[[redirects]]
+  from = "/studio"
+  to = "https://riverside.fm/studio/eggs-the-podcasts-studio?t=0fe1c009761d26116ff2"
+  status = 302
+  force = true
+
 # Static asset caching for hashed build output.
 [[headers]]
   for = "/_astro/*"
