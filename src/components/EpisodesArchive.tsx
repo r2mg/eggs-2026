@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { episodePath, episodeEyebrow } from '../lib/display';
 
-import { episodeThumbnailForDisplay } from '../app/lib/youtubeThumbnails';
+import { episodeCardThumbnailSources, episodeThumbnailForDisplay } from '../app/lib/youtubeThumbnails';
 
 /** Slim episode projection passed from the Astro page (keeps the hydration payload small). */
 export interface ArchiveEpisode {
@@ -40,7 +40,9 @@ function normalizeForSearch(value: string): string {
 }
 
 function CardImage({ ep }: { ep: ArchiveEpisode }) {
-  const primary = episodeThumbnailForDisplay(ep.youtubeThumbnail?.trim() || ep.image?.trim(), 'card');
+  const imageUrl = ep.youtubeThumbnail?.trim() || ep.image?.trim();
+  const cardSources = episodeCardThumbnailSources(imageUrl);
+  const primary = cardSources.src;
   const fallback =
     ep.youtubeThumbnail && ep.image ? episodeThumbnailForDisplay(ep.image, 'card') : '';
   if (!primary) {
@@ -49,12 +51,26 @@ function CardImage({ ep }: { ep: ArchiveEpisode }) {
   return (
     <img
       src={primary}
+      srcSet={cardSources.srcSet}
+      sizes={cardSources.sizes}
       alt=""
       loading="lazy"
       decoding="async"
       className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
       onError={(e) => {
         const img = e.currentTarget;
+        if (img.dataset.srcsetRetried) {
+          if (fallback && img.src !== fallback) img.src = fallback;
+          return;
+        }
+        if (img.srcset) {
+          img.dataset.srcsetRetried = '1';
+          img.removeAttribute('srcset');
+          img.removeAttribute('sizes');
+          const hq = cardSources.youtubeHqFallback;
+          if (hq) img.src = hq;
+          return;
+        }
         if (fallback && img.src !== fallback) img.src = fallback;
       }}
     />

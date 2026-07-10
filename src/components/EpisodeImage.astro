@@ -5,7 +5,10 @@
  * swaps to RSS art as insurance if a YouTube CDN URL ever 404s in the browser.
  */
 import type { Episode } from '../app/types/episode';
-import { episodeThumbnailForDisplay } from '../app/lib/youtubeThumbnails';
+import {
+  episodeCardThumbnailSources,
+  episodeThumbnailForDisplay,
+} from '../app/lib/youtubeThumbnails';
 
 interface Props {
   episode: Episode;
@@ -13,7 +16,7 @@ interface Props {
   class?: string;
   /** "eager" for above-the-fold hero art; defaults to lazy. */
   loading?: 'eager' | 'lazy';
-  /** "hero" keeps full-res art; "card" uses a smaller YouTube CDN size for grids. */
+  /** "hero" keeps full-res art; "card" uses responsive YouTube CDN sizes for grids. */
   size?: 'hero' | 'card';
   fetchpriority?: 'high' | 'low' | 'auto';
 }
@@ -21,21 +24,34 @@ interface Props {
 const { episode, class: className = '', loading = 'lazy', size = 'card', fetchpriority } = Astro.props;
 const yt = episode.youtubeThumbnail?.trim();
 const rss = episode.image?.trim();
-const primary = episodeThumbnailForDisplay(yt || rss || '', size);
+const cardSources =
+  size === 'card' ? episodeCardThumbnailSources(yt || rss || '') : null;
+const primary =
+  size === 'card' && cardSources?.src
+    ? cardSources.src
+    : episodeThumbnailForDisplay(yt || rss || '', size);
+const srcSet = cardSources?.srcSet;
+const sizes = cardSources?.sizes;
+const youtubeHqFallback = cardSources?.youtubeHqFallback ?? '';
 const fallback = yt && rss ? episodeThumbnailForDisplay(rss, size) : '';
+const cardOnError = `if(this.dataset.srcsetRetried){if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}}else if(this.srcset){this.dataset.srcsetRetried='1';this.removeAttribute('srcset');this.removeAttribute('sizes');if(this.dataset.ytHq){this.src=this.dataset.ytHq;}}else if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}`;
+const onError = size === 'card' && srcSet ? cardOnError : "if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}";
 ---
 
 {
   primary ? (
     <img
       src={primary}
+      srcset={srcSet}
+      sizes={sizes}
       alt=""
       loading={loading}
       decoding="async"
       fetchpriority={fetchpriority}
       data-fallback={fallback}
+      data-yt-hq={youtubeHqFallback}
       class={`absolute inset-0 h-full w-full object-cover ${className}`}
-      onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}"
+      onerror={onError}
     />
   ) : (
     <div class="absolute inset-0 bg-gradient-to-br from-accent/15 to-accent/5" aria-hidden="true"></div>

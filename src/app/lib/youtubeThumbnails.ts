@@ -23,7 +23,12 @@ export function youtubeMaxresThumbnailUrl(videoId: string): string {
   return `${YT_IMG}/${videoId}/maxresdefault.jpg`;
 }
 
-/** 480×360 — reliable default for UI cards */
+/** 640×480 — middle tier for card srcset */
+export function youtubeSdThumbnailUrl(videoId: string): string {
+  return `${YT_IMG}/${videoId}/sddefault.jpg`;
+}
+
+/** 480×360 — reliable default for small screens */
 export function youtubeHqThumbnailUrl(videoId: string): string {
   return `${YT_IMG}/${videoId}/hqdefault.jpg`;
 }
@@ -53,9 +58,42 @@ export function youtubeThumbnailFallbackUrls(videoId: string): string[] {
 /** YouTube `i.ytimg.com` URLs include the video id in a predictable segment. */
 const YT_IMG_VIDEO_RE = /\/vi\/([\w-]{11})\//;
 
+export function youtubeVideoIdFromThumbnailUrl(url: string | undefined): string | undefined {
+  return url?.trim().match(YT_IMG_VIDEO_RE)?.[1];
+}
+
+/** Matches episode card grids: 1 col mobile, 2 col tablet, 3 col desktop. */
+export const EPISODE_CARD_THUMBNAIL_SIZES =
+  '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw';
+
+export type EpisodeCardThumbnailSources = {
+  src: string;
+  srcSet?: string;
+  sizes?: string;
+  /** Lower-res YouTube URL used when a srcset candidate 404s. */
+  youtubeHqFallback?: string;
+};
+
+/**
+ * Responsive card thumbnails: small screens stay on hq/sd, desktop gets maxres when available.
+ * Non-YouTube URLs pass through unchanged.
+ */
+export function episodeCardThumbnailSources(url: string | undefined): EpisodeCardThumbnailSources {
+  const trimmed = url?.trim();
+  if (!trimmed) return { src: '' };
+  const id = youtubeVideoIdFromThumbnailUrl(trimmed);
+  if (!id) return { src: trimmed };
+  return {
+    src: youtubeSdThumbnailUrl(id),
+    srcSet: `${youtubeHqThumbnailUrl(id)} 480w, ${youtubeSdThumbnailUrl(id)} 640w, ${youtubeMaxresThumbnailUrl(id)} 1280w`,
+    sizes: EPISODE_CARD_THUMBNAIL_SIZES,
+    youtubeHqFallback: youtubeHqThumbnailUrl(id),
+  };
+}
+
 /**
  * Pick a display-sized thumbnail URL. Hero/detail keeps the build-time URL (often maxres/high);
- * cards downgrade YouTube JPEGs to hqdefault to avoid downloading 1280px images into small grids.
+ * cards use sddefault as the default src while srcset supplies sharper sizes on larger viewports.
  */
 export function episodeThumbnailForDisplay(
   url: string | undefined,
@@ -64,8 +102,8 @@ export function episodeThumbnailForDisplay(
   const trimmed = url?.trim();
   if (!trimmed) return '';
   if (size === 'hero') return trimmed;
-  const id = trimmed.match(YT_IMG_VIDEO_RE)?.[1];
-  if (id) return youtubeHqThumbnailUrl(id);
+  const id = youtubeVideoIdFromThumbnailUrl(trimmed);
+  if (id) return youtubeSdThumbnailUrl(id);
   return trimmed;
 }
 
