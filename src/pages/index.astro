@@ -81,7 +81,7 @@ const jsonLd = {
               </div>
 
               <div class="min-w-0">
-                <a href={episodePath(latest.slug)} class="block group">
+                <a href={episodePath(latest.slug)} class="block group" aria-label={`View episode: ${latest.title}`}>
                   <div class="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">
                     <EpisodeImage episode={latest} loading="eager" size="hero" fetchpriority="high" class="transition-transform duration-300 group-hover:scale-[1.02]" />
                     <div class="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50"></div>
