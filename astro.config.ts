@@ -7,7 +7,7 @@ import tailwindcss from '@tailwindcss/vite';
  * Canonical production origin — drives sitemap URLs, canonical tags, and Open Graph URLs.
  * Override per environment with `PUBLIC_SITE_URL` (Netlify env var). No trailing slash.
  */
-const SITE_URL = (process.env.PUBLIC_SITE_URL ?? 'https://eggscast.com').replace(/\/+$/, '');
+const SITE_URL = (process.env.PUBLIC_SITE_URL ?? 'https://eggsthepodcast.com').replace(/\/+$/, '');
 
 // https://astro.build/config
 export default defineConfig({

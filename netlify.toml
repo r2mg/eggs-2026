@@ -12,7 +12,7 @@
   NODE_VERSION = "22"
   # Canonical production origin used for sitemap URLs, canonical tags, and Open Graph.
   # Set this to the real domain in the Netlify UI (Site settings → Environment variables) if different.
-  PUBLIC_SITE_URL = "https://eggscast.com"
+  PUBLIC_SITE_URL = "https://eggsthepodcast.com"
   # YouTube Data API key for build-time enrichment (thumbnails, topics, featured order).
   # Set the SECRET value in the Netlify UI as YOUTUBE_API_KEY (do NOT commit it).
   # Without it the site still builds (RSS-only).
@@ -32,5 +32,11 @@
 # Static asset caching for hashed build output.
 [[headers]]
   for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Public assets (not content-hashed) — safe to cache long-term.
+[[headers]]
+  for = "/og-default.png"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"

@@ -50,6 +50,25 @@ export function youtubeThumbnailFallbackUrls(videoId: string): string[] {
   ];
 }
 
+/** YouTube `i.ytimg.com` URLs include the video id in a predictable segment. */
+const YT_IMG_VIDEO_RE = /\/vi\/([\w-]{11})\//;
+
+/**
+ * Pick a display-sized thumbnail URL. Hero/detail keeps the build-time URL (often maxres/high);
+ * cards downgrade YouTube JPEGs to hqdefault to avoid downloading 1280px images into small grids.
+ */
+export function episodeThumbnailForDisplay(
+  url: string | undefined,
+  size: 'hero' | 'card' = 'card',
+): string {
+  const trimmed = url?.trim();
+  if (!trimmed) return '';
+  if (size === 'hero') return trimmed;
+  const id = trimmed.match(YT_IMG_VIDEO_RE)?.[1];
+  if (id) return youtubeHqThumbnailUrl(id);
+  return trimmed;
+}
+
 /** Pull the 11-character id from a `watch?v=` or `youtu.be` URL. */
 export function videoIdFromYouTubeWatchUrl(url: string | undefined): string | undefined {
   if (!url?.trim()) return undefined;

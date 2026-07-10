@@ -6,6 +6,7 @@
  * `Astro.site` (set in astro.config.ts) is the canonical origin, so canonical/OG URLs are absolute.
  */
 import { SITE } from '../data/content';
+import { resolveSiteOrigin } from '../lib/siteOrigin';
 
 interface Props {
   /** Page-specific title. Rendered as "{title} — EGGS! The Podcast". Omit on the homepage. */
@@ -24,7 +25,7 @@ interface Props {
 
 const { title, description, image, type = 'website', jsonLd, noindex = false } = Astro.props;
 
-const siteOrigin = Astro.site ?? new URL('https://eggscast.com');
+const siteOrigin = resolveSiteOrigin(Astro.site);
 const canonical = new URL(Astro.url.pathname, siteOrigin).href;
 
 const fullTitle = title ? `${title} — ${SITE.name}` : `${SITE.name} — Official Site`;

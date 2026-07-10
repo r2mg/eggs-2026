@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { episodePath, episodeEyebrow } from '../lib/display';
 
+import { episodeThumbnailForDisplay } from '../app/lib/youtubeThumbnails';
+
 /** Slim episode projection passed from the Astro page (keeps the hydration payload small). */
 export interface ArchiveEpisode {
   id: string;
@@ -38,8 +40,9 @@ function normalizeForSearch(value: string): string {
 }
 
 function CardImage({ ep }: { ep: ArchiveEpisode }) {
-  const primary = ep.youtubeThumbnail?.trim() || ep.image?.trim() || '';
-  const fallback = ep.youtubeThumbnail && ep.image ? ep.image : '';
+  const primary = episodeThumbnailForDisplay(ep.youtubeThumbnail?.trim() || ep.image?.trim(), 'card');
+  const fallback =
+    ep.youtubeThumbnail && ep.image ? episodeThumbnailForDisplay(ep.image, 'card') : '';
   if (!primary) {
     return <div className="absolute inset-0 bg-gradient-to-br from-accent/15 to-accent/5" aria-hidden />;
   }

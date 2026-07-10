@@ -4,14 +4,17 @@ import EpisodeCard from '../../components/EpisodeCard.astro';
 import { getSiteContent } from '../../data/content';
 import { topicPath } from '../../lib/display';
 
+import { resolveSiteOrigin } from '../../lib/siteOrigin';
+
 export async function getStaticPaths() {
   const { topics } = await getSiteContent();
   return topics.map((topic) => ({ params: { slug: topic.slug }, props: { topic } }));
 }
 
 const { topic } = Astro.props;
+const siteOrigin = resolveSiteOrigin(Astro.site);
 const count = topic.episodes.length;
-const canonical = new URL(topicPath(topic.slug), Astro.site ?? 'https://eggscast.com').href;
+const canonical = new URL(topicPath(topic.slug), siteOrigin).href;
 const description = `${count} EGGS! Podcast ${count === 1 ? 'episode' : 'episodes'} on ${topic.label} — conversations with creative professionals and entrepreneurs.`;
 
 const jsonLd = {

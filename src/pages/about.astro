@@ -2,7 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getSiteContent } from '../data/content';
 
+import { resolveSiteOrigin } from '../lib/siteOrigin';
+
 const { episodes, latest } = await getSiteContent();
+const siteOrigin = resolveSiteOrigin(Astro.site);
 
 // Highest episode number we know about, so the hosts blurb stays current.
 // Fall back to the count of episodes (then a static floor) if numbers are missing.
@@ -27,7 +30,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
   name: 'About EGGS! The Podcast',
-  url: new URL('/about', Astro.site ?? 'https://eggscast.com').href,
+  url: new URL('/about', siteOrigin).href,
 };
 ---
 

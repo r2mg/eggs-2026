@@ -3,11 +3,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import EpisodeImage from '../components/EpisodeImage.astro';
 import EpisodeCard from '../components/EpisodeCard.astro';
 import { getSiteContent, SITE } from '../data/content';
+import { resolveSiteOrigin } from '../lib/siteOrigin';
+import { episodeThumbnailForDisplay } from '../app/lib/youtubeThumbnails';
 import { episodePath, episodeEyebrow } from '../lib/display';
 import { EGGS_TOPIC_PLAYLIST_TITLES } from '../app/config/youtubeChannel';
 import { SHOW_NEWSLETTER_EMAIL_SIGNUP } from '../app/config/siteUi';
 
 const { latest, featured, topics } = await getSiteContent();
+const siteOrigin = resolveSiteOrigin(Astro.site);
+const heroImage = latest
+  ? episodeThumbnailForDisplay(latest.youtubeThumbnail?.trim() || latest.image?.trim(), 'hero')
+  : '';
 
 // Topic cards: prefer derived topics with counts; otherwise show the canonical labels.
 const topicCards =
@@ -27,12 +33,15 @@ const jsonLd = {
   '@type': 'PodcastSeries',
   name: SITE.name,
   description: SITE.description,
-  url: (Astro.site ?? new URL('https://eggscast.com')).href,
+  url: siteOrigin.href,
   webFeed: SITE.listen.rss,
 };
 ---
 
 <BaseLayout jsonLd={jsonLd}>
+  {heroImage ? (
+    <link slot="head" rel="preload" as="image" href={heroImage} fetchpriority="high" />
+  ) : null}
   <main>
     {/* Orange hero — latest episode */}
     <section id="home-hero" class="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-accent text-white pt-16">
@@ -74,7 +83,7 @@ const jsonLd = {
               <div class="min-w-0">
                 <a href={episodePath(latest.slug)} class="block group">
                   <div class="aspect-video rounded-sm overflow-hidden relative bg-black/20 ring-1 ring-black/10 shadow-lg">
-                    <EpisodeImage episode={latest} loading="eager" class="transition-transform duration-300 group-hover:scale-[1.02]" />
+                    <EpisodeImage episode={latest} loading="eager" size="hero" fetchpriority="high" class="transition-transform duration-300 group-hover:scale-[1.02]" />
                     <div class="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 sm:opacity-50"></div>
                   </div>
                 </a>

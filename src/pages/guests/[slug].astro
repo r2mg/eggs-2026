@@ -4,14 +4,17 @@ import EpisodeCard from '../../components/EpisodeCard.astro';
 import { getSiteContent } from '../../data/content';
 import { guestPath } from '../../lib/display';
 
+import { resolveSiteOrigin } from '../../lib/siteOrigin';
+
 export async function getStaticPaths() {
   const { guests } = await getSiteContent();
   return guests.map((guest) => ({ params: { slug: guest.slug }, props: { guest } }));
 }
 
 const { guest } = Astro.props;
+const siteOrigin = resolveSiteOrigin(Astro.site);
 const count = guest.episodes.length;
-const canonical = new URL(guestPath(guest.slug), Astro.site ?? 'https://eggscast.com').href;
+const canonical = new URL(guestPath(guest.slug), siteOrigin).href;
 const description = `${guest.name} on EGGS! The Podcast — ${count} ${count === 1 ? 'episode' : 'episodes'} exploring creativity, entrepreneurship, and the people behind interesting work.`;
 
 const jsonLd = [
@@ -26,8 +29,8 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: (Astro.site ?? new URL('https://eggscast.com')).href },
-      { '@type': 'ListItem', position: 2, name: 'Episodes', item: new URL('/episodes', Astro.site ?? 'https://eggscast.com').href },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteOrigin.href },
+      { '@type': 'ListItem', position: 2, name: 'Episodes', item: new URL('/episodes', siteOrigin).href },
       { '@type': 'ListItem', position: 3, name: guest.name, item: canonical },
     ],
   },

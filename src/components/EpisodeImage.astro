@@ -5,6 +5,7 @@
  * swaps to RSS art as insurance if a YouTube CDN URL ever 404s in the browser.
  */
 import type { Episode } from '../app/types/episode';
+import { episodeThumbnailForDisplay } from '../app/lib/youtubeThumbnails';
 
 interface Props {
   episode: Episode;
@@ -12,13 +13,16 @@ interface Props {
   class?: string;
   /** "eager" for above-the-fold hero art; defaults to lazy. */
   loading?: 'eager' | 'lazy';
+  /** "hero" keeps full-res art; "card" uses a smaller YouTube CDN size for grids. */
+  size?: 'hero' | 'card';
+  fetchpriority?: 'high' | 'low' | 'auto';
 }
 
-const { episode, class: className = '', loading = 'lazy' } = Astro.props;
+const { episode, class: className = '', loading = 'lazy', size = 'card', fetchpriority } = Astro.props;
 const yt = episode.youtubeThumbnail?.trim();
 const rss = episode.image?.trim();
-const primary = yt || rss || '';
-const fallback = yt && rss ? rss : '';
+const primary = episodeThumbnailForDisplay(yt || rss || '', size);
+const fallback = yt && rss ? episodeThumbnailForDisplay(rss, size) : '';
 ---
 
 {
@@ -28,6 +32,7 @@ const fallback = yt && rss ? rss : '';
       alt=""
       loading={loading}
       decoding="async"
+      fetchpriority={fetchpriority}
       data-fallback={fallback}
       class={`absolute inset-0 h-full w-full object-cover ${className}`}
       onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}"

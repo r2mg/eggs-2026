@@ -3,7 +3,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import EpisodesArchive, { type ArchiveEpisode } from '../../components/EpisodesArchive';
 import { getSiteContent } from '../../data/content';
 
+import { resolveSiteOrigin } from '../../lib/siteOrigin';
+
 const { episodes, topics } = await getSiteContent();
+const siteOrigin = resolveSiteOrigin(Astro.site);
 
 // Slim projection so we don't ship full show-notes HTML into the hydrated island.
 const slim: ArchiveEpisode[] = episodes.map((e) => ({
@@ -28,7 +31,7 @@ const jsonLd = {
   '@type': 'CollectionPage',
   name: 'All Episodes — EGGS! The Podcast',
   description: `The complete archive of ${episodes.length} EGGS! The Podcast episodes.`,
-  url: new URL('/episodes', Astro.site ?? 'https://eggscast.com').href,
+  url: new URL('/episodes', siteOrigin).href,
 };
 ---
 

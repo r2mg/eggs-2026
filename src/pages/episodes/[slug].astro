@@ -14,6 +14,7 @@ import {
   stripHtmlTags,
 } from '../../app/lib/rss';
 import { slugify } from '../../app/lib/rss';
+import { resolveSiteOrigin } from '../../lib/siteOrigin';
 
 export async function getStaticPaths() {
   const { episodes } = await getSiteContent();
@@ -21,6 +22,7 @@ export async function getStaticPaths() {
 }
 
 const { episode } = Astro.props;
+const siteOrigin = resolveSiteOrigin(Astro.site);
 const { episodes } = await getSiteContent();
 
 // Related: next 3 older episodes (fall back to other recent ones).
@@ -47,7 +49,7 @@ const embedSrc =
 const seoDescription = (episode.summary?.trim() || stripHtmlTags(episode.descriptionHtml ?? '') || SITE.description)
   .slice(0, 300)
   .trim();
-const canonicalUrl = new URL(episodePath(episode.slug), Astro.site ?? 'https://eggscast.com').href;
+const canonicalUrl = new URL(episodePath(episode.slug), siteOrigin).href;
 
 // --- Structured data (JSON-LD) ---
 const podcastEpisodeLd: Record<string, unknown> = {
@@ -62,13 +64,13 @@ const podcastEpisodeLd: Record<string, unknown> = {
   partOfSeries: {
     '@type': 'PodcastSeries',
     name: SITE.name,
-    url: (Astro.site ?? new URL('https://eggscast.com')).href,
+    url: siteOrigin.href,
   },
   ...(episode.audioUrl
     ? { associatedMedia: { '@type': 'MediaObject', contentUrl: episode.audioUrl } }
     : {}),
   ...(guestName
-    ? { actor: { '@type': 'Person', name: guestName, url: new URL(guestPath(slugify(guestName, 80)), Astro.site ?? 'https://eggscast.com').href } }
+    ? { actor: { '@type': 'Person', name: guestName, url: new URL(guestPath(slugify(guestName, 80)), siteOrigin).href } }
     : {}),
 };
 
@@ -76,8 +78,8 @@ const breadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: (Astro.site ?? new URL('https://eggscast.com')).href },
-    { '@type': 'ListItem', position: 2, name: 'Episodes', item: new URL('/episodes', Astro.site ?? 'https://eggscast.com').href },
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteOrigin.href },
+    { '@type': 'ListItem', position: 2, name: 'Episodes', item: new URL('/episodes', siteOrigin).href },
     { '@type': 'ListItem', position: 3, name: episode.title, item: canonicalUrl },
   ],
 };
@@ -130,7 +132,7 @@ const RSS_HTML_CLASS =
             </div>
           ) : (
             <div class="aspect-video bg-gradient-to-br from-accent/10 to-accent/5 rounded-sm overflow-hidden relative">
-              <EpisodeImage episode={episode} loading="eager" />
+              <EpisodeImage episode={episode} loading="eager" size="hero" fetchpriority="high" />
               <div class="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-foreground/50 via-transparent to-transparent" />
             </div>
           )
