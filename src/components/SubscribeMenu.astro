@@ -15,9 +15,11 @@ interface Props {
   block?: boolean;
   /** Extra classes for the popover (e.g. z-index overrides). */
   menuClass?: string;
+  /** Analytics label for where this menu lives (e.g. "header", "episode_sidebar"). */
+  location?: string;
 }
 
-const { buttonClass, align = 'right', block = false, menuClass = '' } = Astro.props;
+const { buttonClass, align = 'right', block = false, menuClass = '', location = 'unknown' } = Astro.props;
 
 const subscribeLinks = [
   { id: 'spotify', href: SITE.listen.spotify, label: 'Spotify', color: '#1DB954' },
@@ -62,7 +64,16 @@ const widthClass = block ? '' : 'w-56';
   >
     {
       subscribeLinks.map((s) => (
-        <a href={s.href} target="_blank" rel="noopener noreferrer" class={menuItem} role="menuitem">
+        <a
+          href={s.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class={menuItem}
+          role="menuitem"
+          data-ga-event="subscribe_click"
+          data-ga-platform={s.label}
+          data-ga-location={location}
+        >
           <span class="shrink-0 inline-flex" style={`color: ${s.color}`} set:html={iconSvg(s.id)} />
           {s.label}
         </a>

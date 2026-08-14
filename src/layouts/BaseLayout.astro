@@ -5,6 +5,7 @@
  */
 import '../styles/index.css';
 import Seo from '../components/Seo.astro';
+import Analytics from '../components/Analytics.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 
@@ -29,6 +30,7 @@ const { title, description, image, type, jsonLd, noindex } = Astro.props;
     <link rel="preconnect" href="https://i.ytimg.com" />
     <slot name="head" />
     <Seo title={title} description={description} image={image} type={type} jsonLd={jsonLd} noindex={noindex} />
+    <Analytics />
   </head>
   <body class="min-h-screen bg-background overflow-x-hidden">
     <SiteHeader />
@@ -36,3 +38,41 @@ const { title, description, image, type, jsonLd, noindex } = Astro.props;
     <SiteFooter />
   </body>
 </html>
+
+<script>
+  /**
+   * Lightweight analytics event layer. `window.track` sends a GA4 event when gtag is
+   * present and no-ops otherwise (dev, previews, or when GA is blocked) so call sites
+   * never need their own guards.
+   *
+   * Any element (or its ancestor) carrying `data-ga-event="..."` is tracked on click.
+   * Extra `data-ga-*` attributes become event params, e.g.
+   *   <a data-ga-event="subscribe_click" data-ga-platform="Spotify" data-ga-location="footer">
+   * fires: subscribe_click { platform: "Spotify", location: "footer" }.
+   */
+  declare global {
+    interface Window {
+      gtag?: (...args: unknown[]) => void;
+      track: (name: string, params?: Record<string, string>) => void;
+    }
+  }
+
+  window.track = (name, params = {}) => {
+    if (typeof window.gtag === 'function') window.gtag('event', name, params);
+  };
+
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const el = target?.closest<HTMLElement>('[data-ga-event]');
+    const name = el?.dataset.gaEvent;
+    if (!el || !name) return;
+
+    const params: Record<string, string> = {};
+    for (const [key, value] of Object.entries(el.dataset)) {
+      if (key === 'gaEvent' || !key.startsWith('ga') || value == null) continue;
+      const rest = key.slice(2);
+      params[rest.charAt(0).toLowerCase() + rest.slice(1)] = value;
+    }
+    window.track(name, params);
+  });
+</script>

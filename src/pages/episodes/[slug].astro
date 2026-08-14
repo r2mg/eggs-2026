@@ -41,9 +41,13 @@ const chapters = episode.chapters ?? [];
 const guestName = episode.guest?.trim();
 
 const eyebrow = episodeEyebrow(episode.episodeNumber, episode.publishedAt, episode.duration);
-const embedSrc =
+const rawEmbedSrc =
   episode.youtubeEmbedUrl?.trim() ||
   (episode.youtubeVideoId ? `https://www.youtube.com/embed/${episode.youtubeVideoId}` : '');
+// `enablejsapi=1` lets GA4 Enhanced Measurement auto-track video plays/progress on the embed.
+const embedSrc = rawEmbedSrc
+  ? `${rawEmbedSrc}${rawEmbedSrc.includes('enablejsapi') ? '' : `${rawEmbedSrc.includes('?') ? '&' : '?'}enablejsapi=1`}`
+  : '';
 
 // SEO description: prefer the plain summary, stripped of HTML, capped.
 const seoDescription = (episode.summary?.trim() || stripHtmlTags(episode.descriptionHtml ?? '') || SITE.description)
@@ -104,7 +108,7 @@ const RSS_HTML_CLASS =
         </div>
         <div class="mb-5 sm:mb-8 min-w-0">
           <p class="text-[0.65rem] sm:text-xs md:text-sm font-medium text-accent tracking-wide sm:tracking-wider uppercase mb-4 sm:mb-6">
-            Presented by <a href="https://www.roghealth.com" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:opacity-80 transition-opacity">RŌG Health</a>
+            Presented by <a href="https://www.roghealth.com" target="_blank" rel="noopener noreferrer" data-ga-event="sponsor_click" data-ga-sponsor="ROG Health" data-ga-location="episode" class="underline underline-offset-2 hover:opacity-80 transition-opacity">RŌG Health</a>
           </p>
           <h1 class="text-[clamp(1.375rem,5.5vw,2.75rem)] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-3 sm:mb-6 leading-[1.12] sm:leading-tight break-words" style="font-family: var(--font-display); font-weight: 700;">
             {episode.title}
@@ -152,14 +156,14 @@ const RSS_HTML_CLASS =
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3 sm:gap-4 mt-5 sm:mt-8 w-full max-w-xl mx-auto min-w-0">
           {
             episode.spotifyUrl ? (
-              <a href={episode.spotifyUrl} target="_blank" rel="noopener noreferrer" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity text-center">Listen on Spotify</a>
+              <a href={episode.spotifyUrl} target="_blank" rel="noopener noreferrer" data-ga-event="episode_listen" data-ga-platform="Spotify" data-ga-title={episode.title} class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity text-center">Listen on Spotify</a>
             ) : (
               <span class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto bg-accent text-accent-foreground px-6 sm:px-8 py-3.5 text-sm font-medium opacity-50 cursor-not-allowed">Listen on Spotify</span>
             )
           }
           {
             episode.youtubeUrl ? (
-              <a href={episode.youtubeUrl} target="_blank" rel="noopener noreferrer" class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium hover:border-foreground transition-colors text-center">Watch on YouTube</a>
+              <a href={episode.youtubeUrl} target="_blank" rel="noopener noreferrer" data-ga-event="episode_listen" data-ga-platform="YouTube" data-ga-title={episode.title} class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium hover:border-foreground transition-colors text-center">Watch on YouTube</a>
             ) : (
               <span class="inline-flex justify-center items-center min-h-12 w-full sm:w-auto border-2 border-border px-6 sm:px-8 py-3.5 text-sm font-medium opacity-50 cursor-not-allowed">Watch on YouTube</span>
             )
@@ -236,6 +240,7 @@ const RSS_HTML_CLASS =
               <p class="text-sm opacity-80 mb-6 leading-relaxed">Follow EGGS! on your favorite platform.</p>
               <SubscribeMenu
                 block
+                location="episode_sidebar"
                 buttonClass="inline-flex justify-center items-center w-full min-h-11 bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
               />
             </div>

@@ -38,4 +38,15 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       </div>
     </section>
   </main>
+
+  {/* This page is only reached after a successful guest-pitch submission, so it's the
+      reliable place to record the lead conversion. Waits for DOMContentLoaded so the
+      deferred window.track helper (defined in BaseLayout) is available. */}
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof window.track === 'function') {
+        window.track('generate_lead', { form_type: 'guest_pitch' });
+      }
+    });
+  </script>
 </BaseLayout>

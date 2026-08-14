@@ -13,6 +13,9 @@
   # Canonical production origin used for sitemap URLs, canonical tags, and Open Graph.
   # Set this to the real domain in the Netlify UI (Site settings → Environment variables) if different.
   PUBLIC_SITE_URL = "https://eggsthepodcast.com"
+  # Google Analytics 4 measurement ID. Only fires on the production deploy (see Analytics.astro).
+  # Not secret — safe to keep here. Replace with a new ID if the GA property changes.
+  PUBLIC_GA_MEASUREMENT_ID = "G-8LB7KFGQZN"
   # YouTube Data API key for build-time enrichment (thumbnails, topics, featured order).
   # Set the SECRET value in the Netlify UI as YOUTUBE_API_KEY (do NOT commit it).
   # Without it the site still builds (RSS-only).
