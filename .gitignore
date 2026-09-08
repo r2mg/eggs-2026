@@ -30,3 +30,6 @@ coverage/
 
 # Local Netlify folder
 .netlify
+
+# Build-time YouTube catalog cache (Netlify Blobs in production)
+.cache/

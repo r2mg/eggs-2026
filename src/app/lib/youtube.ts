@@ -206,7 +206,9 @@ async function youtubeGet<T extends Record<string, unknown>>(
   if (status < 200 || status >= 300) {
     const msg = (json as { error?: { message?: string } }).error?.message ?? `HTTP ${status}`;
     console.error('[EGGS YouTube API] Request failed:', endpoint, status, msg, url.pathname);
-    throw new Error(msg);
+    const err = new Error(msg) as Error & { status?: number };
+    err.status = status;
+    throw err;
   }
 
   return json;
@@ -297,7 +299,7 @@ export async function fetchPlaylistsForChannel(channelId: string = YOUTUBE_CHANN
   }));
 }
 
-type PlaylistItemRow = {
+export type PlaylistItemRow = {
   snippet?: {
     title?: string;
     description?: string;
@@ -344,6 +346,23 @@ export async function fetchPlaylistItemsUpTo(
   return out;
 }
 
+/** One page of playlist items (50 max) — used by incremental uploads sync. */
+export async function fetchPlaylistItemsPage(
+  playlistId: string,
+  pageToken?: string,
+): Promise<{ items: PlaylistItemRow[]; nextPageToken?: string }> {
+  const key = getYouTubeApiKey();
+  if (!key) return { items: [] };
+
+  const page = await youtubeGet<ApiPage<PlaylistItemRow>>('playlistItems', {
+    part: 'snippet,contentDetails',
+    playlistId,
+    maxResults: '50',
+    ...(pageToken ? { pageToken } : {}),
+  });
+  return { items: page.items ?? [], nextPageToken: page.nextPageToken };
+}
+
 /** All items in a playlist (full pagination — can be slow on huge lists). */
 export async function fetchPlaylistItems(playlistId: string): Promise<PlaylistItemRow[]> {
   return fetchPlaylistItemsUpTo(playlistId, Number.MAX_SAFE_INTEGER);
@@ -361,6 +380,90 @@ export type YouTubeChannelData = {
   blockedVideoIds: Set<string>;
 };
 
+export function emptyYouTubeChannelData(): YouTubeChannelData {
+  return {
+    uploadsPlaylistId: null,
+    playlists: [],
+    videosById: new Map(),
+    blockedVideoIds: new Set(),
+  };
+}
+
+export function cloneYouTubeChannelData(data: YouTubeChannelData): YouTubeChannelData {
+  const videosById = new Map<string, YouTubeVideo>();
+  for (const [id, v] of data.videosById) {
+    videosById.set(id, {
+      ...v,
+      playlistIds: v.playlistIds ? [...v.playlistIds] : undefined,
+      playlistTitles: v.playlistTitles ? [...v.playlistTitles] : undefined,
+      positionsByPlaylist: v.positionsByPlaylist ? { ...v.positionsByPlaylist } : undefined,
+      thumbnails: v.thumbnails ? { ...v.thumbnails } : undefined,
+    });
+  }
+  return {
+    uploadsPlaylistId: data.uploadsPlaylistId,
+    playlists: data.playlists.map((p) => ({ ...p })),
+    videosById,
+    blockedVideoIds: new Set(data.blockedVideoIds),
+  };
+}
+
+export function isYouTubeQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const status = err && typeof err === 'object' && 'status' in err ? Number((err as { status?: number }).status) : 0;
+  return status === 403 || /quota/i.test(msg) || /exceeded/i.test(msg);
+}
+
+/**
+ * Merge one playlist row into the catalog. Existing videos keep historical playlist
+ * membership and pick up newer titles/thumbnails from uploads.
+ */
+export function mergePlaylistItemIntoCatalog(
+  videosById: Map<string, YouTubeVideo>,
+  videoId: string,
+  snippet: PlaylistItemRow['snippet'],
+  playlist: { id: string; title: string },
+  position: number,
+  videoPublishedAt?: string,
+): void {
+  const title = snippet?.title?.trim() || '(untitled)';
+  const description = snippet?.description?.trim();
+  const publishedAt = videoPublishedAt || snippet?.publishedAt;
+  const thumbnails = mapThumbnails(snippet?.thumbnails);
+
+  const existing = videosById.get(videoId);
+  if (!existing) {
+    videosById.set(videoId, {
+      videoId,
+      title,
+      description,
+      publishedAt,
+      thumbnails,
+      playlistIds: [playlist.id],
+      playlistTitles: [playlist.title],
+      positionsByPlaylist: { [playlist.id]: position },
+      youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      embedUrl: `https://www.youtube.com/embed/${videoId}`,
+    });
+    return;
+  }
+
+  const ids = new Set(existing.playlistIds ?? []);
+  const titles = new Set(existing.playlistTitles ?? []);
+  ids.add(playlist.id);
+  titles.add(playlist.title);
+  existing.playlistIds = [...ids];
+  existing.playlistTitles = [...titles];
+  existing.positionsByPlaylist = {
+    ...(existing.positionsByPlaylist ?? {}),
+    [playlist.id]: position,
+  };
+  if (description) existing.description = description;
+  if (publishedAt) existing.publishedAt = publishedAt;
+  if (thumbnails && pickBestThumbnailUrl(thumbnails)) existing.thumbnails = thumbnails;
+  if (title && title !== '(untitled)') existing.title = title;
+}
+
 /**
  * Fetches uploads + playlists allowed by `isAllowedPlaylistForMerge` (see `EGGS_TOPIC_PLAYLIST_TITLES`
  * and Start Here), merges videos, and returns a map you can match RSS episodes against.
@@ -368,12 +471,7 @@ export type YouTubeChannelData = {
 export async function fetchYouTubeChannelData(
   channelId: string = YOUTUBE_CHANNEL_ID,
 ): Promise<YouTubeChannelData> {
-  const empty: YouTubeChannelData = {
-    uploadsPlaylistId: null,
-    playlists: [],
-    videosById: new Map(),
-    blockedVideoIds: new Set(),
-  };
+  const empty = emptyYouTubeChannelData();
 
   if (!getYouTubeApiKey()) return empty;
 
@@ -415,51 +513,6 @@ export async function fetchYouTubeChannelData(
 
   const videosById = new Map<string, YouTubeVideo>();
 
-  const mergeItem = (
-    videoId: string,
-    snippet: PlaylistItemRow['snippet'],
-    playlist: { id: string; title: string },
-    position: number,
-    videoPublishedAt?: string,
-  ) => {
-    const title = snippet?.title?.trim() || '(untitled)';
-    const description = snippet?.description?.trim();
-    const publishedAt = videoPublishedAt || snippet?.publishedAt;
-    const thumbnails = mapThumbnails(snippet?.thumbnails);
-
-    const existing = videosById.get(videoId);
-    if (!existing) {
-      videosById.set(videoId, {
-        videoId,
-        title,
-        description,
-        publishedAt,
-        thumbnails,
-        playlistIds: [playlist.id],
-        playlistTitles: [playlist.title],
-        positionsByPlaylist: { [playlist.id]: position },
-        youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        embedUrl: `https://www.youtube.com/embed/${videoId}`,
-      });
-      return;
-    }
-
-    const ids = new Set(existing.playlistIds ?? []);
-    const titles = new Set(existing.playlistTitles ?? []);
-    ids.add(playlist.id);
-    titles.add(playlist.title);
-    existing.playlistIds = [...ids];
-    existing.playlistTitles = [...titles];
-    existing.positionsByPlaylist = {
-      ...(existing.positionsByPlaylist ?? {}),
-      [playlist.id]: position,
-    };
-    if (!existing.description && description) existing.description = description;
-    if (!existing.publishedAt && publishedAt) existing.publishedAt = publishedAt;
-    if (!pickBestThumbnailUrl(existing.thumbnails) && thumbnails) existing.thumbnails = thumbnails;
-    if (title && title !== '(untitled)') existing.title = title;
-  };
-
   const playlistLoadList = [...playlistIdsToLoad];
   for (let i = 0; i < playlistLoadList.length; i += YOUTUBE_PLAYLIST_FETCH_CONCURRENCY) {
     const batch = playlistLoadList.slice(i, i + YOUTUBE_PLAYLIST_FETCH_CONCURRENCY);
@@ -481,7 +534,14 @@ export async function fetchYouTubeChannelData(
         if (!vid || vid.length !== 11) continue;
         const pos = row.snippet?.position ?? 0;
         const published = row.contentDetails?.videoPublishedAt;
-        mergeItem(vid, row.snippet, { id: pid, title: playlistTitle }, pos, published);
+        mergePlaylistItemIntoCatalog(
+          videosById,
+          vid,
+          row.snippet,
+          { id: pid, title: playlistTitle },
+          pos,
+          published,
+        );
       }
     }
   }

@@ -7,7 +7,8 @@
  * "some images/audio load, some don't" flakiness), we do all of it **once, here, at build time**:
  *
  *  1. Download the Anchor RSS feed and parse it into stable `Episode` rows (existing `rss.ts`).
- *  2. Download YouTube channel data (uploads + editorial/topic playlists) when an API key is set.
+ *  2. Load/update the saved YouTube catalog (full refresh at most daily; otherwise newest uploads only).
+ *     Quota failures reuse the last good catalog instead of publishing RSS-only pages.
  *  3. Match every episode to its YouTube video and merge the overlay (thumbnail, embed, featured,
  *     topics) into the episode — deterministically, with the full dataset available.
  *  4. Derive guests and topics so we can statically generate `/guests/*` and `/topics/*` pages.
@@ -25,11 +26,7 @@ import {
   fetchRssEpisodes,
   slugify,
 } from '../app/lib/rss';
-import {
-  fetchYouTubeChannelData,
-  getYouTubeApiKey,
-  type YouTubeChannelData,
-} from '../app/lib/youtube';
+import { getYouTubeChannelDataForBuild } from '../app/lib/youtubeChannelSync';
 import { buildYoutubeOverlaysForEpisodes } from '../app/lib/computeEpisodeYoutubeOverlay';
 import { getFeaturedEpisodesInPlaylistOrder } from '../app/lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../app/types/youtubeOverlay';
@@ -72,16 +69,9 @@ export interface SiteContent {
   guests: Guest[];
   /** All topics that have at least one episode, in the configured order. */
   topics: Topic[];
-  /** True when YouTube enrichment ran (an API key was available at build time). */
+  /** True when this build has a YouTube catalog (live fetch, incremental, or saved). */
   youtubeEnabled: boolean;
 }
-
-const EMPTY_CHANNEL: YouTubeChannelData = {
-  uploadsPlaylistId: null,
-  playlists: [],
-  videosById: new Map(),
-  blockedVideoIds: new Set(),
-};
 
 let cached: SiteContent | null = null;
 
@@ -158,20 +148,10 @@ export async function getSiteContent(): Promise<SiteContent> {
     console.error('[EGGS build] RSS fetch failed — generating with no episodes.', err);
   }
 
-  // 2. YouTube — optional; only runs when a key is configured.
-  const youtubeEnabled = Boolean(getYouTubeApiKey());
-  let channel: YouTubeChannelData = EMPTY_CHANNEL;
-  if (youtubeEnabled) {
-    try {
-      channel = await fetchYouTubeChannelData();
-    } catch (err) {
-      console.error('[EGGS build] YouTube fetch failed — continuing RSS-only.', err);
-    }
-  } else {
-    console.info(
-      '[EGGS build] No YouTube API key (YOUTUBE_API_KEY) — building RSS-only (no thumbnails/topics/featured).',
-    );
-  }
+  // 2. YouTube — saved catalog + incremental/full fetch. Quota failures keep the last good catalog.
+  const youtubeResult = await getYouTubeChannelDataForBuild();
+  const channel = youtubeResult.data;
+  const youtubeEnabled = youtubeResult.source !== 'empty';
 
   // 3. Match + merge overlays into stable episode objects, once.
   const overlays = buildYoutubeOverlaysForEpisodes(rss, channel);
@@ -194,7 +174,7 @@ export async function getSiteContent(): Promise<SiteContent> {
   };
 
   console.log(
-    `[EGGS build] Content ready: ${cached.episodes.length} episodes, ${cached.guests.length} guests, ${cached.topics.length} topics (YouTube ${youtubeEnabled ? 'on' : 'off'}).`,
+    `[EGGS build] Content ready: ${cached.episodes.length} episodes, ${cached.guests.length} guests, ${cached.topics.length} topics (YouTube ${youtubeEnabled ? youtubeResult.source : 'off'}).`,
   );
 
   return cached;

@@ -1,16 +1,21 @@
 /**
- * Scheduled function: keep production in sync with Anchor/Spotify RSS and YouTube uploads.
+ * Scheduled function: keep production in sync with Anchor/Spotify RSS and long-form YouTube.
  *
  * The EGGS! site is a STATIC Astro build — episodes are baked in at build time
  * (see `src/data/content.ts`), so a deployed site only knows about the episodes
  * that existed when it was last built. Neither Anchor / Spotify for Podcasters nor
  * YouTube emit a webhook we can rely on, so we poll both feeds on a schedule and
- * trigger a production rebuild ONLY when something new appears.
+ * trigger a production rebuild ONLY when a new podcast episode appears:
  *
- * State (last-seen RSS guid, last-seen YouTube upload id, and that upload's Atom
- * `updated` timestamp) lives in Netlify Blobs so we don't rebuild on every run.
- * The `updated` field catches metadata edits on the current newest upload (e.g. a
- * custom thumbnail swap) without requiring a brand-new video id.
+ *   - newest RSS episode id changed, or
+ *   - newest **long-form** YouTube upload id changed
+ *
+ * YouTube Shorts / clip uploads (hashtag-heavy titles) and metadata edits on the
+ * current newest video do **not** trigger a rebuild. Those were causing full site
+ * regenerations several times a day while the Data API re-downloaded the catalog.
+ *
+ * State lives in Netlify Blobs. The YouTube catalog itself is persisted separately
+ * during `astro build` (see `youtubeChannelStore.ts`).
  */
 import { getStore } from '@netlify/blobs';
 import { XMLParser } from 'fast-xml-parser';
@@ -22,8 +27,8 @@ const YOUTUBE_FEED_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${
 
 const STORE_NAME = 'rss-episode-watch';
 const RSS_STATE_KEY = 'latest-episode-id';
+/** Last seen **long-form** YouTube video id (Shorts are ignored). */
 const YOUTUBE_STATE_KEY = 'latest-youtube-video-id';
-const YOUTUBE_UPDATED_STATE_KEY = 'latest-youtube-video-updated';
 
 const USER_AGENT = 'eggs-content-watch/1.0 (+netlify-scheduled-function)';
 
@@ -58,6 +63,18 @@ function pickString(value) {
     return text || undefined;
   }
   return String(value).trim() || undefined;
+}
+
+/**
+ * EGGS Shorts/clips use punchy titles plus several #hashtags; long-form episode titles do not.
+ * Keep in sync with `src/app/lib/youtubeShorts.ts`.
+ */
+function isLikelyYouTubeShortTitle(title) {
+  if (!title || typeof title !== 'string') return false;
+  const t = title.trim();
+  if (/#shorts?\b/i.test(t)) return true;
+  const tags = t.match(/#\w+/g) || [];
+  return tags.length >= 2;
 }
 
 function newestByPublished(items, getPublishedAt) {
@@ -109,7 +126,7 @@ async function fetchLatestRssEpisodeId() {
 }
 
 /**
- * @returns {Promise<{ videoId: string | null, updatedAt: string | null, error: string | null }>}
+ * @returns {Promise<{ videoId: string | null, skippedShorts?: number, error: string | null }>}
  */
 async function fetchLatestYoutubeUploadState() {
   let xml;
@@ -120,28 +137,39 @@ async function fetchLatestYoutubeUploadState() {
     if (!res.ok) throw new Error(`YouTube feed responded ${res.status}`);
     xml = await res.text();
   } catch (err) {
-    return { videoId: null, updatedAt: null, error: `fetch failed: ${err}` };
+    return { videoId: null, error: `fetch failed: ${err}` };
   }
 
   try {
     const parsed = ATOM_XML_PARSER.parse(xml);
     const entries = ensureArray(parsed?.feed?.entry);
     if (entries.length === 0) {
-      return { videoId: null, updatedAt: null, error: 'feed had no entries' };
+      return { videoId: null, error: 'feed had no entries' };
     }
 
-    const newest = newestByPublished(entries, (entry) => entry?.published);
+    const longFormEntries = entries.filter(
+      (entry) => !isLikelyYouTubeShortTitle(pickString(entry?.title)),
+    );
+    const skippedShorts = entries.length - longFormEntries.length;
+    if (longFormEntries.length === 0) {
+      return {
+        videoId: null,
+        skippedShorts,
+        error: null,
+      };
+    }
+
+    const newestLongForm = newestByPublished(longFormEntries, (entry) => entry?.published);
     const videoId =
-      pickString(newest?.['yt:videoId']) ??
-      pickString(newest?.id)?.replace(/^yt:video:/, '');
-    const updatedAt = pickString(newest?.updated);
+      pickString(newestLongForm?.['yt:videoId']) ??
+      pickString(newestLongForm?.id)?.replace(/^yt:video:/, '');
 
     if (!videoId) {
-      return { videoId: null, updatedAt: null, error: 'could not determine video id' };
+      return { videoId: null, skippedShorts, error: 'could not determine video id' };
     }
-    return { videoId, updatedAt, error: null };
+    return { videoId, skippedShorts, error: null };
   } catch (err) {
-    return { videoId: null, updatedAt: null, error: `parse failed: ${err}` };
+    return { videoId: null, error: `parse failed: ${err}` };
   }
 }
 
@@ -170,27 +198,21 @@ export default async () => {
   }
 
   const store = getStore(STORE_NAME);
-  const [previousRssId, previousYoutubeId, previousYoutubeUpdated] = await Promise.all([
+  const [previousRssId, previousYoutubeId] = await Promise.all([
     store.get(RSS_STATE_KEY),
     store.get(YOUTUBE_STATE_KEY),
-    store.get(YOUTUBE_UPDATED_STATE_KEY),
   ]);
 
   const rssChanged = !!(rssResult.latestId && previousRssId !== rssResult.latestId);
   const youtubeIdChanged = !!(
     youtubeResult.videoId && previousYoutubeId !== youtubeResult.videoId
   );
-  const youtubeUpdatedChanged = !!(
-    youtubeResult.videoId &&
-    youtubeResult.updatedAt &&
-    previousYoutubeId === youtubeResult.videoId &&
-    previousYoutubeUpdated !== youtubeResult.updatedAt
-  );
-  const youtubeChanged = youtubeIdChanged || youtubeUpdatedChanged;
 
-  if (!rssChanged && !youtubeChanged) {
+  if (!rssChanged && !youtubeIdChanged) {
+    const shortsNote =
+      youtubeResult.skippedShorts > 0 ? `, ignored ${youtubeResult.skippedShorts} Shorts/clips` : '';
     console.log(
-      `[content-watch] No changes (RSS: ${rssResult.latestId ?? 'n/a'}, YouTube: ${youtubeResult.videoId ?? 'n/a'}).`,
+      `[content-watch] No changes (RSS: ${rssResult.latestId ?? 'n/a'}, YouTube long-form: ${youtubeResult.videoId ?? 'n/a'}${shortsNote}).`,
     );
     return new Response('No change', { status: 200 });
   }
@@ -204,13 +226,8 @@ export default async () => {
   }
   if (youtubeIdChanged) {
     reasons.push(
-      `YouTube upload ${youtubeResult.videoId}` +
+      `YouTube long-form ${youtubeResult.videoId}` +
         (previousYoutubeId ? ` (was ${previousYoutubeId})` : ' (first run)'),
-    );
-  } else if (youtubeUpdatedChanged) {
-    reasons.push(
-      `YouTube upload ${youtubeResult.videoId} updated` +
-        (previousYoutubeUpdated ? ` (was ${previousYoutubeUpdated})` : ' (first run)'),
     );
   }
 
@@ -228,9 +245,6 @@ export default async () => {
   }
   if (youtubeResult.videoId) {
     await store.set(YOUTUBE_STATE_KEY, youtubeResult.videoId);
-  }
-  if (youtubeResult.updatedAt) {
-    await store.set(YOUTUBE_UPDATED_STATE_KEY, youtubeResult.updatedAt);
   }
 
   console.log(`[content-watch] Triggered production rebuild: ${reasons.join('; ')}.`);
