@@ -17,6 +17,7 @@
  * HTML ships fully populated — great for SEO, social unfurls, and LLM crawlers.
  *
  * The result is memoised for the duration of a single build so we only hit the network once.
+ * Rebuild seed: 2026-09-09 (force Astro to re-run page generation).
  */
 
 import type { Episode } from '../app/types/episode';
