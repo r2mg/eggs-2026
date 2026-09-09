@@ -7,6 +7,10 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  # Always run the build, even when git SHA is unchanged. Episode data comes from RSS/YouTube
+  # at build time; skipping would republish stale HTML (and "Clear cache" on the same commit
+  # was finishing in ~30s without regenerating pages).
+  ignore = "exit 1"
 
 [build.environment]
   NODE_VERSION = "22"

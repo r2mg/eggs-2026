@@ -40,8 +40,10 @@ const API_ROOT = 'https://www.googleapis.com/youtube/v3';
 const YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS = 450;
 /** Per EGGS topic / editorial playlist (each is usually much smaller than uploads) */
 const YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS = 200;
-/** Scan excluded lists (e.g. “Audio Edition”) this deep to learn which video ids to ban */
-const YOUTUBE_EXCLUDED_PLAYLIST_MAX_ITEMS = 6000;
+/** Scan excluded lists (e.g. “Audio Edition”) this deep to learn which video ids to ban.
+ * RSS already drops “audio edition” episode titles; a deep scan (was 6000) burned most of
+ * the daily Data API quota before the catalog could be saved. Two pages is enough. */
+const YOUTUBE_EXCLUDED_PLAYLIST_MAX_ITEMS = 100;
 
 // ---------------------------------------------------------------------------
 // Homepage “lite” fetch — much smaller than `fetchYouTubeChannelData` (see bottom of file)
