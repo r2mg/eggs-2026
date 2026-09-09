@@ -9,13 +9,15 @@
  */
 
 import { isLikelyYouTubeShortTitle } from './youtubeShorts';
+import { isAudioEditionVideoTitle, YOUTUBE_CHANNEL_ID } from '../config/youtubeChannel';
 import {
   channelDataToPersisted,
+  isYouTubeQuotaExhaustedToday,
   loadPersistedYouTubeCatalog,
+  markYouTubeQuotaExhausted,
   persistedToChannelData,
   savePersistedYouTubeCatalog,
 } from './youtubeChannelStore';
-import { YOUTUBE_CHANNEL_ID } from '../config/youtubeChannel';
 import {
   cloneYouTubeChannelData,
   emptyYouTubeChannelData,
@@ -48,7 +50,7 @@ export type YoutubeCatalogForBuild = {
 function dropShortFormVideos(data: YouTubeChannelData): number {
   let removed = 0;
   for (const [id, video] of data.videosById) {
-    if (isLikelyYouTubeShortTitle(video.title)) {
+    if (isLikelyYouTubeShortTitle(video.title) || isAudioEditionVideoTitle(video.title)) {
       data.videosById.delete(id);
       removed += 1;
     }
@@ -76,7 +78,7 @@ export function mergeChannelCatalogs(
   for (const id of incoming.blockedVideoIds) out.blockedVideoIds.add(id);
 
   for (const [id, video] of incoming.videosById) {
-    if (isLikelyYouTubeShortTitle(video.title)) continue;
+    if (isLikelyYouTubeShortTitle(video.title) || isAudioEditionVideoTitle(video.title)) continue;
     const existing = out.videosById.get(id);
     if (!existing) {
       out.videosById.set(id, video);
@@ -136,7 +138,7 @@ async function syncNewUploads(cached: YouTubeChannelData): Promise<{
       const vid = row.snippet?.resourceId?.videoId;
       if (!vid || vid.length !== 11) continue;
       const title = row.snippet?.title;
-      if (isLikelyYouTubeShortTitle(title)) continue;
+      if (isLikelyYouTubeShortTitle(title) || isAudioEditionVideoTitle(title)) continue;
 
       const known = data.videosById.has(vid);
       mergePlaylistItemIntoCatalog(
@@ -174,11 +176,19 @@ function cacheIsFresh(lastFullFetchAt: string): boolean {
   return Date.now() - at < FULL_REFRESH_MS;
 }
 
+let inflight: Promise<YoutubeCatalogForBuild> | null = null;
+
 /**
  * Resolve the YouTube catalog for this build. Always prefers a saved catalog over RSS-only
- * when the API is unavailable or over quota.
+ * when the API is unavailable or over quota. One in-flight promise — Astro may call this
+ * from several routes at once; they all share the same download.
  */
-export async function getYouTubeChannelDataForBuild(): Promise<YoutubeCatalogForBuild> {
+export function getYouTubeChannelDataForBuild(): Promise<YoutubeCatalogForBuild> {
+  if (!inflight) inflight = resolveYouTubeCatalogForBuild();
+  return inflight;
+}
+
+async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> {
   const persisted = await loadPersistedYouTubeCatalog();
   const cached = persisted ? persistedToChannelData(persisted) : null;
   const hasCache = !!(cached && cached.videosById.size > 0);
@@ -191,6 +201,19 @@ export async function getYouTubeChannelDataForBuild(): Promise<YoutubeCatalogFor
     }
     console.info(
       '[EGGS build] No YouTube API key (YOUTUBE_API_KEY) — building RSS-only (no thumbnails/topics/featured).',
+    );
+    return { data: emptyYouTubeChannelData(), source: 'empty' };
+  }
+
+  if (await isYouTubeQuotaExhaustedToday()) {
+    if (hasCache && cached) {
+      console.info(
+        '[EGGS build] YouTube quota already exhausted today — using saved catalog (no Data API calls).',
+      );
+      return { data: cached, source: 'cache' };
+    }
+    console.info(
+      '[EGGS build] YouTube quota already exhausted today — RSS-only until midnight Pacific.',
     );
     return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
@@ -221,6 +244,7 @@ export async function getYouTubeChannelDataForBuild(): Promise<YoutubeCatalogFor
     return { data, source: 'incremental' };
   } catch (err) {
     const quota = isYouTubeQuotaError(err);
+    if (quota) await markYouTubeQuotaExhausted();
     if (hasCache && cached) {
       console.error(
         `[EGGS build] YouTube fetch failed (${quota ? 'quota' : 'error'}) — using saved catalog (${cached.videosById.size} videos).`,

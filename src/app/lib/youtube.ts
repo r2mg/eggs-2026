@@ -27,6 +27,7 @@ import {
   PLAYLIST_TITLE_START_HERE,
   YOUTUBE_CHANNEL_ID,
   isAllowedPlaylistForMerge,
+  isAudioEditionVideoTitle,
   isPlaylistExcludedFromYouTubeMerge,
   titleMatchesPlaylist,
 } from '../config/youtubeChannel';
@@ -40,10 +41,10 @@ const API_ROOT = 'https://www.googleapis.com/youtube/v3';
 const YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS = 450;
 /** Per EGGS topic / editorial playlist (each is usually much smaller than uploads) */
 const YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS = 200;
-/** Scan excluded lists (e.g. “Audio Edition”) this deep to learn which video ids to ban.
- * RSS already drops “audio edition” episode titles; a deep scan (was 6000) burned most of
- * the daily Data API quota before the catalog could be saved. Two pages is enough. */
-const YOUTUBE_EXCLUDED_PLAYLIST_MAX_ITEMS = 100;
+/** How many playlistItem requests run at once (each playlist still pages sequentially) */
+const YOUTUBE_PLAYLIST_FETCH_CONCURRENCY = 5;
+/** Abort a hung Data API request instead of sitting on the build for minutes. */
+const YOUTUBE_HTTP_TIMEOUT_MS = 20_000;
 
 // ---------------------------------------------------------------------------
 // Homepage “lite” fetch — much smaller than `fetchYouTubeChannelData` (see bottom of file)
@@ -52,10 +53,6 @@ const YOUTUBE_EXCLUDED_PLAYLIST_MAX_ITEMS = 100;
 const YOUTUBE_HOME_LITE_UPLOADS_MAX_ITEMS = 180;
 /** Featured / Start Here playlist rows to pull (only these editorial lists, not every EGGS topic list). */
 const YOUTUBE_HOME_LITE_EDITORIAL_PLAYLIST_MAX_ITEMS = 80;
-/** Still learn “blocked” ids from excluded playlists, but do not scan thousands of rows on first paint. */
-const YOUTUBE_HOME_LITE_EXCLUDED_PLAYLIST_MAX_ITEMS = 300;
-/** How many playlistItem requests run at once (each playlist still pages sequentially) */
-const YOUTUBE_PLAYLIST_FETCH_CONCURRENCY = 5;
 
 // ---------------------------------------------------------------------------
 // Types (match your editorial / UI needs)
@@ -168,6 +165,10 @@ function httpsGetJson(
         data += chunk;
       });
       res.on('end', () => resolve({ status: res.statusCode ?? 0, body: data }));
+    });
+    req.setTimeout(YOUTUBE_HTTP_TIMEOUT_MS, () => {
+      req.destroy();
+      reject(new Error(`YouTube API request timed out after ${YOUTUBE_HTTP_TIMEOUT_MS / 1000}s`));
     });
     req.on('error', reject);
     req.end();
@@ -477,6 +478,8 @@ export async function fetchYouTubeChannelData(
 
   if (!getYouTubeApiKey()) return empty;
 
+  console.log('[EGGS YouTube API] Starting one channel catalog fetch (uploads + topic playlists).');
+
   let uploadsPlaylistId =
     KNOWN_PLAYLIST_IDS.uploads ??
     (await fetchChannelUploadsPlaylistId(channelId));
@@ -485,18 +488,9 @@ export async function fetchYouTubeChannelData(
 
   const excludedPlaylists = playlists.filter((p) => isPlaylistExcludedFromYouTubeMerge(p.title));
   const blockedVideoIds = new Set<string>();
-  await Promise.all(
-    excludedPlaylists.map(async (p) => {
-      const items = await fetchPlaylistItemsUpTo(p.id, YOUTUBE_EXCLUDED_PLAYLIST_MAX_ITEMS);
-      for (const row of items) {
-        const vid = row.snippet?.resourceId?.videoId;
-        if (vid && vid.length === 11) blockedVideoIds.add(vid);
-      }
-    }),
-  );
   if (excludedPlaylists.length > 0) {
     console.log(
-      `[EGGS YouTube API] Excluded playlist(s): ${excludedPlaylists.map((p) => p.title).join(' | ')} — collected ${blockedVideoIds.size} video id(s) to omit (even when the same video also appears in Uploads).`,
+      `[EGGS YouTube API] Not paging excluded playlist(s) ${excludedPlaylists.map((p) => p.title).join(' | ')} — Audio Edition videos are dropped by title instead.`,
     );
   }
 
@@ -526,6 +520,9 @@ export async function fetchYouTubeChannelData(
           uploadsPlaylistId && pid === uploadsPlaylistId
             ? YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS
             : YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS;
+        console.log(
+          `[EGGS YouTube API] Fetching playlist "${playlistTitle}" (≤${maxItems} items)…`,
+        );
         const items = await fetchPlaylistItemsUpTo(pid, maxItems);
         return { pid, playlistTitle, items };
       }),
@@ -549,12 +546,15 @@ export async function fetchYouTubeChannelData(
   }
 
   let removedBlocked = 0;
-  for (const vid of blockedVideoIds) {
-    if (videosById.delete(vid)) removedBlocked += 1;
+  for (const [vid, video] of videosById) {
+    if (!isAudioEditionVideoTitle(video.title)) continue;
+    videosById.delete(vid);
+    blockedVideoIds.add(vid);
+    removedBlocked += 1;
   }
   if (removedBlocked > 0) {
     console.log(
-      `[EGGS YouTube API] Removed ${removedBlocked} video(s) from the merge catalog because they appear on excluded playlist(s).`,
+      `[EGGS YouTube API] Removed ${removedBlocked} Audio Edition video(s) from the merge catalog by title.`,
     );
   }
 
@@ -579,8 +579,9 @@ export async function fetchYouTubeChannelData(
  *
  * What we skip compared to `fetchYouTubeChannelData`:
  * - We do **not** download every “EGGS …” topic playlist’s videos (those lists can be huge).
- * - We only merge **uploads + Featured + Start Here** (plus a capped scan of excluded lists for blocked ids).
- * - Uploads and excluded scans use **smaller caps** so first paint wins.
+ * - We only merge **uploads + Featured + Start Here**.
+ * - Audio Edition videos are dropped by title (no playlist paging).
+ * - Uploads use a **smaller cap** so first paint wins.
  *
  * The archive (`/episodes`) still uses the full fetch so matching older episodes stays reliable.
  */
@@ -601,17 +602,7 @@ export async function fetchYouTubeChannelHomeLite(
 
   const playlists = await fetchPlaylistsForChannel(channelId);
 
-  const excludedPlaylists = playlists.filter((p) => isPlaylistExcludedFromYouTubeMerge(p.title));
   const blockedVideoIds = new Set<string>();
-  await Promise.all(
-    excludedPlaylists.map(async (p) => {
-      const items = await fetchPlaylistItemsUpTo(p.id, YOUTUBE_HOME_LITE_EXCLUDED_PLAYLIST_MAX_ITEMS);
-      for (const row of items) {
-        const vid = row.snippet?.resourceId?.videoId;
-        if (vid && vid.length === 11) blockedVideoIds.add(vid);
-      }
-    }),
-  );
 
   const { featuredId, startHereId } = resolveEditorialPlaylistIds(playlists);
 
@@ -694,17 +685,20 @@ export async function fetchYouTubeChannelHomeLite(
   }
 
   let removedBlocked = 0;
-  for (const vid of blockedVideoIds) {
-    if (videosById.delete(vid)) removedBlocked += 1;
+  for (const [vid, video] of videosById) {
+    if (!isAudioEditionVideoTitle(video.title)) continue;
+    videosById.delete(vid);
+    blockedVideoIds.add(vid);
+    removedBlocked += 1;
   }
   if (removedBlocked > 0) {
     console.log(
-      `[EGGS YouTube API] Home lite: removed ${removedBlocked} blocked video(s) from the small merge catalog.`,
+      `[EGGS YouTube API] Home lite: removed ${removedBlocked} Audio Edition video(s) from the small merge catalog.`,
     );
   }
 
   console.log(
-    `[EGGS YouTube API] Home lite snapshot: uploads ≤${YOUTUBE_HOME_LITE_UPLOADS_MAX_ITEMS}, editorial lists ≤${YOUTUBE_HOME_LITE_EDITORIAL_PLAYLIST_MAX_ITEMS}, excluded scan ≤${YOUTUBE_HOME_LITE_EXCLUDED_PLAYLIST_MAX_ITEMS} per excluded playlist.`,
+    `[EGGS YouTube API] Home lite snapshot: uploads ≤${YOUTUBE_HOME_LITE_UPLOADS_MAX_ITEMS}, editorial lists ≤${YOUTUBE_HOME_LITE_EDITORIAL_PLAYLIST_MAX_ITEMS}.`,
   );
 
   return {

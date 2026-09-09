@@ -16,8 +16,9 @@
  * Every Astro page imports `getSiteContent()` in its server-side frontmatter, so the resulting
  * HTML ships fully populated — great for SEO, social unfurls, and LLM crawlers.
  *
- * The result is memoised for the duration of a single build so we only hit the network once.
- * Rebuild seed: 2026-09-09 (force Astro to re-run page generation).
+ * ~700 HTML files share **one** in-flight fetch (RSS + YouTube catalog). Visitors never call
+ * the YouTube Data API; they just download the baked pages.
+ * Rebuild seed: 2026-09-09b (single-flight content + skip Audio Edition scan).
  */
 
 import type { Episode } from '../app/types/episode';
@@ -75,6 +76,7 @@ export interface SiteContent {
 }
 
 let cached: SiteContent | null = null;
+let inflight: Promise<SiteContent> | null = null;
 
 /** Newest-first comparator by ISO publish date. */
 function byNewest(a: Episode, b: Episode): number {
@@ -135,10 +137,18 @@ function deriveTopics(episodes: Episode[]): Topic[] {
 }
 
 /**
- * Fetch + enrich + derive all site content. Memoised for the build.
+ * Fetch + enrich + derive all site content. One shared promise for the whole build —
+ * `if (cached)` alone is not enough, because several routes call this before the first
+ * fetch finishes.
  * Never throws: if the network or YouTube fails, we degrade to whatever we have (RSS, or empty).
  */
-export async function getSiteContent(): Promise<SiteContent> {
+export function getSiteContent(): Promise<SiteContent> {
+  if (cached) return Promise.resolve(cached);
+  if (!inflight) inflight = buildSiteContent();
+  return inflight;
+}
+
+async function buildSiteContent(): Promise<SiteContent> {
   if (cached) return cached;
 
   // 1. RSS — fetch Anchor directly (no Vite dev proxy at build time).

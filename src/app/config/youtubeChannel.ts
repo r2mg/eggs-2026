@@ -134,6 +134,11 @@ export function isEpisodeTitleExcludedFromSite(episodeTitle: string): boolean {
   return EPISODE_TITLE_SUBSTRINGS_EXCLUDE_FROM_SITE.some((frag) => t.includes(frag.toLowerCase()));
 }
 
+/** YouTube video titles that are audio-only duplicates — omit without paging the Audio Edition playlist. */
+export function isAudioEditionVideoTitle(title: string | undefined): boolean {
+  return !!title && title.toLowerCase().includes('audio edition');
+}
+
 /**
  * Playlists whose **items** we merge in `fetchYouTubeChannelData` (in addition to uploads and
  * `KNOWN_PLAYLIST_IDS`). Replaces a loose “title starts with EGGS” rule so one-off channel
