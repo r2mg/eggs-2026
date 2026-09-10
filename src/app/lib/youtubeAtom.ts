@@ -10,7 +10,7 @@ import { isLikelyYouTubeShortTitle } from './youtubeShorts';
 import { emptyYouTubeChannelData, type YouTubeChannelData, type YouTubeVideo } from './youtube';
 import { resolveYouTubeForEpisode } from './youtubeMatching';
 import { youtubeCandidatesFromChannelData } from './computeEpisodeYoutubeOverlay';
-import { youtubeHqThumbnailUrl } from './youtubeThumbnails';
+import { youtubeHqThumbnailUrl, youtubeMaxresThumbnailUrl } from './youtubeThumbnails';
 
 const YOUTUBE_FEED_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
 
@@ -58,7 +58,7 @@ export async function fetchYouTubeAtomChannelData(): Promise<YouTubeChannelData>
         videoId,
         title: title || '(untitled)',
         publishedAt,
-        thumbnails: { high: youtubeHqThumbnailUrl(videoId), maxres: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg` },
+        thumbnails: { high: youtubeHqThumbnailUrl(videoId), maxres: youtubeMaxresThumbnailUrl(videoId) },
         youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
         embedUrl: `https://www.youtube.com/embed/${videoId}`,
       };
@@ -87,7 +87,7 @@ export function applyAtomOverlays(
       youtubeVideoId: resolved.videoId,
       youtubeUrl: resolved.watchUrl,
       youtubeEmbedUrl: `https://www.youtube.com/embed/${resolved.videoId}`,
-      youtubeThumbnail: resolved.thumbnailUrl?.trim() || youtubeHqThumbnailUrl(resolved.videoId),
+      youtubeThumbnail: resolved.thumbnailUrl?.trim() || youtubeMaxresThumbnailUrl(resolved.videoId),
     };
     applied += 1;
   }

@@ -92,7 +92,7 @@ export function episodeCardThumbnailSources(url: string | undefined): EpisodeCar
 }
 
 /**
- * Pick a display-sized thumbnail URL. Hero/detail keeps the build-time URL (often maxres/high);
+ * Pick a display-sized thumbnail URL. Hero/detail uses maxres when the URL is a YouTube still;
  * cards use sddefault as the default src while srcset supplies sharper sizes on larger viewports.
  */
 export function episodeThumbnailForDisplay(
@@ -101,8 +101,8 @@ export function episodeThumbnailForDisplay(
 ): string {
   const trimmed = url?.trim();
   if (!trimmed) return '';
-  if (size === 'hero') return trimmed;
   const id = youtubeVideoIdFromThumbnailUrl(trimmed);
+  if (size === 'hero') return id ? youtubeMaxresThumbnailUrl(id) : trimmed;
   if (id) return youtubeSdThumbnailUrl(id);
   return trimmed;
 }

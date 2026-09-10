@@ -8,6 +8,8 @@ import type { Episode } from '../app/types/episode';
 import {
   episodeCardThumbnailSources,
   episodeThumbnailForDisplay,
+  youtubeHqThumbnailUrl,
+  youtubeVideoIdFromThumbnailUrl,
 } from '../app/lib/youtubeThumbnails';
 
 interface Props {
@@ -32,10 +34,12 @@ const primary =
     : episodeThumbnailForDisplay(yt || rss || '', size);
 const srcSet = cardSources?.srcSet;
 const sizes = cardSources?.sizes;
-const youtubeHqFallback = cardSources?.youtubeHqFallback ?? '';
+const heroYtId = size === 'hero' ? youtubeVideoIdFromThumbnailUrl(yt || rss || '') : undefined;
+const youtubeHqFallback = cardSources?.youtubeHqFallback ?? (heroYtId ? youtubeHqThumbnailUrl(heroYtId) : '');
 const fallback = yt && rss ? episodeThumbnailForDisplay(rss, size) : '';
 const cardOnError = `if(this.dataset.srcsetRetried){if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}}else if(this.srcset){this.dataset.srcsetRetried='1';this.removeAttribute('srcset');this.removeAttribute('sizes');if(this.dataset.ytHq){this.src=this.dataset.ytHq;}}else if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}`;
-const onError = size === 'card' && srcSet ? cardOnError : "if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}";
+const heroOnError = `if(this.dataset.ytHq){const u=this.dataset.ytHq;this.dataset.ytHq='';this.src=u;}else if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}`;
+const onError = size === 'card' && srcSet ? cardOnError : heroOnError;
 ---
 
 {

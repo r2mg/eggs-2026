@@ -4,7 +4,7 @@
  */
 import type { Episode } from '../types/episode';
 import type { YoutubeEpisodeOverlay } from '../types/youtubeOverlay';
-import { youtubeHqThumbnailUrl } from './youtubeThumbnails';
+import { youtubeMaxresThumbnailUrl } from './youtubeThumbnails';
 import seed from '../../data/youtube-slug-seed.json';
 
 export type YoutubeSlugSeedEntry = {
@@ -24,7 +24,7 @@ function overlayFromSeed(row: YoutubeSlugSeedEntry): YoutubeEpisodeOverlay {
     youtubeVideoId: row.videoId,
     youtubeUrl: `https://www.youtube.com/watch?v=${row.videoId}`,
     youtubeEmbedUrl: `https://www.youtube.com/embed/${row.videoId}`,
-    youtubeThumbnail: youtubeHqThumbnailUrl(row.videoId),
+    youtubeThumbnail: youtubeMaxresThumbnailUrl(row.videoId),
     featured: !!row.featured,
     collections: row.collections?.length ? [...row.collections] : undefined,
   };
