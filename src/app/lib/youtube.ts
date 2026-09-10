@@ -41,8 +41,9 @@ const API_ROOT = 'https://www.googleapis.com/youtube/v3';
 const YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS = 450;
 /** Per EGGS topic / editorial playlist (each is usually much smaller than uploads) */
 const YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS = 200;
-/** How many playlistItem requests run at once (each playlist still pages sequentially) */
-const YOUTUBE_PLAYLIST_FETCH_CONCURRENCY = 5;
+/** How many playlistItem requests run at once (each playlist still pages sequentially).
+ * 1 = stop immediately on quota errors instead of firing overlapping pages. */
+const YOUTUBE_PLAYLIST_FETCH_CONCURRENCY = 1;
 /** Abort a hung Data API request instead of sitting on the build for minutes. */
 const YOUTUBE_HTTP_TIMEOUT_MS = 20_000;
 
@@ -95,7 +96,16 @@ type ApiPage<T> = {
 // API key
 // ---------------------------------------------------------------------------
 
+let youtubeRequestCount = 0;
 let loggedMissingKey = false;
+
+export function getYouTubeRequestCount(): number {
+  return youtubeRequestCount;
+}
+
+export function resetYouTubeRequestCount(): void {
+  youtubeRequestCount = 0;
+}
 
 /**
  * Resolves the YouTube Data API key for both runtimes:
@@ -202,6 +212,11 @@ async function youtubeGet<T extends Record<string, unknown>>(
   const referer = getYouTubeApiReferer();
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (referer) headers.Referer = referer;
+
+  youtubeRequestCount += 1;
+  if (youtubeRequestCount === 1 || youtubeRequestCount % 10 === 0) {
+    console.log(`[EGGS YouTube API] Request ${youtubeRequestCount}: ${endpoint}`);
+  }
 
   const { status, body } = await httpsGetJson(url.toString(), headers);
   const json = (body ? (JSON.parse(body) as T & { error?: { message?: string } }) : ({} as T));
@@ -563,7 +578,7 @@ export async function fetchYouTubeChannelData(
   }
 
   console.log(
-    `[EGGS YouTube API] Playlist fetch caps: uploads ≤${YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS} items, other lists ≤${YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS} items each (${YOUTUBE_PLAYLIST_FETCH_CONCURRENCY} playlists in parallel per batch).`,
+    `[EGGS YouTube API] Playlist fetch caps: uploads ≤${YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS} items, other lists ≤${YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS} items each. Data API requests this fetch: ${youtubeRequestCount}.`,
   );
 
   return {

@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
+import { youtubeCatalogIntegration } from './src/integrations/youtube-catalog';
 
 /**
  * Canonical production origin — drives sitemap URLs, canonical tags, and Open Graph URLs.
@@ -14,7 +15,7 @@ export default defineConfig({
   site: SITE_URL,
   // Static site generation: every route is prerendered to HTML at build time (best for SEO/LLMs).
   output: 'static',
-  integrations: [react(), sitemap()],
+  integrations: [youtubeCatalogIntegration(), react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
   },

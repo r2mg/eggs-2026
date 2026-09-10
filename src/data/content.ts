@@ -16,9 +16,9 @@
  * Every Astro page imports `getSiteContent()` in its server-side frontmatter, so the resulting
  * HTML ships fully populated — great for SEO, social unfurls, and LLM crawlers.
  *
- * ~700 HTML files share **one** in-flight fetch (RSS + YouTube catalog). Visitors never call
- * the YouTube Data API; they just download the baked pages.
- * Rebuild seed: 2026-09-09b (single-flight content + skip Audio Edition scan).
+ * ~700 HTML files share a catalog that is downloaded once at `astro:build:start`, then
+ * only read from disk/Blobs while pages render. Visitors never call the YouTube Data API.
+ * Rebuild seed: 2026-09-10 (warmup once before page generation).
  */
 
 import type { Episode } from '../app/types/episode';

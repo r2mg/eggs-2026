@@ -25,8 +25,10 @@ import {
   fetchPlaylistItemsPage,
   fetchYouTubeChannelData,
   getYouTubeApiKey,
+  getYouTubeRequestCount,
   isYouTubeQuotaError,
   mergePlaylistItemIntoCatalog,
+  resetYouTubeRequestCount,
   type YouTubeChannelData,
   type YouTubeVideo,
 } from './youtube';
@@ -178,10 +180,33 @@ function cacheIsFresh(lastFullFetchAt: string): boolean {
 
 let inflight: Promise<YoutubeCatalogForBuild> | null = null;
 
+function youtubeSyncAllowed(): boolean {
+  if (process.env.EGGS_YOUTUBE_SYNC === '1') return true;
+  try {
+    return Boolean(import.meta.env?.DEV);
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Resolve the YouTube catalog for this build. Always prefers a saved catalog over RSS-only
- * when the API is unavailable or over quota. One in-flight promise — Astro may call this
- * from several routes at once; they all share the same download.
+ * Download / refresh the catalog **once** at the start of `astro build`.
+ * Page rendering must not call the Data API — Astro can prerender routes in
+ * parallel isolates, and an in-memory promise does not span those workers.
+ */
+export async function warmupYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> {
+  process.env.EGGS_YOUTUBE_SYNC = '1';
+  inflight = null;
+  const result = await getYouTubeChannelDataForBuild();
+  console.log(
+    `[EGGS YouTube catalog] Warmup done: source=${result.source}, videos=${result.data.videosById.size}, Data API requests=${getYouTubeRequestCount()}.`,
+  );
+  return result;
+}
+
+/**
+ * Resolve the YouTube catalog for this build. During page generation this only
+ * reads the catalog saved by `warmupYouTubeCatalogForBuild`.
  */
 export function getYouTubeChannelDataForBuild(): Promise<YoutubeCatalogForBuild> {
   if (!inflight) inflight = resolveYouTubeCatalogForBuild();
@@ -193,6 +218,7 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
   const cached = persisted ? persistedToChannelData(persisted) : null;
   const hasCache = !!(cached && cached.videosById.size > 0);
   const key = getYouTubeApiKey();
+  const allowFetch = youtubeSyncAllowed();
 
   if (!key) {
     if (hasCache && cached) {
@@ -205,6 +231,19 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
     return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 
+  if (!allowFetch) {
+    if (hasCache && cached) {
+      console.info(
+        `[EGGS build] Using warmed YouTube catalog (${cached.videosById.size} videos) — no Data API during page render.`,
+      );
+      return { data: cached, source: 'cache' };
+    }
+    console.info(
+      '[EGGS build] YouTube catalog was not warmed before page render — RSS-only for this process.',
+    );
+    return { data: emptyYouTubeChannelData(), source: 'empty' };
+  }
+
   if (await isYouTubeQuotaExhaustedToday()) {
     if (hasCache && cached) {
       console.info(
@@ -213,14 +252,14 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
       return { data: cached, source: 'cache' };
     }
     console.info(
-      '[EGGS build] YouTube quota already exhausted today — RSS-only until midnight Pacific.',
+      '[EGGS build] Quota marker is set but no catalog is saved — attempting one warmup fetch.',
     );
-    return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 
   const needsFull = !persisted || !cacheIsFresh(persisted.lastFullFetchAt);
 
   try {
+    resetYouTubeRequestCount();
     if (needsFull) {
       const fetched = await fetchYouTubeChannelData();
       dropShortFormVideos(fetched);
@@ -229,7 +268,7 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
       const now = new Date().toISOString();
       await savePersistedYouTubeCatalog(channelDataToPersisted(data, now, now));
       console.log(
-        `[EGGS YouTube catalog] Full refresh merged to ${data.videosById.size} long-form videos.`,
+        `[EGGS YouTube catalog] Full refresh merged to ${data.videosById.size} long-form videos (${getYouTubeRequestCount()} Data API requests).`,
       );
       return { data, source: 'full' };
     }
@@ -239,7 +278,7 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
       channelDataToPersisted(data, persisted!.lastFullFetchAt),
     );
     console.log(
-      `[EGGS YouTube catalog] Incremental uploads: ${pages} page(s), ${added} new long-form video(s), catalog ${data.videosById.size}.`,
+      `[EGGS YouTube catalog] Incremental uploads: ${pages} page(s), ${added} new long-form video(s), catalog ${data.videosById.size} (${getYouTubeRequestCount()} Data API requests).`,
     );
     return { data, source: 'incremental' };
   } catch (err) {
@@ -247,12 +286,15 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
     if (quota) await markYouTubeQuotaExhausted();
     if (hasCache && cached) {
       console.error(
-        `[EGGS build] YouTube fetch failed (${quota ? 'quota' : 'error'}) — using saved catalog (${cached.videosById.size} videos).`,
+        `[EGGS build] YouTube fetch failed (${quota ? 'quota' : 'error'}) after ${getYouTubeRequestCount()} request(s) — using saved catalog (${cached.videosById.size} videos).`,
         err,
       );
       return { data: cached, source: 'cache' };
     }
-    console.error('[EGGS build] YouTube fetch failed — continuing RSS-only.', err);
+    console.error(
+      `[EGGS build] YouTube fetch failed after ${getYouTubeRequestCount()} request(s) — continuing RSS-only.`,
+      err,
+    );
     return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 }
