@@ -8,6 +8,9 @@
  * - Shorts / hashtag clips are not stored for episode matching.
  */
 
+import { existsSync } from 'node:fs';
+import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { isLikelyYouTubeShortTitle } from './youtubeShorts';
 import { isAudioEditionVideoTitle, YOUTUBE_CHANNEL_ID } from '../config/youtubeChannel';
 import {
@@ -41,6 +44,12 @@ const INCREMENTAL_CONSECUTIVE_KNOWN = 3;
 
 /** Safety cap: 8 pages × 50 = 400 newest uploads (covers a large Shorts burst). */
 const INCREMENTAL_MAX_PAGES = 8;
+
+const CACHE_DIR = path.join(process.cwd(), '.cache');
+const WARMUP_LOCK = path.join(CACHE_DIR, 'youtube-warmup.lock');
+const WARMUP_DONE = path.join(CACHE_DIR, 'youtube-warmup.done');
+const WARMUP_WAIT_MS = 180_000;
+const STALE_LOCK_MS = 3 * 60 * 1000;
 
 export type YoutubeCatalogSource = 'full' | 'incremental' | 'cache' | 'empty';
 
@@ -180,8 +189,7 @@ function cacheIsFresh(lastFullFetchAt: string): boolean {
 
 let inflight: Promise<YoutubeCatalogForBuild> | null = null;
 
-function youtubeSyncAllowed(): boolean {
-  if (process.env.EGGS_YOUTUBE_SYNC === '1') return true;
+function isDevBuild(): boolean {
   try {
     return Boolean(import.meta.env?.DEV);
   } catch {
@@ -189,24 +197,50 @@ function youtubeSyncAllowed(): boolean {
   }
 }
 
-/**
- * Download / refresh the catalog **once** at the start of `astro build`.
- * Page rendering must not call the Data API — Astro can prerender routes in
- * parallel isolates, and an in-memory promise does not span those workers.
- */
-export async function warmupYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> {
-  process.env.EGGS_YOUTUBE_SYNC = '1';
-  inflight = null;
-  const result = await getYouTubeChannelDataForBuild();
-  console.log(
-    `[EGGS YouTube catalog] Warmup done: source=${result.source}, videos=${result.data.videosById.size}, Data API requests=${getYouTubeRequestCount()}.`,
-  );
-  return result;
+async function tryBecomeWarmupOwner(): Promise<boolean> {
+  await mkdir(CACHE_DIR, { recursive: true });
+  try {
+    await writeFile(WARMUP_LOCK, `${process.pid}\n${new Date().toISOString()}\n`, { flag: 'wx' });
+    return true;
+  } catch {
+    try {
+      const info = await stat(WARMUP_LOCK);
+      if (Date.now() - info.mtimeMs > STALE_LOCK_MS) {
+        await unlink(WARMUP_LOCK);
+        await writeFile(WARMUP_LOCK, `${process.pid}\n${new Date().toISOString()}\n`, { flag: 'wx' });
+        return true;
+      }
+    } catch {
+      // Another process won the race.
+    }
+    return false;
+  }
+}
+
+async function waitForWarmup(): Promise<void> {
+  const started = Date.now();
+  while (Date.now() - started < WARMUP_WAIT_MS) {
+    if (existsSync(WARMUP_DONE)) return;
+    const persisted = await loadPersistedYouTubeCatalog();
+    if (persisted && persisted.videos.length > 0) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  console.warn('[EGGS YouTube catalog] Timed out waiting for the warmup owner — continuing without a new fetch.');
+}
+
+async function markWarmupDone(): Promise<void> {
+  try {
+    await mkdir(CACHE_DIR, { recursive: true });
+    await writeFile(WARMUP_DONE, new Date().toISOString());
+  } catch {
+    // Ignore
+  }
 }
 
 /**
- * Resolve the YouTube catalog for this build. During page generation this only
- * reads the catalog saved by `warmupYouTubeCatalogForBuild`.
+ * Resolve the YouTube catalog for this build. The first process to take the lock
+ * downloads (or incrementally updates) the catalog; every other Astro worker waits
+ * and only reads the saved file. That avoids repeating the Data API across isolates.
  */
 export function getYouTubeChannelDataForBuild(): Promise<YoutubeCatalogForBuild> {
   if (!inflight) inflight = resolveYouTubeCatalogForBuild();
@@ -218,7 +252,6 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
   const cached = persisted ? persistedToChannelData(persisted) : null;
   const hasCache = !!(cached && cached.videosById.size > 0);
   const key = getYouTubeApiKey();
-  const allowFetch = youtubeSyncAllowed();
 
   if (!key) {
     if (hasCache && cached) {
@@ -231,17 +264,22 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
     return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 
-  if (!allowFetch) {
-    if (hasCache && cached) {
-      console.info(
-        `[EGGS build] Using warmed YouTube catalog (${cached.videosById.size} videos) — no Data API during page render.`,
-      );
-      return { data: cached, source: 'cache' };
+  let owner = isDevBuild();
+  if (!owner) {
+    owner = await tryBecomeWarmupOwner();
+    if (!owner) {
+      await waitForWarmup();
+      const ready = await loadPersistedYouTubeCatalog();
+      const readyData = ready ? persistedToChannelData(ready) : null;
+      if (readyData && readyData.videosById.size > 0) {
+        console.info(
+          `[EGGS build] Using warmed YouTube catalog (${readyData.videosById.size} videos) — no Data API in this process.`,
+        );
+        return { data: readyData, source: 'cache' };
+      }
+      console.info('[EGGS build] No warmed catalog in this process — RSS-only here.');
+      return { data: emptyYouTubeChannelData(), source: 'empty' };
     }
-    console.info(
-      '[EGGS build] YouTube catalog was not warmed before page render — RSS-only for this process.',
-    );
-    return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 
   if (await isYouTubeQuotaExhaustedToday()) {
@@ -249,6 +287,7 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
       console.info(
         '[EGGS build] YouTube quota already exhausted today — using saved catalog (no Data API calls).',
       );
+      await markWarmupDone();
       return { data: cached, source: 'cache' };
     }
     console.info(
@@ -296,5 +335,7 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
       err,
     );
     return { data: emptyYouTubeChannelData(), source: 'empty' };
+  } finally {
+    await markWarmupDone();
   }
 }
