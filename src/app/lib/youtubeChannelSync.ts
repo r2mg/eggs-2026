@@ -291,8 +291,10 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
       return { data: cached, source: 'cache' };
     }
     console.info(
-      '[EGGS build] Quota marker is set but no catalog is saved — attempting one warmup fetch.',
+      '[EGGS build] Quota exhausted and no catalog is saved — skipping the Data API. Baked matches and the public Atom feed will still attach Watch links.',
     );
+    await markWarmupDone();
+    return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 
   const needsFull = !persisted || !cacheIsFresh(persisted.lastFullFetchAt);

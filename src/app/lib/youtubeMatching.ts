@@ -45,8 +45,7 @@ import { videoIdFromYouTubeWatchUrl, youtubeHqThumbnailUrl } from './youtubeThum
  * The value is only the 11-character YouTube id (from the watch URL).
  */
 export const MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID: Record<string, string> = {
-  // Example (remove the // to activate):
-  // '461-brand-story-with-jane-doe': 'dQw4w9WgXcQ',
+  '483-curiosity-driven-leadership-with-jon-beebe': 'XZ7Gf37v778',
 };
 
 // ---------------------------------------------------------------------------

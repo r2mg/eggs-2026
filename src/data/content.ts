@@ -18,7 +18,7 @@
  *
  * ~700 HTML files share a YouTube catalog fetched by the first build process (file lock);
  * other page workers only read the saved file. Visitors never call the YouTube Data API.
- * Rebuild seed: 2026-09-10b (file-lock catalog, no astro:build:start hook).
+ * Rebuild seed: 2026-09-10c (baked YouTube matches + Atom fallback when Data API is empty).
  */
 
 import type { Episode } from '../app/types/episode';
@@ -30,6 +30,8 @@ import {
 } from '../app/lib/rss';
 import { getYouTubeChannelDataForBuild } from '../app/lib/youtubeChannelSync';
 import { buildYoutubeOverlaysForEpisodes } from '../app/lib/computeEpisodeYoutubeOverlay';
+import { applyYoutubeSlugSeed } from '../app/lib/youtubeSlugSeed';
+import { applyAtomOverlays, fetchYouTubeAtomChannelData } from '../app/lib/youtubeAtom';
 import { getFeaturedEpisodesInPlaylistOrder } from '../app/lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../app/types/youtubeOverlay';
 import {
@@ -162,17 +164,30 @@ async function buildSiteContent(): Promise<SiteContent> {
   // 2. YouTube — saved catalog + incremental/full fetch. Quota failures keep the last good catalog.
   const youtubeResult = await getYouTubeChannelDataForBuild();
   const channel = youtubeResult.data;
-  const youtubeEnabled = youtubeResult.source !== 'empty';
 
-  // 3. Match + merge overlays into stable episode objects, once.
+  // 3. Match + merge overlays. If the Data API is down, reuse the last baked matches + public Atom.
   const overlays = buildYoutubeOverlaysForEpisodes(rss, channel);
+  const seedApplied = applyYoutubeSlugSeed(overlays, rss);
+  const atom = await fetchYouTubeAtomChannelData();
+  const atomApplied = applyAtomOverlays(overlays, rss, atom);
+  if (seedApplied || atomApplied) {
+    console.log(
+      `[EGGS build] YouTube fallback overlays: ${seedApplied} from saved matches, ${atomApplied} from Atom feed.`,
+    );
+  }
+
   const episodes = rss
     .map((ep) => mergeEpisodeForDisplay(ep, overlays[ep.slug] ?? null))
     .sort(byNewest);
 
-  // 4. Featured order from the editorial playlist; fall back to recent episodes after the latest.
+  const youtubeEnabled = episodes.some((ep) => !!ep.youtubeVideoId);
+
+  // 4. Featured order from the editorial playlist; fall back to seeded featured, then recent.
   let featured = getFeaturedEpisodesInPlaylistOrder(rss, channel)
     .map((ep) => mergeEpisodeForDisplay(ep, overlays[ep.slug] ?? null));
+  if (featured.length === 0) {
+    featured = episodes.filter((ep) => ep.featured && ep.slug !== episodes[0]?.slug);
+  }
   if (featured.length === 0) featured = episodes.slice(1, 7);
 
   cached = {

@@ -1,0 +1,2279 @@
+{
+  "version": 1,
+  "note": "Baked YouTube matches from production deploy 6a9f503 (2026-09-08) plus the current long-form Atom upload for episode 483. Used when the Data API is unavailable.",
+  "entries": [
+    {
+      "slug": "482-cutting-through-the-clutter-in-communications-with-cyndee-woolley",
+      "videoId": "UMecpL_9g3w",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "481-getting-out-of-the-middle-overcoming-the-founder-bottleneck-with-kris-ward",
+      "videoId": "f6YICZHHKNg",
+      "featured": true,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "480-living-an-exceptional-life-through-financial-planning-with-mike-milligan",
+      "videoId": "HiQxw7oA6H4",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "479-finding-the-missing-millions-in-m-a-with-holli-moeini",
+      "videoId": "vR5jgrWEOQE",
+      "featured": true,
+      "collections": []
+    },
+    {
+      "slug": "478-how-ai-is-revolutionizing-medicine-and-manufacturing-with-tony-paquin",
+      "videoId": "M9SzLZjFZOs",
+      "featured": true,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "477-mastering-remote-teams-with-chris-mcshanag",
+      "videoId": "TIqubl2CGJY",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "476-reimagining-life-after-sports-with-eric-dahl",
+      "videoId": "aRzNObFbTmc",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "475-how-generative-engine-optimization-is-changing-content-marketing-with-jackson-wightman",
+      "videoId": "W81iZEwWrsg",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "474-the-difference-between-innovation-and-adoption-with-sam-yeruva",
+      "videoId": "4WBVGncMPvc",
+      "featured": true,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "473-the-long-road-to-product-market-fit-with-josh-nielsen",
+      "videoId": "qdLaAWvQuPo",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "472-lead-anyway-with-greg-hoover",
+      "videoId": "4SywEx93y3E",
+      "featured": true,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "471-the-long-game-of-health-and-business-with-tyler-bramlett",
+      "videoId": "PWPx0NDR9rg",
+      "featured": true,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "470-calm-clarity-and-courage-with-dominic-forth",
+      "videoId": "Q7SXgs9iFXY",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "469-the-three-rings-of-life-balancing-work-self-and-relationships-with-jones-loflin",
+      "videoId": "lz2KCMeQNVg",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "468-living-in-alignment-how-choice-shapes-your-life-with-brent-perkins",
+      "videoId": "TzV1QLeM3Fo",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "467-transforming-leadership-the-power-of-we-with-kyle-mcdowell",
+      "videoId": "1Px_Lc6go8Q",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "466-less-vibe-more-code-the-future-of-software-development-with-tyler-wells",
+      "videoId": "4bhYpYWhj9k",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "465-resilience-action-and-the-entrepreneurial-mindset-with-jeff-amerine",
+      "videoId": "EUFiDLLSAeY",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "464-how-to-build-a-truly-sustainable-business-from-scratch-with-kate-assaraf",
+      "videoId": "z57dcp9PY6E",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "463-how-immersive-customer-experiences-drive-business-growth-with-jason-friedman",
+      "videoId": "65kQVv16Zyc",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "462-decision-making-strategies-for-entrepreneurs-with-chris-boucousis",
+      "videoId": "cMSCzGLb4FU",
+      "featured": true,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "461-the-blueprint-for-becoming-an-8-figure-course-creator-with-justin-montgomery",
+      "videoId": "aalfjcI5W5w",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "460-understanding-stress-through-heart-rate-variability-with-dr-torkil-f-r",
+      "videoId": "Dd1xOvvpziA",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "459-the-importance-of-emotional-intelligence-in-leadership-with-antonio-garrido",
+      "videoId": "iYiilgsqWAo",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "458-5-key-systems-every-agency-must-have-to-scale-with-nick-avaria",
+      "videoId": "JEbNNOneWH0",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "457-how-to-price-your-services-for-profit-with-marcel-petitpas",
+      "videoId": "e2fNzus6roY",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "456-intellectual-property-your-business-s-hidden-asset-with-sharon-toerek",
+      "videoId": "_rgncy5F6mI",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "455-from-police-force-to-paintbrush-embracing-a-growth-mindset-with-tim-packer",
+      "videoId": "ao1-B0v0cLk",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "454-the-evolution-of-marketing-embracing-change-with-perry-marshall",
+      "videoId": "Po7YsltWWOo",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "453-the-role-of-ai-in-modern-marketing-with-mike-snyder",
+      "videoId": "xJ2VmnEdQAI",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "452-the-evolution-of-customer-service-with-nathan-strum",
+      "videoId": "0h9UEtaUsPI",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "451-the-fine-art-of-growing-a-business-with-russ-hawkins",
+      "videoId": "ZbyYMbuk8RM",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "450-unlocking-human-potential-with-a-j-mizes",
+      "videoId": "HAf1KMnJKRU",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "449-kind-copywriting-that-sells-with-cath-reohorn",
+      "videoId": "oqP53SmGQIA",
+      "featured": true,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "448-building-a-successful-sales-team-from-scratch-with-kevin-downey",
+      "videoId": "PkbimqZDPPs",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "447-standing-out-in-a-crowded-legal-market-with-jonathan-rosenfeld",
+      "videoId": "Ohl6mythEAY",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "445-the-key-to-success-spotting-market-gaps-with-jay-sapovits",
+      "videoId": "3gFed63-Ios",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "443-closing-the-gap-between-belief-and-breakthrough-with-david-neagle",
+      "videoId": "0c6Eeo_WmwA",
+      "featured": true,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "440-experiential-marketing-in-the-ai-age-with-ondar-tarlow",
+      "videoId": "b7ET8j9sYCM",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "439-the-art-of-hard-work-avoiding-the-talent-trap-with-kevin-murphy",
+      "videoId": "HKf7d6PfrbM",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "438-mixing-for-the-human-element-with-chris-leonard",
+      "videoId": "nSPKz9X1PwY",
+      "featured": false,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "437-the-death-of-hourly-billing-with-jonathan-stark",
+      "videoId": "nLMan647eo4",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "436-the-power-of-niche-marketing-in-b2b-with-joe-sullivan",
+      "videoId": "lM4_-vCPjTI",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "435-design-deploy-develop-yourself-with-caleb-mellas",
+      "videoId": "vUC3RIgtn28",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "434-the-intersection-of-ai-and-human-connection-with-peter-murphy-lewis",
+      "videoId": "r3Lrl2Jqu_k",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "433-transforming-webinars-from-simple-sales-tools-into-thought-leadership-opportunities-with-logan-l",
+      "videoId": "3-2tZCRrVxo",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "432-navigating-the-challenges-of-real-estate-investing-with-alan-siebenaler",
+      "videoId": "Z63-_Hzvl8A",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "431-building-a-better-world-online-niching-down-and-authentic-storytelling-with-eric-ressler",
+      "videoId": "ioZTtCdpk98",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "430-sharing-authentic-stories-with-dan-davis",
+      "videoId": "JSh0awib1Oc",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "429-conquering-uncertainty-the-only-way-is-through-with-scott-stirrett",
+      "videoId": "4L5sAc68pJE",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "428-winning-the-cybersecurity-war-with-kaizen-and-christian-espinosa",
+      "videoId": "s0eDzzClFeQ",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "427-unlocking-business-growth-with-jason-kruger",
+      "videoId": "j1p7tP7yDs4",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "426-from-studio-to-stadium-life-on-the-road-and-the-art-of-live-sound-with-ken-pooch-van-druten",
+      "videoId": "9HT_3oZP8Go",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "425-from-turntables-to-technology-with-dj-qbert",
+      "videoId": "vMbOuhOrVp0",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "424-revolutionizing-our-energy-future-with-ammonia-with-greg-vezina",
+      "videoId": "kaPAKyqrY9Q",
+      "featured": false,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "423-the-intersection-of-science-and-entrepreneurship-with-curtis-sprouse",
+      "videoId": "wk1bqU6Ksqk",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "422-the-power-of-choice-in-life-and-business-with-jones-loflin",
+      "videoId": "64-jO5kt34o",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "421-bob-burg-on-unlocking-success-with-the-go-giver-philosophy",
+      "videoId": "KwVoGIkJRcU",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "420-unlocking-unlimited-funding-in-real-estate-with-jay-conner",
+      "videoId": "zWaAtliaWWQ",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "419-from-leeds-to-rock-stardom-the-space-hog-journey-with-antony-langdon",
+      "videoId": "nokew8IU5Tg",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "418-from-gloucestershire-to-global-fame-and-back-again-with-james-atkin-of-emf",
+      "videoId": "fDAdWAdGy74",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "417-building-what-you-need-and-the-power-of-open-source-with-david-young",
+      "videoId": "Nb0Ma7L8ERs",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "416-unlocking-real-estate-success-with-ai-and-liat-arama",
+      "videoId": "4uYURrh0ws4",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "415-trading-fast-fashion-for-smart-wardrobes-with-anya-cheng",
+      "videoId": "8-6QtxVCuY0",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "413-a-founder-s-guide-to-understanding-venture-capital-with-jason-kirby",
+      "videoId": "kCTncT_jAwE",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "411-the-future-of-personal-branding-in-sports-beyond-with-dave-behar",
+      "videoId": "KuremnNFGis",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "410-building-trust-through-the-human-touch-with-tyler-dunagin",
+      "videoId": "uEgGvF77PgA",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "409-the-role-of-humanity-in-marketing-with-ryan-chute",
+      "videoId": "jWcpaRpPf7M",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "408-retirement-planning-for-entrepreneurs-with-ed-meek",
+      "videoId": "W7KrqUnEJ-Q",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "407-ai-s-transformative-role-in-modern-marketing-with-perry-marshall",
+      "videoId": "CEgYCIVSODQ",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "404-unlocking-the-future-of-personal-ai-with-suman-kanuganti",
+      "videoId": "imCKI3Zuc1w",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "403-mastering-e-commerce-profitability-with-adam-callinan",
+      "videoId": "amWihboP5tA",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "402-building-a-home-service-empire-insights-from-swoop-scoop-with-william-milliken",
+      "videoId": "-mQeRPQthcc",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "401-cracking-the-franchise-code-insider-secrets-for-success-with-adam-goldman",
+      "videoId": "11QWj2NLkOI",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "400-unlocking-the-ai-human-paradox-with-bruce-d-randall",
+      "videoId": "Nr4ohfYuErc",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "398-technology-tickets-and-tangents-catching-up-with-mike-ryan",
+      "videoId": "ZaiqQUOXLdw",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "396-the-role-of-ai-in-the-future-of-marketing-online-with-avi-kumar",
+      "videoId": "nCojqsXQ4UE",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "395-how-to-survive-and-thrive-under-any-economic-conditions-with-alejandro-szita",
+      "videoId": "0fNH_eUKVfw",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "394-the-limitations-of-employer-based-health-insurance-with-marshall-darr",
+      "videoId": "sRj5zz3a4ro",
+      "featured": false,
+      "collections": [
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "393-the-evolution-of-a-ceo-with-jon-morris",
+      "videoId": "YtO_uX13yfM",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "392-unlocking-health-the-power-of-heart-rate-variability-with-dr-torkil-f-r",
+      "videoId": "8W-T__Rep-Q",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "391-navigating-the-tech-landscape-with-benjamin-johnson",
+      "videoId": "PWyRyCb9KQY",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "390-exploring-cultural-roots-through-music-with-josh-rogosin",
+      "videoId": "Lnm-06uR6xs",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "389-bouncing-back-from-business-failure-with-jose-berlanga",
+      "videoId": "8QDsm7tbL9w",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "387-the-art-of-strategic-decision-making-with-anthony-taylor",
+      "videoId": "C8Iox8O4Lq4",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "386-transforming-leadership-and-the-power-of-we-with-kyle-mcdowell",
+      "videoId": "IU8HotHdI5w",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "384-cultivating-a-high-touch-customer-experience-with-alex-levin",
+      "videoId": "O4czzz0rsp0",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "383-building-a-strong-brand-foundation-and-navigating-audience-perception-with-deevo-tindall",
+      "videoId": "p4GwnqUniSk",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "382-solving-subscription-business-challenges-with-nick-fogle",
+      "videoId": "VD2wT4F5v6M",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "381-the-power-of-unique-brand-experiences-with-andrew-howlett",
+      "videoId": "jngsHBcmoHU",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "380-the-importance-of-positioning-in-selling-a-business-with-jonathan-baker",
+      "videoId": "V_mnQoKPxdw",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "379-reprogramming-success-making-a-bold-career-shift-with-zac-wellsandt",
+      "videoId": "rLtf8lf1-dw",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "378-the-impact-of-exceptional-customer-service-with-mike-and-ryan",
+      "videoId": "QGWECc9WvZg",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "375-unlocking-the-value-of-precious-metals-with-michael-arries",
+      "videoId": "M82HctVeDo0",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "374-the-money-mindset-emotions-and-financial-freedom-with-bob-wheeler",
+      "videoId": "uOYdWQiQJJ4",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "373-mindfulness-in-the-marketplace-merging-business-and-purpose-with-dr-eric-holsapple",
+      "videoId": "EnwdQg1Mxso",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "372-40-years-of-revolutionizing-the-technology-of-live-music-with-robert-scovill",
+      "videoId": "4IGHzY6feQk",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "371-from-working-at-facebook-to-successful-entrepreneur-with-aj-mizes",
+      "videoId": "n1PdDxcoqMI",
+      "featured": false,
+      "collections": [
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "370-bootstrapping-your-business-vs-seeking-outside-funding-with-manny-skevofilax",
+      "videoId": "mjmaHCgFs8M",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "368-the-limitations-of-employer-based-health-insurance",
+      "videoId": "sRj5zz3a4ro",
+      "featured": false,
+      "collections": [
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "367-the-entrepreneurial-mindset-lessons-from-tony-carlston",
+      "videoId": "gff5tZC5mNk",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "364-advance-into-retirement-with-eric-d-brotman",
+      "videoId": "OohYaPnU9i4",
+      "featured": false,
+      "collections": [
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "359-podcasting-strategies-and-service-business-growth-with-steve-gordon",
+      "videoId": "FeFO4pu7GlI",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "352-adapting-to-change-when-growing-a-tech-startup-with-josh-little",
+      "videoId": "H89fvBqg4z8",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "350-revolution-riffs-and-road-stories-behind-the-scenes-with-authority-zero-s-frontman-jason-devore",
+      "videoId": "NKXWq5-UY5Q",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "349-unlock-media-success-small-business-pr-secrets-with-mickie-kennedy",
+      "videoId": "qxGmeyU8Rjk",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "348-grow-your-business-through-sponsorship-with-ken-ungar",
+      "videoId": "kWv_kIxvIHs",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "347-delegate-your-way-to-growth-leverage-tech-to-scale-your-business-with-maddy-martin",
+      "videoId": "nIUogqmov_Q",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "346-short-term-rental-secrets-exposed-how-i-made-10k-a-month-with-no-experience-with-j-massey",
+      "videoId": "zRwru6dlN1M",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "345-mastering-the-marketing-game-mike-snyder-s-revolutionary-insights-on-ai-strategy-and-success",
+      "videoId": "XRWyLy9hg-8",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "344-fresh-start-reflecting-and-connecting-with-ryan-mike-a-new-year-s-journey-on-eggs",
+      "videoId": "jiHmsX6RbTI",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "343-unlock-your-financial-potential-with-powerful-money-strategies-for-entrepreneurs-with-tracey-bis",
+      "videoId": "Uc2WUGX0mEs",
+      "featured": false,
+      "collections": [
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "339-double-your-revenue-in-90-days-with-simon-severino",
+      "videoId": "VguQRWwjegs",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "336-the-accidental-agency-owner-s-journey-to-saas-stardom-with-joe-ardeeser",
+      "videoId": "967KjG3dnhg",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "335-leading-a-digital-first-approach-to-social-change-with-eric-ressler",
+      "videoId": "T1mswqoFVXA",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "333-learning-leadership-in-a-fast-paced-tech-environment-with-caleb-mellas",
+      "videoId": "by6azqjEswA",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "332-the-greatest-environmental-challenges-facing-us-today-and-how-to-solve-them-with-dave-borlace",
+      "videoId": "2wr7l8NwC9Q",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "331-crafting-a-successful-product-launch-through-a-powerful-brand-story-with-liliana-pertenava",
+      "videoId": "yQCdTTc_j-4",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "329-embracing-a-life-of-integrity-with-brent-perkins",
+      "videoId": "GoFdGfIWY4g",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "327-how-to-win-at-real-estate-investing-when-the-market-sucks-with-alan-siebenaler",
+      "videoId": "idF1tXIDxTA",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "325-conquering-fear-to-build-better-teams-and-scale-with-kurt-uhlir",
+      "videoId": "qmGvwJhdrII",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "324-finding-your-passion-and-achieving-your-goals-with-cliff-beach",
+      "videoId": "MhoD6s1JkMY",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "323-the-global-guide-to-sourcing-promotional-products-with-isaac-hetzroni",
+      "videoId": "YspeI1C7xiY",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "322-leveraging-your-experience-to-evolve-your-business-with-jake-hurwitz",
+      "videoId": "M2DcbaEKW6w",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "321-building-and-scaling-a-business-when-times-are-tough-with-paul-hickey",
+      "videoId": "nQ7D9TVHNts",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "320-utilizing-automation-to-build-powerful-efficient-money-making-machines-with-daniel-abbate",
+      "videoId": "y8vuNo-mqzM",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "319-from-ideation-to-exit-a-conversation-with-reza-farahani",
+      "videoId": "GnEbfTEPqYE",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "318-lance-graulich-you-don-t-have-to-be-rich-to-get-into-franchising-with-lance-graulich",
+      "videoId": "Hkdk_G7WbGw",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "317-what-not-to-do-when-buying-real-estate-with-damion-lupo",
+      "videoId": "0UA5brlVK2Q",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "316-overcoming-adversity-to-become-a-marketing-powerhouse-with-chantel-soumis",
+      "videoId": "bkwq1zMVjzY",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "315-if-not-now-when-building-a-sustainable-career-doing-what-you-love-with-b-jeffrey-madoff",
+      "videoId": "OcZGc6lKYto",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "314-uncovering-your-genius-zone-with-josh-steimle",
+      "videoId": "dKR9Z7VDr7I",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "313-next-level-strategies-for-growing-creative-agencies-with-robert-patin",
+      "videoId": "b6TvIXv2HgA",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "312-leveraging-linkedin-to-find-jobs-in-tech-with-ryan-talbert",
+      "videoId": "mSikf7hqOx8",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "311-how-to-find-your-perfect-audience-with-john-edmonds-kozma",
+      "videoId": "Q3KyswGBlC4",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "310-how-to-profitably-scale-your-business-with-adam-rundle",
+      "videoId": "sUEjWgVNMXk",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "309-understanding-emerging-trends-in-tech-with-max-podkidkin",
+      "videoId": "ezloeLB0EO8",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "308-revolutionize-your-business-and-life-in-just-90-days-with-brad-sugars",
+      "videoId": "KUM7Zk3FySc",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "307-the-future-is-now-exploring-ai-and-the-future-of-jobs-in-tech-with-bassem-dghaidi",
+      "videoId": "y4SLyprvO2I",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "306-trips-tech-and-staying-true-to-our-values-with-the-eggs-crew",
+      "videoId": "9cpXLNRBVI4",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "304-implementing-a-powerful-and-effective-marketing-strategy-with-john-smiddy",
+      "videoId": "_Jx6ZZP8bGY",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "303-utilize-marketing-to-deliver-measurable-business-results-with-mark-stouse",
+      "videoId": "wl_ajE5QbAg",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "302-launching-your-startup-the-right-way-with-karthik-suresh",
+      "videoId": "eq6GmzyCBgw",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "301-building-a-7-figure-business-leveraging-airbnb-arbitrage-with-jorge-contreras",
+      "videoId": "tB1RqbLvaoc",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "300-raising-venture-capital-the-right-way-with-jason-kirby",
+      "videoId": "kCTncT_jAwE",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "299-uncovering-hidden-profit-in-your-business-with-chris-hervichon",
+      "videoId": "U1Oh0teeCuY",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "295-leading-a-team-made-up-of-the-smartest-people-in-the-room-with-christian-espinosa",
+      "videoId": "ve24bvn5SsE",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "294-revolutionize-your-marketing-with-artificial-intelligence-and-chris-carr",
+      "videoId": "A1feCR9lwkg",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "293-how-to-truly-protect-your-business-and-personal-information-with-michal-cizek",
+      "videoId": "0wJK6xbrsXs",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "292-how-ai-will-help-you-realize-the-potential-of-humanity-with-suman-kanuganti",
+      "videoId": "imCKI3Zuc1w",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "291-finding-success-with-social-media-marketing-with-tony-restell",
+      "videoId": "mU_zBls6K5s",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "289-40-years-of-revolutionizing-the-technology-of-live-music-with-robert-scovill",
+      "videoId": "4IGHzY6feQk",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "288-kicking-off-holidays-with-the-eggs-crew-ryan-and-mike",
+      "videoId": "7takWcNIm1c",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "287-learn-networking-strategies-that-will-supercharge-your-job-search-with-christy-rosen",
+      "videoId": "WOkTqNI7Z_M",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "286-uncover-your-hidden-purpose-with-dr-eric-holsapple",
+      "videoId": "EnwdQg1Mxso",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "285-the-role-of-artificial-intelligence-in-human-resources-with-phil-strazzulla",
+      "videoId": "RnG9toIav5s",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "284-finding-your-dream-job-in-the-tech-business-with-taylor-desseyn",
+      "videoId": "vb6Z0bSSCkE",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "283-creating-a-meaningful-customer-experience-with-aaron-weiche",
+      "videoId": "TugIstxQT9M",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "282-a-conversation-with-the-eggs-crew-mike-and-ryan",
+      "videoId": "UjAloV3SBpY",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "281-evolve-your-mindset-and-discover-your-authentic-self-with-brian-bogert",
+      "videoId": "j8RmdnRPvw8",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "280-creating-a-company-culture-that-fuels-collective-performance-with-gustavo-razzetti",
+      "videoId": "vXbpe2SSHEQ",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "279-everything-you-need-to-know-about-brand-tracking-with-angeley-mullins",
+      "videoId": "F5YDjqddTsU",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "278-developing-a-growth-mindset-from-the-ground-up-with-ryan-niddel",
+      "videoId": "Ap77nawv9DU",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "277-developing-a-conscious-leadership-mindset-with-jeff-deckman",
+      "videoId": "xpTI5trWYjk",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "276-how-to-survive-and-thrive-under-any-economic-conditions-with-alejandro-szita",
+      "videoId": "0fNH_eUKVfw",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "275-helping-hydrogen-energy-enter-the-mainstream-with-stacey-smith",
+      "videoId": "VPdPOcHkrkc",
+      "featured": false,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "274-reclaiming-and-reconnecting-with-our-authentic-creative-selves-with-albert-flynn-desilver",
+      "videoId": "FNfW_FU1HPU",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "273-navigating-the-path-to-financial-freedom-with-bob-wheeler",
+      "videoId": "uOYdWQiQJJ4",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "272-creating-your-realistic-path-to-a-million-dollar-business-with-jason-yormark",
+      "videoId": "kv-MREKjDHQ",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "271-how-to-grow-revenue-and-scale-a-product-launch-with-referrals-and-raul-galera",
+      "videoId": "tBUVt_j0v_Q",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "270-starting-scaling-and-selling-your-business-with-chad-rubin",
+      "videoId": "oSTFi7okw4g",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "269-growing-not-one-but-two-companies-amid-pandemic-by-howie-zales",
+      "videoId": "1xLx6Qf82Qw",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "268-positioning-your-business-for-acquisition-with-thomas-smale",
+      "videoId": "Sr4EGcpi0w0",
+      "featured": false,
+      "collections": [
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "267-starting-and-scaling-a-business-during-a-global-pandemic-with-ian-foster",
+      "videoId": "Ci35JfsQKbE",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "266-employing-self-leadership-to-unlock-personal-potential-with-andrew-ryder",
+      "videoId": "xr-j8UzwMsw",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "265-grow-your-business-today-with-a-powerful-seo-strategy-and-vikas-singal",
+      "videoId": "FEZjDT1sZms",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "264-thriving-through-adversity-and-successful-living-with-bew-white",
+      "videoId": "MBcQGlABLv0",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "263-crafting-an-impactful-narrative-for-your-organization-with-guillaume-wiatr",
+      "videoId": "TywFWx5KqYc",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "262-developing-an-adaptable-mindset-in-a-constantly-changing-world-with-robert-overweg",
+      "videoId": "0Yk-xnQvATs",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "261-building-and-scaling-a-remote-team-with-andy-cabasso",
+      "videoId": "toud_Ak20aM",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "260-protect-your-intellectual-property-through-an-effective-patent-strategy-with-thomas-franklin",
+      "videoId": "L6HPWimOXfc",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "259-grow-your-reputionation-and-revenue-through-effective-podcasting-with-roger-nairn",
+      "videoId": "jTWABP_spoE",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "258-creating-a-world-class-social-networking-experience-with-josh-simons",
+      "videoId": "NoSuegmJJEE",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "256-life-scaping-and-compassionate-business-building-with-monique-allen",
+      "videoId": "owROpjTDako",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "254-catching-up-with-mike-and-ryan-the-eggs-crew",
+      "videoId": "lXASrFi2Kfw",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "253-crafting-a-diy-plan-for-financial-fitness-with-aryeh-sheinbein",
+      "videoId": "mD3cJxEYgHU",
+      "featured": false,
+      "collections": [
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "252-avoid-burnout-and-become-financially-resilient-with-john-briggs",
+      "videoId": "u4WlilZQ_Ys",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "251-adapting-to-change-when-growing-a-tech-startup-with-josh-little",
+      "videoId": "ZlEjWh-gfW8",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "250-why-cybersecurity-is-everyone-s-business-with-scott-schober",
+      "videoId": "K1MWtjjh6QU",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "249-uncovering-and-leading-with-your-authentic-self-with-drew-smith",
+      "videoId": "F_X8cOa8u_0",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "248-become-a-better-leader-by-becoming-a-better-communicator-with-shawna-schuh",
+      "videoId": "gnvLVnjEwgw",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "247-build-a-7-figure-business-without-sacrificing-your-wellbeing-with-isaac-ho",
+      "videoId": "kVWzfWD2jsc",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "246-amplify-your-business-with-data-driven-content-marketing-strategies-with-julia-gifford",
+      "videoId": "13XqZrBltZs",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "245-double-your-revenue-in-90-days-with-simon-severino",
+      "videoId": "VguQRWwjegs",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "244-making-financial-literacy-accessible-with-john-stoj",
+      "videoId": "pjHqRWm4UiM",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "243-build-your-empire-by-investing-in-land-with-jack-bosch-aka-the-land-guy",
+      "videoId": "_mTWMTL5tfs",
+      "featured": false,
+      "collections": [
+        "Real Estate",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "242-grow-your-business-through-sponsorship-with-ken-ungar",
+      "videoId": "kWv_kIxvIHs",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "241-scaling-your-business-authentically-with-kathy-bowman-atkins",
+      "videoId": "EZFV7lyLqh4",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "239-buying-and-selling-small-businesses-and-building-multigenerational-wealth-with-carl-allen",
+      "videoId": "u2krXOkxIHs",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "238-the-philosophy-of-life-business-and-finding-your-happiness-with-grant-aldrich",
+      "videoId": "-3eFavs0KlU",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "237-retrain-your-brain-for-a-life-of-abundance-and-personal-freedom-with-thais-gibson",
+      "videoId": "YZw4elD5EoE",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "236-better-leadership-through-better-communication-with-comedian-and-business-coach-marcus",
+      "videoId": "scVwyLMux_E",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "235-self-help-self-love-and-living-a-legendary-life-with-tommy-breedlove",
+      "videoId": "DEptV6BWK9k",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "234-the-real-value-of-human-relationships-with-mark-e-green",
+      "videoId": "g_PJKOZnukA",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "233-conquer-imposter-syndrome-and-start-podcasting-now-with-kelly-glover",
+      "videoId": "Y0zDFO6ZCvs",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Sports, Music, and Entertainment",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "232-overcoming-addiction-and-building-million-dollar-companies-with-michael-g-dash",
+      "videoId": "s5UJaeUjiEw",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "231-career-pivots-and-personal-growth-in-real-time-with-mike-and-ryan",
+      "videoId": "ytcWLwLQBrA",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "230-making-the-software-development-process-more-affordable-with-ryan-vice",
+      "videoId": "Wdnf1C_spuw",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "229-how-to-sell-your-online-business-for-top-dollar-with-joe-valley",
+      "videoId": "s944YWuUrsw",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "228-finding-and-hiring-top-talent-in-tech-with-chase-kocher",
+      "videoId": "wITn8-EjM7I",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "227-making-a-career-pivot-for-a-happier-and-healthier-life-with-zac-wellsandt",
+      "videoId": "rLtf8lf1-dw",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "226-the-greatest-environmental-challenges-facing-us-today-and-how-to-solve-them-with-dave-borlace",
+      "videoId": "2wr7l8NwC9Q",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "225-building-an-environment-to-fuel-your-success-with-marcus-bellringer-bell",
+      "videoId": "cZHdGGaT65o",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "224-maximizing-communication-to-build-better-relationships-with-robbie-kramer",
+      "videoId": "fVLdVFvCLlk",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "223-cutting-it-up-with-world-renowned-turntablist-dj-q-bert",
+      "videoId": "3ILAvc4siLs",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "222-ammonia-for-a-cleaner-greener-energy-future-with-greg-vezina",
+      "videoId": "KhtWiK9A4ww",
+      "featured": false,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "221-grow-your-ecommerce-company-by-6-to-7-figures-with-tyler-sully-sullivan",
+      "videoId": "-Gd7yMFl64o",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "220-financial-planning-and-mindful-money-management-with-jonathon-deyoe",
+      "videoId": "NkKO9fxEzEI",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "219-wrapping-up-the-summer-with-mike-and-ryan",
+      "videoId": "ACtFjf9FiRI",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "215-wine-business-and-the-business-of-wine-with-aubrey-terrazas",
+      "videoId": "8Kr-f7i7zdc",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "212-learning-how-to-grow-a-life-changing-side-hustle-with-scotty-russell",
+      "videoId": "zHw7nMyFdcY",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "211-hydrogen-and-the-localized-production-of-much-needed-oxygen-with-dr-amit-roy",
+      "videoId": "hMxcbYHOIpQ",
+      "featured": false,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "210-utilizing-automation-to-build-powerful-efficient-money-making-machines-with-daniel-abbate",
+      "videoId": "y8vuNo-mqzM",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "209-the-importance-of-deep-listening-and-becoming-a-great-listener-with-oscar-trimboli",
+      "videoId": "dU_sJl4hlMM",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "208-bringing-time-honored-crafts-to-the-masses-through-television-with-j-neilson",
+      "videoId": "MerZfn4JfEA",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "207-the-entrepreneur-s-journey-and-how-to-stand-out-in-a-crowd-with-jeroen-corthout",
+      "videoId": "TevocO35wsw",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "206-starting-a-new-business-and-career-pivots-with-hosts-mike-and-ryan",
+      "videoId": "XHppEpQ1Br4",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "205-aligning-teams-to-overcome-internal-sabotage-and-digital-product-failure-with-jonathon-hensley",
+      "videoId": "Y32eMJBNT70",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "204-creating-and-implementing-an-extraordinary-company-culture-with-scott-porter",
+      "videoId": "RpP7NtvDF9g",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "203-blockchain-and-the-future-of-the-crypto-economy-with-nicholas-prouten",
+      "videoId": "7aPZi19yaS4",
+      "featured": false,
+      "collections": [
+        "Technology",
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "202-building-a-business-and-staying-competitive-during-a-pandemic-with-paul-hickey",
+      "videoId": "nQ7D9TVHNts",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "201-leveraging-social-media-in-marketing-and-maximizing-outreach-with-miruna-dragomir-of-planable",
+      "videoId": "5KfQEapNTpE",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "200-revolutionizing-the-hip-hop-art-form-w-founding-member-of-the-x-ecutioners-dj-rob-swift",
+      "videoId": "G69PKh80VTw",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment",
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "195-andrew-murphy-director-of-hydrogen-and-energy-transition-at-rhc-imzadi-new-energy-consulting",
+      "videoId": "D6mmSonJgII",
+      "featured": false,
+      "collections": [
+        "Technology"
+      ]
+    },
+    {
+      "slug": "194-chris-leonard-podcaster-and-director-of-audio-at-ims-technology-services",
+      "videoId": "F1xDHA41Mnc",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "182-dr-jeff-gusky-e-r-doctor-covid-19-researcher",
+      "videoId": "_Dkmb9rlxf4",
+      "featured": false,
+      "collections": [
+        "Personal Growth and Development"
+      ]
+    },
+    {
+      "slug": "177-eggs-177-chris-rabold-foh-engineer-for-bruno-mars-and-lady-gaga",
+      "videoId": "0bKNwNfpQqM",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "155-lori-hibma-founder-and-ceo-at-cp-solutions-and-vmd-services",
+      "videoId": "pgXtb5dAMi4",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "154-ken-pooch-van-druten-co-founder-and-director-of-sound-at-nvdvm",
+      "videoId": "9mo4xqOnmK4",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "149-george-papadeas-chief-operating-officer-at-the-hoth",
+      "videoId": "rOgz9yp8WjE",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "148-raitis-purins-head-of-marketing-at-printful",
+      "videoId": "QjbKfJJ1Gow",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "146-tracey-bissett-president-and-chief-financial-fitness-trainer-at-bissett-financial-fitness-inc",
+      "videoId": "Uc2WUGX0mEs",
+      "featured": false,
+      "collections": [
+        "Personal Finance"
+      ]
+    },
+    {
+      "slug": "145-carl-gould-business-growth-expert-and-entrepreneur",
+      "videoId": "iaKzSbc1v3Y",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "141-jennifer-peek-founder-of-peek-advisory-group",
+      "videoId": "g6kZNfRLG1U",
+      "featured": false,
+      "collections": [
+        "Personal Finance",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "140-larry-ludwig-entrepreneur-tech-digital-marketing-guru",
+      "videoId": "-XGZpvpwKt8",
+      "featured": false,
+      "collections": [
+        "Marketing",
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "137-dr-karen-hardy-risk-management-expert-author-and-speaker",
+      "videoId": "vbSMGXh0qZQ",
+      "featured": false,
+      "collections": [
+        "Business Leadership"
+      ]
+    },
+    {
+      "slug": "135-eggy-award-nominations-and-christmas-with-scott-foster",
+      "videoId": "gwdzN9QOM1w",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "131-melvin-figueroa-web-designer-branding-expert-and-the-founder-of-mello-multimedia",
+      "videoId": "l7Yj9kpxdmM",
+      "featured": false,
+      "collections": [
+        "Marketing"
+      ]
+    },
+    {
+      "slug": "84-musicians-and-stars-of-discovery-s-bering-sea-gold-ian-and-scott-foster",
+      "videoId": "4FYlGal1d5Q",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "24-dj-phase-dj-and-radio-producer-extraordinaire",
+      "videoId": "hty1Dg4i_Ic",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "22-dj-tamm-seattle-based-dj-and-radio-personality",
+      "videoId": "qcQgm5MMR1c",
+      "featured": false,
+      "collections": [
+        "Sports, Music, and Entertainment"
+      ]
+    },
+    {
+      "slug": "10-practice-makes-perfect-seriously-thats-the-title",
+      "videoId": "KY-OuMAXxbs",
+      "featured": false,
+      "collections": []
+    },
+    {
+      "slug": "483-curiosity-driven-leadership-with-jon-beebe",
+      "videoId": "XZ7Gf37v778",
+      "featured": false,
+      "collections": []
+    }
+  ]
+}
