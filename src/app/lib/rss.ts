@@ -829,13 +829,20 @@ export type FetchRssEpisodesOptions = {
  */
 export async function fetchRssEpisodes(options?: FetchRssEpisodesOptions): Promise<Episode[]> {
   const url = options?.feedUrl ?? resolvePodcastRssUrl();
+  const fetchUrl =
+    url.startsWith('http') && !url.includes('_eggs=')
+      ? `${url}${url.includes('?') ? '&' : '?'}_eggs=${Date.now()}`
+      : url;
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await fetch(fetchUrl, {
       ...options?.init,
+      cache: 'no-store',
       headers: {
         Accept: 'application/rss+xml, application/xml, text/xml, */*',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
         ...options?.init?.headers,
       },
     });

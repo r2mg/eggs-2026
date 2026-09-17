@@ -46,6 +46,7 @@ import { videoIdFromYouTubeWatchUrl, youtubeHqThumbnailUrl } from './youtubeThum
  */
 export const MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID: Record<string, string> = {
   '483-curiosity-driven-leadership-with-jon-beebe': 'XZ7Gf37v778',
+  '484-human-creativity-in-an-ai-world-with-joe-baron': 'fzmNjGNDrpQ',
 };
 
 // ---------------------------------------------------------------------------

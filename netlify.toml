@@ -29,11 +29,13 @@
 # Because the site is static, new episodes only appear after a rebuild. Neither Anchor /
 # Spotify for Podcasters nor YouTube emit a webhook we rely on, so we watch both feeds:
 #
-#   netlify/functions/check-new-episode.mjs  (scheduled hourly)
+#   netlify/functions/check-new-episode.mjs  (every 15 minutes, offset from the hour)
 #     → polls the Anchor RSS feed and the YouTube uploads Atom feed; when the newest
 #       RSS episode changes, or the newest **long-form** YouTube upload id changes,
 #       it POSTs the production build hook. Shorts/clips and metadata-only edits do
 #       not trigger a rebuild. Last-seen values are tracked in Netlify Blobs.
+#     → Checks at :07/:22/:37/:52 UTC so a 9:00 AM Mountain publish is not missed
+#       by racing the exact hour. Rebuilds still only happen when content actually changes.
 #     → `astro build` persists the YouTube matching catalog (Blobs) and on later
 #       builds only merges new long-form uploads, falling back to that catalog if
 #       the Data API is over quota.

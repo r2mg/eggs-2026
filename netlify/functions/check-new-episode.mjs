@@ -10,6 +10,9 @@
  *   - newest RSS episode id changed, or
  *   - newest **long-form** YouTube upload id changed
  *
+ * Runs four times an hour, at 7/22/37/52 minutes past (UTC), so a 9:00 AM Mountain
+ * publish is not missed by polling on the hour before RSS/YouTube have updated.
+ *
  * YouTube Shorts / clip uploads (hashtag-heavy titles) and metadata edits on the
  * current newest video do **not** trigger a rebuild. Those were causing full site
  * regenerations several times a day while the Data API re-downloaded the catalog.
@@ -94,8 +97,14 @@ function newestByPublished(items, getPublishedAt) {
 async function fetchLatestRssEpisodeId() {
   let xml;
   try {
-    const res = await fetch(RSS_FEED_URL, {
-      headers: { 'user-agent': USER_AGENT },
+    const rssUrl = `${RSS_FEED_URL}${RSS_FEED_URL.includes('?') ? '&' : '?'}_eggs=${Date.now()}`;
+    const res = await fetch(rssUrl, {
+      cache: 'no-store',
+      headers: {
+        'user-agent': USER_AGENT,
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
     });
     if (!res.ok) throw new Error(`RSS responded ${res.status}`);
     xml = await res.text();
@@ -132,7 +141,11 @@ async function fetchLatestYoutubeUploadState() {
   let xml;
   try {
     const res = await fetch(YOUTUBE_FEED_URL, {
-      headers: { 'user-agent': USER_AGENT },
+      cache: 'no-store',
+      headers: {
+        'user-agent': USER_AGENT,
+        'Cache-Control': 'no-cache',
+      },
     });
     if (!res.ok) throw new Error(`YouTube feed responded ${res.status}`);
     xml = await res.text();
@@ -252,5 +265,7 @@ export default async () => {
 };
 
 export const config = {
-  schedule: '@hourly',
+  // Offset from :00 UTC so Thursday 9:00 AM Mountain (15:00 UTC) is not a dead heat
+  // with the RSS/YouTube publish. Function is cheap; rebuilds still only run on change.
+  schedule: '7,22,37,52 * * * *',
 };

@@ -39,7 +39,11 @@ export async function fetchYouTubeAtomChannelData(): Promise<YouTubeChannelData>
   const data = emptyYouTubeChannelData();
   try {
     const res = await fetch(YOUTUBE_FEED_URL, {
-      headers: { 'user-agent': 'eggs-site-build/1.0' },
+      cache: 'no-store',
+      headers: {
+        'user-agent': 'eggs-site-build/1.0',
+        'Cache-Control': 'no-cache',
+      },
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) throw new Error(`Atom feed ${res.status}`);
