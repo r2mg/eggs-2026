@@ -31,8 +31,8 @@ import {
 import { getYouTubeChannelDataForBuild } from '../app/lib/youtubeChannelSync';
 import { buildYoutubeOverlaysForEpisodes } from '../app/lib/computeEpisodeYoutubeOverlay';
 import { applyYoutubeSlugSeed } from '../app/lib/youtubeSlugSeed';
-import { applyAtomOverlays, fetchYouTubeAtomChannelData } from '../app/lib/youtubeAtom';
-import { getFeaturedEpisodesInPlaylistOrder } from '../app/lib/youtubeFeaturedOrder';
+import { applyAtomOverlays, fetchFeaturedPlaylistVideoIds, fetchYouTubeAtomChannelData } from '../app/lib/youtubeAtom';
+import { episodesFromFeaturedVideoIds, getFeaturedEpisodesInPlaylistOrder } from '../app/lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../app/types/youtubeOverlay';
 import {
   EGGS_TOPIC_PLAYLIST_TITLES,
@@ -182,13 +182,28 @@ async function buildSiteContent(): Promise<SiteContent> {
 
   const youtubeEnabled = episodes.some((ep) => !!ep.youtubeVideoId);
 
-  // 4. Featured order from the editorial playlist; fall back to seeded featured, then recent.
-  let featured = getFeaturedEpisodesInPlaylistOrder(rss, channel)
-    .map((ep) => mergeEpisodeForDisplay(ep, overlays[ep.slug] ?? null));
+  // 4. Featured: public playlist Atom (quota-free), then Data API catalog, then seeded flags.
+  const featuredVideoIds = await fetchFeaturedPlaylistVideoIds();
+  let featured = episodesFromFeaturedVideoIds(
+    episodes,
+    featuredVideoIds,
+    overlays,
+    episodes[0]?.slug,
+  );
+  if (featured.length === 0) {
+    featured = getFeaturedEpisodesInPlaylistOrder(rss, channel, overlays)
+      .map((ep) => mergeEpisodeForDisplay(ep, overlays[ep.slug] ?? null))
+      .filter((ep) => ep.slug !== episodes[0]?.slug);
+  }
   if (featured.length === 0) {
     featured = episodes.filter((ep) => ep.featured && ep.slug !== episodes[0]?.slug);
   }
   if (featured.length === 0) featured = episodes.slice(1, 7);
+  if (featuredVideoIds.length > 0) {
+    console.log(
+      `[EGGS build] Featured playlist: ${featuredVideoIds.length} YouTube video(s) → ${featured.length} episode(s) on the homepage.`,
+    );
+  }
 
   cached = {
     episodes,

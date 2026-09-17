@@ -3,7 +3,7 @@
  * Only the newest ~15 uploads; enough to catch this week's long-form episode.
  */
 import { XMLParser } from 'fast-xml-parser';
-import { YOUTUBE_CHANNEL_ID } from '../config/youtubeChannel';
+import { KNOWN_PLAYLIST_IDS, YOUTUBE_CHANNEL_ID } from '../config/youtubeChannel';
 import type { Episode } from '../types/episode';
 import type { YoutubeEpisodeOverlay } from '../types/youtubeOverlay';
 import { isLikelyYouTubeShortTitle } from './youtubeShorts';
@@ -73,6 +73,45 @@ export async function fetchYouTubeAtomChannelData(): Promise<YouTubeChannelData>
     console.warn('[EGGS YouTube Atom] Feed load skipped:', err instanceof Error ? err.message : err);
   }
   return data;
+}
+
+/**
+ * Public playlist Atom — no Data API. Order follows the feed (same as the playlist page
+ * for the small EGGS Featured list). Caps around 15 items, which is enough for Featured.
+ */
+export async function fetchYouTubePlaylistOrderedVideoIds(playlistId: string): Promise<string[]> {
+  const url = `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`;
+  const ids: string[] = [];
+  try {
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'user-agent': 'eggs-site-build/1.0',
+        'Cache-Control': 'no-cache',
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`playlist Atom ${res.status}`);
+    const xml = await res.text();
+    const parsed = ATOM_XML_PARSER.parse(xml);
+    for (const entry of ensureArray(parsed?.feed?.entry)) {
+      const videoId =
+        pickString((entry as { 'yt:videoId'?: unknown })['yt:videoId']) ??
+        pickString((entry as { id?: unknown }).id)?.replace(/^yt:video:/, '');
+      if (!videoId || videoId.length !== 11 || ids.includes(videoId)) continue;
+      ids.push(videoId);
+    }
+    console.log(`[EGGS YouTube Atom] Playlist ${playlistId.slice(0, 8)}…: ${ids.length} video(s).`);
+  } catch (err) {
+    console.warn('[EGGS YouTube Atom] Playlist feed skipped:', err instanceof Error ? err.message : err);
+  }
+  return ids;
+}
+
+export async function fetchFeaturedPlaylistVideoIds(): Promise<string[]> {
+  const id = KNOWN_PLAYLIST_IDS.featured;
+  if (!id) return [];
+  return fetchYouTubePlaylistOrderedVideoIds(id);
 }
 
 export function applyAtomOverlays(
