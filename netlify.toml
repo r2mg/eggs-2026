@@ -57,6 +57,13 @@
   status = 302
   force = true
 
+# Short link for Nicole's guest-on-podcasts landing page.
+[[redirects]]
+  from = "/nicole"
+  to = "https://worldofmyimagination.com/want-to-be-a-guest-on-podcasts"
+  status = 302
+  force = true
+
 # Static asset caching for hashed build output.
 [[headers]]
   for = "/_astro/*"
