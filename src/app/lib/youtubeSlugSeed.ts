@@ -19,6 +19,14 @@ function seedEntries(): YoutubeSlugSeedEntry[] {
   return Array.isArray(entries) ? entries : [];
 }
 
+export function seedSlugToVideoIdMap(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const row of seedEntries()) {
+    if (row.slug && row.videoId) out[row.slug] = row.videoId;
+  }
+  return out;
+}
+
 function overlayFromSeed(row: YoutubeSlugSeedEntry): YoutubeEpisodeOverlay {
   return {
     youtubeVideoId: row.videoId,

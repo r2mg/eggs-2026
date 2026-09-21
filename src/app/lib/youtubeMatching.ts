@@ -12,13 +12,13 @@
  * keep them in the description). The best-scoring video wins if the score is high enough.
  *
  * **Order of decisions:**
- * 1. If the episode slug is listed in the manual map below → use that video id (always wins).
- * 2. Otherwise score every YouTube candidate; a small bonus is added if that video’s id
- *    already appears as a link in show notes (we trust the editor, but still compare titles).
- * 3. If the best score clears a safety threshold → open that video.
- * 4. If not, and we know the RSS guest name → try matching by **full guest name in the
- *    YouTube description** plus publish-date proximity (for re-titled public uploads).
- * 5. If still nothing → fall back to the first YouTube link found in show notes (old behavior).
+ * 1. Locked / pinned video id (manual map, saved slug map) — titles may change; ids do not.
+ * 2. Episode number in the YouTube title **or description** (`Eggs 407`, `EGGS Episode 407`).
+ *    Keep that line in the description when renaming for SEO.
+ * 3. Score title similarity, dates, and guest name; prefer the public retitled upload
+ *    over an older `Eggs NNN:` copy.
+ * 4. Guest name in the YouTube description plus publish-date proximity.
+ * 5. First YouTube link in RSS show notes.
  *
  * **Guest name** comes from the RSS title (“… with Jane Doe”) and is checked in both
  * the YouTube title and description.
@@ -369,8 +369,40 @@ function resolvedYouTubeFromCandidate(
 }
 
 /**
- * When SEO-optimized YouTube titles no longer resemble the RSS title, match on the guest
- * name appearing in the YouTube description plus a reasonable publish-date window.
+ * Episode number in the YouTube title or description — survives SEO retitles if the
+ * renaming tool keeps a line like `EGGS 407` in the description.
+ */
+function youtubeTextHasEpisodeNumber(text: string | undefined, episodeNumber: number): boolean {
+  if (!text?.trim() || !Number.isFinite(episodeNumber)) return false;
+  return new RegExp(`(?:eggs|episode)\\s*#?\\s*0*${episodeNumber}\\b`, 'i').test(text);
+}
+
+function resolveByEpisodeNumber(
+  episode: Episode,
+  candidateIds: Iterable<string>,
+  catalogById: Map<string, YoutubeCandidate>,
+): string | null {
+  const n = episode.episodeNumber;
+  if (n === undefined || !Number.isFinite(n)) return null;
+  const hits: string[] = [];
+  for (const videoId of candidateIds) {
+    const candidate = catalogById.get(videoId);
+    if (!candidate) continue;
+    if (
+      youtubeTextHasEpisodeNumber(candidate.title, n) ||
+      youtubeTextHasEpisodeNumber(candidate.description, n)
+    ) {
+      hits.push(videoId);
+    }
+  }
+  if (hits.length === 0) return null;
+  const first = hits[0]!;
+  return hits.length === 1 ? first : preferPublicYoutubeVersion(episode, first, hits, catalogById);
+}
+
+/**
+ * When SEO titles no longer resemble the RSS title, match on guest name in the
+ * YouTube description plus a reasonable publish-date window.
  */
 function resolveByGuestInDescription(
   episode: Episode,
@@ -406,18 +438,17 @@ function resolveByGuestInDescription(
  * Pick the best YouTube match for this RSS episode: watch link, video id, poster URL, and
  * YouTube title when we know it (from the playlist feed).
  */
-export function resolveYouTubeForEpisode(episode: Episode, youtubeCatalog: YoutubeCandidate[]): ResolvedYouTube {
+export function resolveYouTubeForEpisode(
+  episode: Episode,
+  youtubeCatalog: YoutubeCandidate[],
+  lockedVideoId?: string,
+): ResolvedYouTube {
   const catalogById = new Map(youtubeCatalog.map((c) => [c.videoId, c]));
 
-  const manualId = MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID[episode.slug]?.trim();
-  if (manualId) {
-    const c = catalogById.get(manualId);
-    return {
-      watchUrl: watchUrlFromVideoId(manualId),
-      videoId: manualId,
-      thumbnailUrl: posterForCandidate(c, manualId),
-      youtubeTitle: c?.title,
-    };
+  const pinned =
+    lockedVideoId?.trim() || MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID[episode.slug]?.trim();
+  if (pinned && pinned.length === 11) {
+    return resolvedYouTubeFromCandidate(catalogById, pinned);
   }
 
   const idsInHtml = extractAllYouTubeVideoIdsFromHtml(episode.descriptionHtml);
@@ -440,6 +471,11 @@ export function resolveYouTubeForEpisode(episode: Episode, youtubeCatalog: Youtu
       };
     }
     return {};
+  }
+
+  const byNumber = resolveByEpisodeNumber(episode, candidateIds, catalogById);
+  if (byNumber) {
+    return resolvedYouTubeFromCandidate(catalogById, byNumber);
   }
 
   let bestId: string | null = null;

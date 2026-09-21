@@ -32,6 +32,7 @@ import { getYouTubeChannelDataForBuild } from '../app/lib/youtubeChannelSync';
 import { buildYoutubeOverlaysForEpisodes } from '../app/lib/computeEpisodeYoutubeOverlay';
 import { applyYoutubeSlugSeed } from '../app/lib/youtubeSlugSeed';
 import { applyAtomOverlays, fetchFeaturedPlaylistVideoIds, fetchYouTubeAtomChannelData } from '../app/lib/youtubeAtom';
+import { loadYoutubeEpisodeMap, overlayVideoIds, saveYoutubeEpisodeMap } from '../app/lib/youtubeEpisodeMap';
 import { episodesFromFeaturedVideoIds, getFeaturedEpisodesInPlaylistOrder } from '../app/lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../app/types/youtubeOverlay';
 import {
@@ -165,8 +166,9 @@ async function buildSiteContent(): Promise<SiteContent> {
   const youtubeResult = await getYouTubeChannelDataForBuild();
   const channel = youtubeResult.data;
 
-  // 3. Match + merge overlays. If the Data API is down, reuse the last baked matches + public Atom.
-  const overlays = buildYoutubeOverlaysForEpisodes(rss, channel);
+  // 3. Match + merge overlays. Locked video ids survive YouTube title renames.
+  const lockedVideoIds = await loadYoutubeEpisodeMap();
+  const overlays = buildYoutubeOverlaysForEpisodes(rss, channel, lockedVideoIds);
   const seedApplied = applyYoutubeSlugSeed(overlays, rss);
   const atom = await fetchYouTubeAtomChannelData();
   const atomApplied = applyAtomOverlays(overlays, rss, atom);
@@ -175,6 +177,7 @@ async function buildSiteContent(): Promise<SiteContent> {
       `[EGGS build] YouTube fallback overlays: ${seedApplied} from saved matches, ${atomApplied} from Atom feed.`,
     );
   }
+  await saveYoutubeEpisodeMap({ ...lockedVideoIds, ...overlayVideoIds(overlays) });
 
   const episodes = rss
     .map((ep) => mergeEpisodeForDisplay(ep, overlays[ep.slug] ?? null))
