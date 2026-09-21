@@ -48,6 +48,7 @@ export const MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID: Record<string, string> = {
   '483-curiosity-driven-leadership-with-jon-beebe': 'XZ7Gf37v778',
   '472-lead-anyway-with-greg-hoover': '4SywEx93y3E',
   '443-closing-the-gap-between-belief-and-breakthrough-with-david-neagle': '0c6Eeo_WmwA',
+  '354-startup-success-ryan-carson-s-journey-in-building-an-ai-driven-company': 'yYbWJ1_P21o',
   '484-human-creativity-in-an-ai-world-with-joe-baron': 'fzmNjGNDrpQ',
 };
 
@@ -69,6 +70,8 @@ const MIN_GUEST_IN_DESCRIPTION_FOR_FALLBACK = 1;
 const MIN_DATE_SCORE_FOR_GUEST_DESCRIPTION_FALLBACK = 0.55;
 /** Extra points when this video id is already linked in show notes */
 const BONUS_LINKED_IN_SHOW_NOTES = 0.18;
+/** Extra points when the YouTube title includes the same episode number (e.g. “Eggs 354”). */
+const BONUS_EPISODE_NUMBER_IN_TITLE = 0.32;
 
 /** Below this total, we refuse to guess and fall back to the raw link in show notes (if any). */
 const MIN_SCORE_TO_ACCEPT_MATCH = 0.38;
@@ -291,6 +294,15 @@ function scoreEpisodeAgainstCandidate(
 
   if (idsLinkedInHtml.has(candidate.videoId)) {
     total += BONUS_LINKED_IN_SHOW_NOTES;
+  }
+
+  const episodeNo = episode.episodeNumber;
+  if (
+    episodeNo !== undefined &&
+    Number.isFinite(episodeNo) &&
+    new RegExp(`(?:eggs\\s+|episode\\s+)${episodeNo}\\b`, 'i').test(candidate.title)
+  ) {
+    total += BONUS_EPISODE_NUMBER_IN_TITLE;
   }
 
   return Math.min(1, total);

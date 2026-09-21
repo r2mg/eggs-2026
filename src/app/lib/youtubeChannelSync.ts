@@ -297,7 +297,10 @@ async function resolveYouTubeCatalogForBuild(): Promise<YoutubeCatalogForBuild> 
     return { data: emptyYouTubeChannelData(), source: 'empty' };
   }
 
-  const needsFull = !persisted || !cacheIsFresh(persisted.lastFullFetchAt);
+  const needsFull =
+    !persisted ||
+    !cacheIsFresh(persisted.lastFullFetchAt) ||
+    (hasCache && cached.videosById.size < 350);
 
   try {
     resetYouTubeRequestCount();

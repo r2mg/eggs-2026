@@ -634,9 +634,20 @@ export function splitRssEpisodeDescriptionForDetailPage(
 
 /** “Eggs 461: Topic with Jane Doe” → “Jane Doe” */
 export function extractGuestFromTitle(title: string): string | undefined {
-  const m = title.match(/\s+with\s+(.+)$/i);
-  const name = m?.[1]?.trim();
-  return name || undefined;
+  const withM = title.match(/\s+with\s+(.+)$/i);
+  const withName = withM?.[1]?.trim();
+  if (withName) return withName;
+
+  const pipeM = title.match(/\|\s*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3})\s*$/);
+  const pipeName = pipeM?.[1]?.trim();
+  if (pipeName) return pipeName;
+
+  // "Startup Success: Ryan Carson's Journey…" — possessive guest, no "with".
+  const possM = title.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'s\b/);
+  const possName = possM?.[1]?.trim();
+  if (possName) return possName;
+
+  return undefined;
 }
 
 /**

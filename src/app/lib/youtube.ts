@@ -31,14 +31,17 @@ import {
   isPlaylistExcludedFromYouTubeMerge,
   titleMatchesPlaylist,
 } from '../config/youtubeChannel';
+import { isLikelyYouTubeShortTitle } from './youtubeShorts';
 
 const API_ROOT = 'https://www.googleapis.com/youtube/v3';
 
 // ---------------------------------------------------------------------------
 // Fetch limits (keeps first paint fast — tune in one place)
 // ---------------------------------------------------------------------------
-/** Uploads list is newest-first; this many items is plenty for RSS title matching */
-const YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS = 450;
+/** How many **long-form** uploads to keep (Shorts do not count — they would otherwise crowd out 2023–2024 episodes). */
+const YOUTUBE_UPLOADS_LONG_FORM_TARGET = 500;
+/** Safety cap: 40 pages × 50 = 2,000 newest uploads scanned (~40 Data API units). */
+const YOUTUBE_UPLOADS_MAX_PAGES = 40;
 /** Per EGGS topic / editorial playlist (each is usually much smaller than uploads) */
 const YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS = 200;
 /** How many playlistItem requests run at once (each playlist still pages sequentially).
@@ -338,6 +341,11 @@ export type PlaylistItemRow = {
 export async function fetchPlaylistItemsUpTo(
   playlistId: string,
   maxItems: number,
+  options?: {
+    /** When set, only these rows count toward `maxItems` (e.g. skip Shorts when paging uploads). */
+    countTowardCap?: (row: PlaylistItemRow) => boolean;
+    maxPages?: number;
+  },
 ): Promise<PlaylistItemRow[]> {
   const key = getYouTubeApiKey();
   if (!key) return [];
@@ -345,8 +353,13 @@ export async function fetchPlaylistItemsUpTo(
   const out: PlaylistItemRow[] = [];
   let token: string | undefined;
   const cap = Number.isFinite(maxItems) ? maxItems : Number.MAX_SAFE_INTEGER;
+  const countTowardCap = options?.countTowardCap;
+  const maxPages = options?.maxPages;
+  let counted = 0;
+  let pages = 0;
 
   do {
+    pages += 1;
     const page = await youtubeGet<ApiPage<PlaylistItemRow>>('playlistItems', {
       part: 'snippet,contentDetails',
       playlistId,
@@ -356,8 +369,12 @@ export async function fetchPlaylistItemsUpTo(
     const batch = page.items ?? [];
     for (const row of batch) {
       out.push(row);
-      if (out.length >= cap) return out;
+      if (!countTowardCap || countTowardCap(row)) {
+        counted += 1;
+        if (counted >= cap) return out;
+      }
     }
+    if (maxPages && pages >= maxPages) break;
     token = page.nextPageToken;
   } while (token);
 
@@ -531,14 +548,24 @@ export async function fetchYouTubeChannelData(
       batch.map(async (pid) => {
         const meta = playlists.find((p) => p.id === pid);
         const playlistTitle = meta?.title ?? '(playlist)';
-        const maxItems =
-          uploadsPlaylistId && pid === uploadsPlaylistId
-            ? YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS
-            : YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS;
+        const isUploads = !!(uploadsPlaylistId && pid === uploadsPlaylistId);
+        const maxItems = isUploads ? YOUTUBE_UPLOADS_LONG_FORM_TARGET : YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS;
         console.log(
-          `[EGGS YouTube API] Fetching playlist "${playlistTitle}" (≤${maxItems} items)…`,
+          `[EGGS YouTube API] Fetching playlist "${playlistTitle}" (≤${maxItems} ${isUploads ? 'long-form ' : ''}items)…`,
         );
-        const items = await fetchPlaylistItemsUpTo(pid, maxItems);
+        const items = await fetchPlaylistItemsUpTo(
+          pid,
+          maxItems,
+          isUploads
+            ? {
+                countTowardCap: (row) => {
+                  const title = row.snippet?.title;
+                  return !isLikelyYouTubeShortTitle(title) && !isAudioEditionVideoTitle(title);
+                },
+                maxPages: YOUTUBE_UPLOADS_MAX_PAGES,
+              }
+            : undefined,
+        );
         return { pid, playlistTitle, items };
       }),
     );
@@ -578,7 +605,7 @@ export async function fetchYouTubeChannelData(
   }
 
   console.log(
-    `[EGGS YouTube API] Playlist fetch caps: uploads ≤${YOUTUBE_UPLOADS_PLAYLIST_MAX_ITEMS} items, other lists ≤${YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS} items each. Data API requests this fetch: ${youtubeRequestCount}.`,
+    `[EGGS YouTube API] Playlist fetch caps: uploads ≤${YOUTUBE_UPLOADS_LONG_FORM_TARGET} long-form (max ${YOUTUBE_UPLOADS_MAX_PAGES} pages), other lists ≤${YOUTUBE_OTHER_PLAYLIST_MAX_ITEMS} items each. Data API requests this fetch: ${youtubeRequestCount}.`,
   );
 
   return {
