@@ -49,6 +49,8 @@ export const MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID: Record<string, string> = {
   '472-lead-anyway-with-greg-hoover': '4SywEx93y3E',
   '443-closing-the-gap-between-belief-and-breakthrough-with-david-neagle': '0c6Eeo_WmwA',
   '354-startup-success-ryan-carson-s-journey-in-building-an-ai-driven-company': 'yYbWJ1_P21o',
+  '407-ai-s-transformative-role-in-modern-marketing-with-perry-marshall': 'CEgYCIVSODQ',
+  '454-the-evolution-of-marketing-embracing-change-with-perry-marshall': 'Po7YsltWWOo',
   '484-human-creativity-in-an-ai-world-with-joe-baron': 'fzmNjGNDrpQ',
 };
 
@@ -308,6 +310,42 @@ function scoreEpisodeAgainstCandidate(
   return Math.min(1, total);
 }
 
+function isEggsNumberedTitle(title: string | undefined): boolean {
+  return !!title && /^eggs\s+\d+\s*:/i.test(title.trim());
+}
+
+/**
+ * Many episodes have two YouTube uploads: the original “Eggs 407: …” title and a later
+ * public title (“Marketing, AI, and the 80/20 Rule | Perry Marshall”). Prefer the public one.
+ */
+function preferPublicYoutubeVersion(
+  episode: Episode,
+  bestId: string,
+  candidateIds: Iterable<string>,
+  catalogById: Map<string, YoutubeCandidate>,
+): string {
+  const best = catalogById.get(bestId);
+  if (!isEggsNumberedTitle(best?.title)) return bestId;
+
+  const guest = episode.guest?.trim() || extractGuestFromTitle(episode.title);
+  let chosen = bestId;
+  let chosenDate = dateProximityScore(episode.publishedAt, best?.publishedAt);
+
+  for (const videoId of candidateIds) {
+    if (videoId === bestId) continue;
+    const candidate = catalogById.get(videoId);
+    if (!candidate?.title || isEggsNumberedTitle(candidate.title)) continue;
+    if (guest && guestNameOverlapInText(guest, candidate.title) < 1) continue;
+    const dateScore = dateProximityScore(episode.publishedAt, candidate.publishedAt);
+    if (dateScore < 0.35) continue;
+    if (chosen === bestId || dateScore > chosenDate) {
+      chosen = videoId;
+      chosenDate = dateScore;
+    }
+  }
+  return chosen;
+}
+
 function watchUrlFromVideoId(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
@@ -423,7 +461,8 @@ export function resolveYouTubeForEpisode(episode: Episode, youtubeCatalog: Youtu
   }
 
   if (bestId && bestScore >= MIN_SCORE_TO_ACCEPT_MATCH) {
-    return resolvedYouTubeFromCandidate(catalogById, bestId);
+    const publicId = preferPublicYoutubeVersion(episode, bestId, candidateIds, catalogById);
+    return resolvedYouTubeFromCandidate(catalogById, publicId);
   }
 
   const guestDescriptionMatch = resolveByGuestInDescription(episode, candidateIds, catalogById);

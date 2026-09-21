@@ -30,7 +30,7 @@ function overlayFromSeed(row: YoutubeSlugSeedEntry): YoutubeEpisodeOverlay {
   };
 }
 
-/** Fill gaps only — never replace a Data API / Atom match. */
+/** Prefer the saved public YouTube match. Catalog matching often keeps the older “Eggs NNN:” upload. */
 export function applyYoutubeSlugSeed(
   overlays: Record<string, YoutubeEpisodeOverlay | null>,
   episodes: Episode[],
@@ -38,10 +38,18 @@ export function applyYoutubeSlugSeed(
   const bySlug = new Map(seedEntries().map((row) => [row.slug, row]));
   let applied = 0;
   for (const ep of episodes) {
-    if (overlays[ep.slug]?.youtubeVideoId) continue;
     const row = bySlug.get(ep.slug);
     if (!row?.videoId) continue;
-    overlays[ep.slug] = overlayFromSeed(row);
+    const existing = overlays[ep.slug];
+    if (existing?.youtubeVideoId === row.videoId) continue;
+    const seeded = overlayFromSeed(row);
+    overlays[ep.slug] = {
+      ...seeded,
+      featured: existing?.featured || seeded.featured,
+      featuredRank: existing?.featuredRank,
+      collections: existing?.collections?.length ? existing.collections : seeded.collections,
+      startHere: existing?.startHere,
+    };
     applied += 1;
   }
   return applied;
