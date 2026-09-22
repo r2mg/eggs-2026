@@ -1,30 +1,19 @@
 /**
- * RSS episode ↔ YouTube video matching (forgiving, score-based)
- * ==============================================================
+ * RSS episode ↔ YouTube video matching
+ * =====================================
  *
- * **What this file does (plain English):**
- * The podcast RSS feed does not always include a clean YouTube link in show notes, and
- * YouTube titles do not always follow the same wording as the RSS title. This module
- * compares an RSS episode to a list of YouTube videos (usually from your channel’s
- * public playlist feed) using several “signals” at once — title similarity, shared
- * words, how close the publish dates are, and guest-name overlap in the YouTube **title
- * or description** (optimized YouTube uploads often drop the guest from the title but
- * keep them in the description). The best-scoring video wins if the score is high enough.
+ * **Stable identity is the YouTube video id.** Titles and descriptions can be rewritten
+ * for SEO; the id does not change. Once a slug is locked to an id, later builds reuse it
+ * and never re-guess from wording.
  *
- * **Order of decisions:**
- * 1. Locked / pinned video id (manual map, saved slug map) — titles may change; ids do not.
- * 2. Episode number in the YouTube title **or description** (`Eggs 407`, `EGGS Episode 407`).
- *    Keep that line in the description when renaming for SEO.
- * 3. Score title similarity, dates, and guest name; prefer the public retitled upload
- *    over an older `Eggs NNN:` copy.
- * 4. Guest name in the YouTube description plus publish-date proximity.
- * 5. First YouTube link in RSS show notes.
+ * **First-time match (no locked id yet):**
+ * 1. Guest name from the RSS title (“… with Jane Doe”) in the YouTube title or description,
+ *    plus a close publish date. Prefer the public retitled upload over an older `Eggs NNN:` copy.
+ * 2. If there is no parseable guest, fall back to title similarity (legacy).
+ * 3. Last resort: a YouTube link already in the RSS show notes.
  *
- * **Guest name** comes from the RSS title (“… with Jane Doe”) and is checked in both
- * the YouTube title and description.
- *
- * **Posters / thumbnails:** Use `resolveYouTubeForEpisode()` — it returns `thumbnailUrl`
- * (playlist image when available, otherwise a public `i.ytimg.com` URL) plus `watchUrl` and `videoId`.
+ * You do **not** need to keep the show title, episode number, or any special line in the
+ * YouTube description after the video exists.
  */
 
 import type { Episode } from '../types/episode';
@@ -67,9 +56,10 @@ const WEIGHT_DATE_PROXIMITY = 0.22;
 /** How much we trust the guest name (from RSS) appearing in the YouTube title or description */
 const WEIGHT_GUEST_OVERLAP = 0.16;
 
-/** Guest-in-description + date fallback when re-titled uploads miss the title score threshold */
-const MIN_GUEST_IN_DESCRIPTION_FOR_FALLBACK = 1;
-const MIN_DATE_SCORE_FOR_GUEST_DESCRIPTION_FALLBACK = 0.55;
+/** Full guest-name overlap required for a first-time identity match. */
+const MIN_GUEST_OVERLAP_FOR_IDENTITY = 1;
+/** ~30 days — weekly episodes plus a delayed YouTube upload still line up. */
+const MIN_DATE_SCORE_FOR_IDENTITY = 0.55;
 /** Extra points when this video id is already linked in show notes */
 const BONUS_LINKED_IN_SHOW_NOTES = 0.18;
 /** Extra points when the YouTube title includes the same episode number (e.g. “Eggs 354”). */
@@ -369,69 +359,37 @@ function resolvedYouTubeFromCandidate(
 }
 
 /**
- * Episode number in the YouTube title or description — survives SEO retitles if the
- * renaming tool keeps a line like `EGGS 407` in the description.
+ * First-time match: same guest (title or description) and a close publish date.
+ * Title wording is ignored. Prefers the public retitled upload when two copies exist.
  */
-function youtubeTextHasEpisodeNumber(text: string | undefined, episodeNumber: number): boolean {
-  if (!text?.trim() || !Number.isFinite(episodeNumber)) return false;
-  return new RegExp(`(?:eggs|episode)\\s*#?\\s*0*${episodeNumber}\\b`, 'i').test(text);
-}
-
-function resolveByEpisodeNumber(
+function resolveByGuestAndDate(
   episode: Episode,
   candidateIds: Iterable<string>,
   catalogById: Map<string, YoutubeCandidate>,
 ): string | null {
-  const n = episode.episodeNumber;
-  if (n === undefined || !Number.isFinite(n)) return null;
-  const hits: string[] = [];
+  const guest = episode.guest?.trim() || extractGuestFromTitle(episode.title);
+  if (!guest) return null;
+
+  const hits: { id: string; dateScore: number; publicTitle: boolean }[] = [];
   for (const videoId of candidateIds) {
     const candidate = catalogById.get(videoId);
     if (!candidate) continue;
-    if (
-      youtubeTextHasEpisodeNumber(candidate.title, n) ||
-      youtubeTextHasEpisodeNumber(candidate.description, n)
-    ) {
-      hits.push(videoId);
-    }
+    const guestScore = Math.max(
+      guestNameOverlapInText(guest, candidate.title),
+      guestNameOverlapInText(guest, candidate.description),
+    );
+    if (guestScore < MIN_GUEST_OVERLAP_FOR_IDENTITY) continue;
+    const dateScore = dateProximityScore(episode.publishedAt, candidate.publishedAt);
+    if (dateScore < MIN_DATE_SCORE_FOR_IDENTITY) continue;
+    hits.push({
+      id: videoId,
+      dateScore,
+      publicTitle: !isEggsNumberedTitle(candidate.title),
+    });
   }
   if (hits.length === 0) return null;
-  const first = hits[0]!;
-  return hits.length === 1 ? first : preferPublicYoutubeVersion(episode, first, hits, catalogById);
-}
-
-/**
- * When SEO titles no longer resemble the RSS title, match on guest name in the
- * YouTube description plus a reasonable publish-date window.
- */
-function resolveByGuestInDescription(
-  episode: Episode,
-  candidateIds: Iterable<string>,
-  catalogById: Map<string, YoutubeCandidate>,
-): ResolvedYouTube {
-  const guestFromRss = episode.guest?.trim() || extractGuestFromTitle(episode.title);
-  if (!guestFromRss) return {};
-
-  let bestId: string | null = null;
-  let bestDateScore = -1;
-
-  for (const videoId of candidateIds) {
-    const candidate = catalogById.get(videoId);
-    if (!candidate?.description?.trim()) continue;
-
-    const guestScore = guestNameOverlapInText(guestFromRss, candidate.description);
-    if (guestScore < MIN_GUEST_IN_DESCRIPTION_FOR_FALLBACK) continue;
-
-    const dateScore = dateProximityScore(episode.publishedAt, candidate.publishedAt);
-    if (dateScore < MIN_DATE_SCORE_FOR_GUEST_DESCRIPTION_FALLBACK) continue;
-
-    if (dateScore > bestDateScore) {
-      bestDateScore = dateScore;
-      bestId = videoId;
-    }
-  }
-
-  return bestId ? resolvedYouTubeFromCandidate(catalogById, bestId) : {};
+  hits.sort((a, b) => Number(b.publicTitle) - Number(a.publicTitle) || b.dateScore - a.dateScore);
+  return hits[0]!.id;
 }
 
 /**
@@ -473,9 +431,9 @@ export function resolveYouTubeForEpisode(
     return {};
   }
 
-  const byNumber = resolveByEpisodeNumber(episode, candidateIds, catalogById);
-  if (byNumber) {
-    return resolvedYouTubeFromCandidate(catalogById, byNumber);
+  const byGuestAndDate = resolveByGuestAndDate(episode, candidateIds, catalogById);
+  if (byGuestAndDate) {
+    return resolvedYouTubeFromCandidate(catalogById, byGuestAndDate);
   }
 
   let bestId: string | null = null;
@@ -499,11 +457,6 @@ export function resolveYouTubeForEpisode(
   if (bestId && bestScore >= MIN_SCORE_TO_ACCEPT_MATCH) {
     const publicId = preferPublicYoutubeVersion(episode, bestId, candidateIds, catalogById);
     return resolvedYouTubeFromCandidate(catalogById, publicId);
-  }
-
-  const guestDescriptionMatch = resolveByGuestInDescription(episode, candidateIds, catalogById);
-  if (guestDescriptionMatch.videoId) {
-    return guestDescriptionMatch;
   }
 
   const fallbackUrl = extractYouTubeUrl(episode.descriptionHtml);

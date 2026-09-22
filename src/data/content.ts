@@ -9,8 +9,8 @@
  *  1. Download the Anchor RSS feed and parse it into stable `Episode` rows (existing `rss.ts`).
  *  2. Load/update the saved YouTube catalog (full refresh at most daily; otherwise newest uploads only).
  *     Quota failures reuse the last good catalog instead of publishing RSS-only pages.
- *  3. Match every episode to its YouTube video and merge the overlay (thumbnail, embed, featured,
- *     topics) into the episode — deterministically, with the full dataset available.
+ *  3. Match each RSS episode to a YouTube **video id** (guest + date on first seen; locked thereafter
+ *     so title/description edits do not break Watch links). Merge overlay fields for display.
  *  4. Derive guests and topics so we can statically generate `/guests/*` and `/topics/*` pages.
  *
  * Every Astro page imports `getSiteContent()` in its server-side frontmatter, so the resulting

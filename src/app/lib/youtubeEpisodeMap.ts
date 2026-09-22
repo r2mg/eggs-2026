@@ -2,7 +2,7 @@
  * Locked RSS slug → YouTube video id.
  *
  * Titles change when videos are renamed for SEO. The 11-character video id does not.
- * Once we have a match, later builds reuse it instead of re-scoring titles.
+ * Once we have a match, later builds reuse it and never re-score titles or descriptions.
  *
  * Production: Netlify Blobs (same store as the channel catalog). Local: `.cache/youtube-episode-map.json`.
  */
