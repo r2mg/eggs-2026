@@ -153,28 +153,85 @@ export function buildEpisodeSlug(options: {
 }
 
 // ---------------------------------------------------------------------------
-// Chapters & summary (Anchor HTML show notes)
+// Chapters & summary (Anchor HTML show notes — plus rewritten / plain notes)
 // ---------------------------------------------------------------------------
 
 /**
- * Pulls chapter lines like `00:00 Introduction` from the “Chapters” section of
- * the HTML description. Returns `undefined` if that section is not found.
+ * Section titles in show notes. SEO rewrites often drop `<strong>`, use
+ * `Timestamps` instead of `Chapters`, add a colon, or leave the label lowercase.
+ */
+const RSS_HEADING_OPEN = `<(?:p|div|h[1-6])\\b[^>]*>\\s*(?:<(?:strong|b|em|span)[^>]*>\\s*)*`;
+const RSS_HEADING_CLOSE = `\\s*:?\\s*(?:</(?:strong|b|em|span)>\\s*)*</(?:p|div|h[1-6])>`;
+
+function rssHeadingRegex(labelPattern: string): RegExp {
+  return new RegExp(`${RSS_HEADING_OPEN}(?:${labelPattern})${RSS_HEADING_CLOSE}`, 'i');
+}
+
+function findRssHeading(
+  html: string,
+  labelPattern: string,
+): { index: number; length: number } | undefined {
+  const m = rssHeadingRegex(labelPattern).exec(html);
+  if (!m || m.index === undefined) return undefined;
+  return { index: m.index, length: m[0].length };
+}
+
+/** Headings that end a Summary / Takeaways / Chapters slice. */
+const RSS_NEXT_SECTION_LABEL =
+  '(?:Key\\s+)?Takeaways|Chapters|Timestamps|Credits|Resources|Links|Summary|Learn more|How to Connect[^<]{0,60}|Connect with[^<]{0,60}|The Plugs|The Carton|The Eggs Podcast Spotify playlist';
+
+/** One-line labels that look like a section title, not episode summary copy. */
+const RSS_SECTION_LABEL_ONLY =
+  /^(?:key\s+)?(takeaways|chapters|credits|timestamps|resources|links|summary|show notes|overview|topics|guests?|learn more)$/i;
+
+function sliceHtmlAfterHeadingUntilNext(
+  html: string,
+  heading: { index: number; length: number },
+): string {
+  const rest = html.slice(heading.index + heading.length);
+  const next = findRssHeading(rest, RSS_NEXT_SECTION_LABEL);
+  return (next ? rest.slice(0, next.index) : rest).trim();
+}
+
+function removeRssSection(html: string, labelPattern: string): string {
+  const heading = findRssHeading(html, labelPattern);
+  if (!heading) return html;
+  const rest = html.slice(heading.index + heading.length);
+  const next = findRssHeading(rest, RSS_NEXT_SECTION_LABEL);
+  const end = heading.index + heading.length + (next ? next.index : rest.length);
+  return `${html.slice(0, heading.index)}${html.slice(end)}`.trim();
+}
+
+function stripEmptyRssParagraphs(html: string): string {
+  return html.replace(/(?:<p>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>\s*)+/gi, '').trim();
+}
+
+/**
+ * Pulls chapter lines like `00:00 Introduction` from a Chapters or Timestamps
+ * section. Returns `undefined` if that section is not found.
  */
 export function extractChaptersFromDescriptionHtml(html: string): EpisodeChapter[] | undefined {
-  const header = /<strong>\s*Chapters\s*<\/strong>\s*<\/p>/i;
-  const found = header.exec(html);
-  if (!found) return undefined;
+  const heading = findRssHeading(html, 'Chapters|Timestamps');
+  if (!heading) return undefined;
 
-  // Only scan after the Chapters heading so we do not pick up random timestamps earlier in the HTML.
-  const tail = html.slice(found.index + found[0].length);
+  const section = sliceHtmlAfterHeadingUntilNext(html, heading);
   const chapters: EpisodeChapter[] = [];
-  // Match paragraphs that start with a timestamp (MM:SS or HH:MM:SS)
-  const line = /<p>\s*(\d{1,2}:\d{2}(?::\d{2})?)\s+([^<]+?)\s*<\/p>/gi;
+  const line = /<p\b[^>]*>\s*(\d{1,2}:\d{2}(?::\d{2})?)\s+[-–—:]?\s*([^<]+?)\s*<\/p>/gi;
   let m: RegExpExecArray | null;
-  while ((m = line.exec(tail)) !== null) {
+  while ((m = line.exec(section)) !== null) {
     const title = stripHtmlTags(decodeBasicHtmlEntities(m[2])).trim();
     if (title) chapters.push({ time: m[1], title });
     if (chapters.length > 250) break;
+  }
+  if (chapters.length === 0) {
+    const plain = stripHtmlTags(decodeBasicHtmlEntities(section.replace(/<br\s*\/?>/gi, '\n')));
+    for (const ln of plain.split(/\n+/)) {
+      const cm = ln.trim().match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s+[-–—:]?\s*(.+)$/);
+      if (cm?.[1] && cm[2]?.trim()) {
+        chapters.push({ time: cm[1], title: cm[2].trim() });
+        if (chapters.length > 250) break;
+      }
+    }
   }
   return chapters.length > 0 ? chapters : undefined;
 }
@@ -183,25 +240,37 @@ export function extractChaptersFromDescriptionHtml(html: string): EpisodeChapter
  * First paragraph under the “Summary” heading in the HTML description.
  */
 export function extractSummaryFromDescriptionHtml(html: string): string | undefined {
-  const m = html.match(/<strong>\s*Summary\s*<\/strong>\s*<\/p>\s*<p>([\s\S]*?)<\/p>/i);
-  if (!m) return undefined;
-  const plain = stripHtmlTags(decodeBasicHtmlEntities(m[1])).trim();
+  const heading = findRssHeading(html, 'Summary');
+  if (!heading) return undefined;
+  const section = sliceHtmlAfterHeadingUntilNext(html, heading);
+  const p = section.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i);
+  const raw = p?.[1] ?? section;
+  const plain = stripHtmlTags(decodeBasicHtmlEntities(raw)).trim();
   return plain || undefined;
 }
 
 /**
- * Bullet list under the “Takeaways” heading in show notes (Anchor HTML).
+ * Bullet list (or rewritten paragraph list) under a Takeaways heading.
  */
 export function extractTakeawaysFromDescriptionHtml(html: string): string[] | undefined {
-  const m = html.match(/<strong>\s*Takeaways\s*<\/strong>\s*<\/p>\s*<ul>([\s\S]*?)<\/ul>/i);
-  if (!m) return undefined;
-  const ul = m[1];
+  const heading = findRssHeading(html, '(?:Key\\s+)?Takeaways');
+  if (!heading) return undefined;
+  const section = sliceHtmlAfterHeadingUntilNext(html, heading);
   const out: string[] = [];
-  const li = /<li>([\s\S]*?)<\/li>/gi;
+  const li = /<li\b[^>]*>([\s\S]*?)<\/li>/gi;
   let row: RegExpExecArray | null;
-  while ((row = li.exec(ul)) !== null) {
+  while ((row = li.exec(section)) !== null) {
     const t = stripHtmlTags(decodeBasicHtmlEntities(row[1])).trim();
     if (t) out.push(t);
+  }
+  if (out.length === 0) {
+    const pRe = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+    while ((row = pRe.exec(section)) !== null) {
+      const t = stripHtmlTags(decodeBasicHtmlEntities(row[1])).replace(/\s+/g, ' ').trim();
+      if (!t || RSS_SECTION_LABEL_ONLY.test(t)) continue;
+      if (/^\d{1,2}:\d{2}(?::\d{2})?\s/.test(t)) continue;
+      out.push(t.replace(/^[-*•–]\s+/, '').trim());
+    }
   }
   return out.length > 0 ? out : undefined;
 }
@@ -268,27 +337,17 @@ function normalizePlainForRssDedupe(htmlOrText: string): string {
  * Stops before the next section whose title matches Takeaways, Chapters, Credits, etc.
  */
 /**
- * Where structured sections (Takeaways, Chapters, …) usually start in Anchor-style HTML.
+ * Where structured sections (Takeaways, Chapters, …) usually start.
  * Used only to cap the “head” of the description when guessing a summary for **older** episodes
- * that never added a `<strong>Summary</strong>` block.
+ * that never added a Summary heading.
  */
-const RSS_DETAIL_SECTION_START_PATTERNS: RegExp[] = [
-  /<p\b[^>]*>\s*<strong>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i,
-  /<p\b[^>]*>\s*<b>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i,
-  /<h[1-6]\b[^>]*>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i,
-];
-
 function indexOfFirstRssDetailSection(html: string): number {
-  let min = Infinity;
-  for (const re of RSS_DETAIL_SECTION_START_PATTERNS) {
-    const idx = html.search(re);
-    if (idx >= 0 && idx < min) min = idx;
-  }
-  return min === Infinity ? -1 : min;
+  const found = findRssHeading(
+    html,
+    '(?:Key\\s+)?Takeaways|Chapters|Timestamps|Credits|Resources|Links',
+  );
+  return found ? found.index : -1;
 }
-
-/** One-line labels that look like a section title, not episode summary copy. */
-const RSS_SECTION_LABEL_ONLY = /^(takeaways|chapters|credits|timestamps|resources|links|summary|show notes|overview|topics|guests?)$/i;
 
 /**
  * For older RSS notes without `<strong>Summary</strong>`: pick the first real `<p>…</p>` in the
@@ -363,14 +422,16 @@ export function splitRssMainHtmlAfterSummaryHeading(mainHtml: string | undefined
     return { summaryParagraphsHtml: undefined, bodyHtml: undefined };
   }
   const html = mainHtml.trim();
-  const headerRe = /<p\b[^>]*>\s*<strong>\s*Summary\s*<\/strong>\s*<\/p>/i;
-  const h = headerRe.exec(html);
+  const h = findRssHeading(html, 'Summary');
   if (!h) {
     return { summaryParagraphsHtml: undefined, bodyHtml: html };
   }
 
-  let rest = html.slice(h.index + h[0].length).replace(/^\s+/, '');
-  const nextSectionRe = /^<p\b[^>]*>\s*<strong>\s*(Takeaways|Chapters|Credits|Timestamps|Resources|Links)\b/i;
+  let rest = html.slice(h.index + h.length).replace(/^\s+/, '');
+  const nextSectionRe = new RegExp(
+    `^${RSS_HEADING_OPEN}(?:(?:Key\\s+)?Takeaways|Chapters|Timestamps|Credits|Resources|Links)${RSS_HEADING_CLOSE}`,
+    'i',
+  );
   const chunks: string[] = [];
 
   while (rest.length) {
@@ -378,8 +439,10 @@ export function splitRssMainHtmlAfterSummaryHeading(mainHtml: string | undefined
     if (nextSectionRe.test(rest)) break;
     const pM = rest.match(/^<p\b[^>]*>[\s\S]*?<\/p>/i);
     if (!pM) break;
-    chunks.push(pM[0]);
+    const plain = stripHtmlTags(decodeBasicHtmlEntities(pM[0])).replace(/\s+/g, ' ').trim();
     rest = rest.slice(pM[0].length);
+    if (!plain) continue;
+    chunks.push(pM[0]);
   }
 
   const summaryParagraphsHtml = chunks.length > 0 ? chunks.join('\n') : undefined;
@@ -555,6 +618,11 @@ export type RssEpisodeDetailDescriptionSplit = {
   summaryHtml: string | undefined;
   /** Rest of show notes (still HTML): overview copy, embedded lists, etc. — no Credits tail. */
   bodyHtml: string | undefined;
+  /**
+   * Notes that are not the summary, takeaways list, or chapter list — guest links,
+   * “Learn more”, extra prose after a rewrite, etc.
+   */
+  supplementalHtml: string | undefined;
   /** Sidebar credits slice (from the word “Credits” onward). */
   creditsHtml: string | undefined;
 };
@@ -582,6 +650,7 @@ export const EGGS_DEFAULT_SHOW_CREDITS_HTML = `
  * 3. If that heading is missing, try {@link extractFallbackSummaryParagraphFromRssMainHtml} so older
  *    episodes still get summary HTML from the first real paragraph before Takeaways / Chapters / etc.
  * 4. Strip duplicate opening paragraphs that match the plain RSS `summary` so the main column does not repeat the blurb.
+ * 5. Pull leftover notes (Learn more, extra prose) after removing Takeaways / Chapters widgets.
  */
 export function splitRssEpisodeDescriptionForDetailPage(
   descriptionHtml: string | undefined,
@@ -595,6 +664,7 @@ export function splitRssEpisodeDescriptionForDetailPage(
       mainHtmlWithoutCredits: undefined,
       summaryHtml: undefined,
       bodyHtml: undefined,
+      supplementalHtml: undefined,
       creditsHtml,
     };
   }
@@ -602,10 +672,12 @@ export function splitRssEpisodeDescriptionForDetailPage(
   const { summaryParagraphsHtml, bodyHtml } = splitRssMainHtmlAfterSummaryHeading(main);
 
   if (summaryParagraphsHtml?.trim()) {
+    const body = bodyHtml?.trim() || undefined;
     return {
       mainHtmlWithoutCredits: main,
       summaryHtml: summaryParagraphsHtml.trim(),
-      bodyHtml: bodyHtml?.trim() || undefined,
+      bodyHtml: body,
+      supplementalHtml: extractSupplementalNotesHtml(body),
       creditsHtml,
     };
   }
@@ -619,13 +691,29 @@ export function splitRssEpisodeDescriptionForDetailPage(
     bodySourceForDedupe,
     summaryPlainFromFeed,
   );
+  const body = bodyStripped.trim() || undefined;
 
   return {
     mainHtmlWithoutCredits: main,
     summaryHtml: fallback.summaryHtml?.trim() || undefined,
-    bodyHtml: bodyStripped.trim() || undefined,
+    bodyHtml: body,
+    supplementalHtml: extractSupplementalNotesHtml(body),
     creditsHtml,
   };
+}
+
+/**
+ * Left-over show notes after Summary / Takeaways / Chapters are taken for their own UI blocks.
+ */
+export function extractSupplementalNotesHtml(mainHtml: string | undefined): string | undefined {
+  if (!mainHtml?.trim()) return undefined;
+  let rest = mainHtml;
+  rest = removeRssSection(rest, '(?:Key\\s+)?Takeaways');
+  rest = removeRssSection(rest, 'Chapters|Timestamps');
+  rest = stripEmptyRssParagraphs(rest);
+  const plain = stripHtmlTags(decodeBasicHtmlEntities(rest)).replace(/\s+/g, ' ').trim();
+  if (plain.length < 24) return undefined;
+  return rest;
 }
 
 // ---------------------------------------------------------------------------
@@ -749,27 +837,156 @@ function pubDateToIso(pubDate: string | undefined): string {
   return Number.isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString();
 }
 
+const RSS_BLOCK_HTML_RE = /<(?:p|div|ul|ol|li|h[1-6]|table)\b/i;
+const PLAIN_NOTES_HEADING =
+  /^(summary|takeaways|key takeaways|chapters|timestamps|credits|resources|links)(?:\s*:)?$/i;
+const PLAIN_NOTES_BULLET = /^\s*(?:[-*•]|–)\s+(.+)$/;
+const PLAIN_NOTES_CHAPTER = /^(\d{1,2}:\d{2}(?::\d{2})?)\s+[-–—:]?\s*(.+)$/;
+
+function canonPlainNotesHeading(raw: string): string {
+  const key = raw.replace(/:$/, '').trim().toLowerCase();
+  if (key === 'timestamps') return 'Chapters';
+  if (key === 'key takeaways') return 'Takeaways';
+  return key.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Turns untagged RSS / YouTube-style notes into the same paragraph HTML the rest of
+ * the parser already understands (`<p><strong>Summary</strong></p>`, chapter lines, etc.).
+ */
+export function wrapPlainShowNotesAsHtml(text: string): string {
+  const normalized = text.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n').map((l) => l.trimEnd());
+  const meaningful = lines.map((l) => l.trim()).filter(Boolean);
+  const hasStructure = meaningful.some(
+    (l) => PLAIN_NOTES_HEADING.test(l) || PLAIN_NOTES_BULLET.test(l) || PLAIN_NOTES_CHAPTER.test(l),
+  );
+
+  if (!hasStructure) {
+    const paras = normalized
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const source = paras.length > 0 ? paras : [normalized.trim()].filter(Boolean);
+    return source
+      .map((p) => `<p>${escapeHtmlTextContent(p).replace(/\n/g, '<br />')}</p>`)
+      .join('');
+  }
+
+  const parts: string[] = [];
+  let mode: 'prose' | 'takeaways' | 'chapters' = 'prose';
+  let takeaways: string[] = [];
+  let proseBuf: string[] = [];
+
+  const flushProse = () => {
+    if (proseBuf.length === 0) return;
+    parts.push(`<p>${escapeHtmlTextContent(proseBuf.join(' '))}</p>`);
+    proseBuf = [];
+  };
+  const flushTakeaways = () => {
+    if (takeaways.length === 0) return;
+    parts.push(
+      `<ul>${takeaways.map((t) => `<li>${escapeHtmlTextContent(t)}</li>`).join('')}</ul>`,
+    );
+    takeaways = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushProse();
+      continue;
+    }
+    if (PLAIN_NOTES_HEADING.test(line)) {
+      flushProse();
+      flushTakeaways();
+      const label = canonPlainNotesHeading(line);
+      parts.push(`<p><strong>${label}</strong></p>`);
+      if (/takeaways/i.test(label)) mode = 'takeaways';
+      else if (/chapters/i.test(label)) mode = 'chapters';
+      else mode = 'prose';
+      continue;
+    }
+    if (mode === 'takeaways') {
+      const b = line.match(PLAIN_NOTES_BULLET);
+      takeaways.push((b?.[1] ?? line).trim());
+      continue;
+    }
+    if (mode === 'chapters') {
+      const c = line.match(PLAIN_NOTES_CHAPTER);
+      if (c?.[1] && c[2]) {
+        parts.push(`<p>${escapeHtmlTextContent(`${c[1]} ${c[2].trim()}`)}</p>`);
+        continue;
+      }
+    }
+    const extraHead = line.match(/^(learn more|connect with\b.*|the plugs|the carton)\s*:?\s*$/i);
+    if (extraHead) {
+      flushProse();
+      flushTakeaways();
+      parts.push(`<p><strong>${escapeHtmlTextContent(line.replace(/:$/, ''))}</strong></p>`);
+      mode = 'prose';
+      continue;
+    }
+    proseBuf.push(line);
+  }
+  flushProse();
+  flushTakeaways();
+  return parts.join('');
+}
+
+/**
+ * Anchor’s current notes are HTML. Older episodes and SEO rewrites are often a
+ * single untagged blob (or YouTube-style line breaks). Normalize so summary /
+ * takeaways / chapters parsers can run.
+ */
+export function normalizeRssDescriptionHtml(raw: string | undefined): string | undefined {
+  if (raw == null) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (RSS_BLOCK_HTML_RE.test(trimmed)) return trimmed;
+  const asText = decodeBasicHtmlEntities(trimmed.replace(/<br\s*\/?>/gi, '\n'));
+  return wrapPlainShowNotesAsHtml(asText);
+}
+
+function clipPlainSummaryForCards(plain: string, max = 420): string {
+  const t = plain.replace(/\s+/g, ' ').trim();
+  if (!t) return t;
+  if (t.length <= max) return t;
+  const slice = t.slice(0, max);
+  const period = slice.lastIndexOf('. ');
+  const cut = period >= 80 ? slice.slice(0, period + 1) : slice.replace(/\s+\S*$/, '').trim();
+  return `${cut}…`;
+}
+
 function rawItemToEpisode(raw: Record<string, unknown>): Episode {
   const title = pickString(raw.title) ?? 'Untitled episode';
   const id = guidToId(raw.guid);
-  const descriptionHtml = pickString(raw.description);
+  const descriptionHtml = normalizeRssDescriptionHtml(pickString(raw.description));
   const itunesEpisode = raw['itunes:episode'];
   const episodeNumber = resolveEpisodeNumber(itunesEpisode, title);
 
-  /** Newer Anchor notes use a `<strong>Summary</strong>` block inside `<description>`. */
+  /** Newer Anchor notes use a Summary heading inside `<description>`. */
   const summaryFromDescriptionBlock =
     descriptionHtml !== undefined ? extractSummaryFromDescriptionHtml(descriptionHtml) : undefined;
+  let summaryFromFallback: string | undefined;
+  if (!summaryFromDescriptionBlock && descriptionHtml) {
+    const fb = extractFallbackSummaryParagraphFromRssMainHtml(descriptionHtml);
+    if (fb.summaryHtml) {
+      summaryFromFallback = stripHtmlTags(decodeBasicHtmlEntities(fb.summaryHtml)).replace(/\s+/g, ' ').trim();
+    }
+  }
   /**
    * Older feeds often skip that HTML pattern but still ship a short blurb in `<itunes:summary>`.
-   * Keep it plain and cap length so list cards never inherit a full show-notes wall.
+   * Keep it plain and clip length so list cards never inherit a full show-notes wall.
    */
   const itunesSummaryRaw = pickString(raw['itunes:summary']);
   let summaryFromItunes: string | undefined;
   if (itunesSummaryRaw) {
     const plain = stripHtmlTags(decodeBasicHtmlEntities(itunesSummaryRaw)).replace(/\s+/g, ' ').trim();
-    if (plain.length > 0 && plain.length <= 600) summaryFromItunes = plain;
+    if (plain.length > 0) summaryFromItunes = clipPlainSummaryForCards(plain, 600);
   }
-  const summary = summaryFromDescriptionBlock ?? summaryFromItunes;
+  const summarySource = summaryFromDescriptionBlock ?? summaryFromItunes ?? summaryFromFallback;
+  const summary = summarySource ? clipPlainSummaryForCards(summarySource) : undefined;
 
   const chapters =
     descriptionHtml !== undefined ? extractChaptersFromDescriptionHtml(descriptionHtml) : undefined;
