@@ -87,13 +87,20 @@ export function overlayVideoIds(overlays: Record<string, { youtubeVideoId?: stri
   return out;
 }
 
-/** Merge new matches into the saved map. Never deletes an existing slug. */
-export async function saveYoutubeEpisodeMap(newIds: Record<string, string>): Promise<void> {
+/** Merge new matches into the saved map. `dropSlugs` removes locks QC rejected. */
+export async function saveYoutubeEpisodeMap(
+  newIds: Record<string, string>,
+  opts?: { dropSlugs?: string[] },
+): Promise<void> {
   const merged = { ...(await loadPersistedMap()) };
   let added = 0;
+  for (const slug of opts?.dropSlugs ?? []) {
+    if (merged[slug]) delete merged[slug];
+  }
   for (const [slug, id] of Object.entries(newIds)) {
     const videoId = id?.trim();
     if (!slug || !videoId || videoId.length !== 11) continue;
+    if (opts?.dropSlugs?.includes(slug)) continue;
     if (merged[slug] === videoId) continue;
     if (!merged[slug]) added += 1;
     merged[slug] = videoId;

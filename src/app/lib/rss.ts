@@ -735,6 +735,13 @@ export function extractGuestFromTitle(title: string): string | undefined {
   const possName = possM?.[1]?.trim();
   if (possName) return possName;
 
+  // Classics / older titles: "Eggs 326: Ian Paget - Graphic designer and founder of LogoGeek.uk"
+  const dashM = title.match(
+    /^(?:Eggs\s+\d+\s*:\s*)?([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z.'’-]+){1,3})\s+[-–—]\s+\S/i,
+  );
+  const dashName = dashM?.[1]?.trim();
+  if (dashName && !/^(the|a|an|how|what|why|when)\b/i.test(dashName)) return dashName;
+
   return undefined;
 }
 

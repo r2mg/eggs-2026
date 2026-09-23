@@ -33,6 +33,7 @@ import { buildYoutubeOverlaysForEpisodes } from '../app/lib/computeEpisodeYoutub
 import { applyYoutubeSlugSeed } from '../app/lib/youtubeSlugSeed';
 import { applyAtomOverlays, fetchFeaturedPlaylistVideoIds, fetchYouTubeAtomChannelData } from '../app/lib/youtubeAtom';
 import { loadYoutubeEpisodeMap, overlayVideoIds, saveYoutubeEpisodeMap } from '../app/lib/youtubeEpisodeMap';
+import { auditAndRepairYoutubeOverlays } from '../app/lib/youtubeMatchQuality';
 import { episodesFromFeaturedVideoIds, getFeaturedEpisodesInPlaylistOrder } from '../app/lib/youtubeFeaturedOrder';
 import { mergeEpisodeForDisplay } from '../app/types/youtubeOverlay';
 import {
@@ -177,7 +178,14 @@ async function buildSiteContent(): Promise<SiteContent> {
       `[EGGS build] YouTube fallback overlays: ${seedApplied} from saved matches, ${atomApplied} from Atom feed.`,
     );
   }
-  await saveYoutubeEpisodeMap({ ...lockedVideoIds, ...overlayVideoIds(overlays) });
+  const qc = auditAndRepairYoutubeOverlays(rss, overlays, channel);
+  if (qc.notes.length > 0) {
+    console.warn(`[EGGS YouTube QC] ${qc.repaired} repair(s):\n  ${qc.notes.join('\n  ')}`);
+  }
+  await saveYoutubeEpisodeMap(
+    { ...lockedVideoIds, ...overlayVideoIds(overlays) },
+    { dropSlugs: channel.videosById.size > 50 ? qc.droppedSlugs : [] },
+  );
 
   const episodes = rss
     .map((ep) => mergeEpisodeForDisplay(ep, overlays[ep.slug] ?? null))

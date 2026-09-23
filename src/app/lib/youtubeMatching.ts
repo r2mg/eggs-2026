@@ -7,13 +7,19 @@
  * and never re-guess from wording.
  *
  * **First-time match (no locked id yet):**
- * 1. Guest name from the RSS title (“… with Jane Doe”) in the YouTube title or description,
- *    plus a close publish date. Prefer the public retitled upload over an older `Eggs NNN:` copy.
- * 2. If there is no parseable guest, fall back to title similarity (legacy).
- * 3. Last resort: a YouTube link already in the RSS show notes.
+ * 1. YouTube title still says `Eggs NNN` / `Episode NNN` — that number wins.
+ * 2. Guest name from the RSS title in the YouTube title or description, plus a close
+ *    publish date. Prefer the public retitled upload over an older `Eggs NNN:` copy.
+ * 3. If there is no parseable guest, fall back to title similarity (legacy), but never
+ *    across a different Eggs number or a different guest name.
+ * 4. Last resort: a YouTube link already in the RSS show notes.
+ *
+ * Locked ids are ignored when they fail those checks (wrong episode number or guest).
+ * Build-time QC then makes sure one video is not assigned to two episodes.
  *
  * You do **not** need to keep the show title, episode number, or any special line in the
- * YouTube description after the video exists.
+ * YouTube description after the video exists. The number in the title is used only when
+ * it is still there.
  */
 
 import type { Episode } from '../types/episode';
@@ -41,6 +47,8 @@ export const MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID: Record<string, string> = {
   '407-ai-s-transformative-role-in-modern-marketing-with-perry-marshall': 'CEgYCIVSODQ',
   '454-the-evolution-of-marketing-embracing-change-with-perry-marshall': 'Po7YsltWWOo',
   '484-human-creativity-in-an-ai-world-with-joe-baron': 'fzmNjGNDrpQ',
+  '326-ian-paget-graphic-designer-and-founder-of-logogeek-uk': '5irs3kKIkdI',
+  '327-how-to-win-at-real-estate-investing-when-the-market-sucks-with-alan-siebenaler': 'idF1tXIDxTA',
 };
 
 // ---------------------------------------------------------------------------
@@ -261,7 +269,10 @@ function scoreEpisodeAgainstCandidate(
   const ytTitleNorm = normalizeTitleForMatching(candidate.title, { stripLeadingEpisodeNumber: true });
 
   if (rssTitleNorm.length > 0 && rssTitleNorm === ytTitleNorm) {
-    return 1;
+    const dateScore = dateProximityScore(episode.publishedAt, candidate.publishedAt);
+    // Classics reruns reuse the original title; same wording years later is not identity.
+    if (dateScore >= MIN_DATE_SCORE_FOR_IDENTITY) return 1;
+    return Math.min(0.45, WEIGHT_DATE_PROXIMITY * dateScore + 0.12);
   }
 
   const rssTokens = meaningfulTokens(rssTitleNorm);
@@ -366,14 +377,17 @@ function resolveByGuestAndDate(
   episode: Episode,
   candidateIds: Iterable<string>,
   catalogById: Map<string, YoutubeCandidate>,
+  excludeVideoIds?: Set<string>,
 ): string | null {
   const guest = episode.guest?.trim() || extractGuestFromTitle(episode.title);
   if (!guest) return null;
 
   const hits: { id: string; dateScore: number; publicTitle: boolean }[] = [];
   for (const videoId of candidateIds) {
+    if (excludeVideoIds?.has(videoId)) continue;
     const candidate = catalogById.get(videoId);
     if (!candidate) continue;
+    if (youtubeAssignmentConflicts(episode, candidate)) continue;
     const guestScore = Math.max(
       guestNameOverlapInText(guest, candidate.title),
       guestNameOverlapInText(guest, candidate.description),
@@ -392,6 +406,74 @@ function resolveByGuestAndDate(
   return hits[0]!.id;
 }
 
+/** “Eggs 326: …” / “Episode 038” in a YouTube title — the video id for that show number. */
+export function episodeNumberFromYoutubeTitle(title: string | undefined): number | undefined {
+  if (!title?.trim()) return undefined;
+  const m = title.trim().match(/\b(?:eggs|episode)\s+0*(\d{1,4})\b/i);
+  if (!m) return undefined;
+  const n = Number.parseInt(m[1]!, 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function resolveByEpisodeNumber(
+  episode: Episode,
+  candidateIds: Iterable<string>,
+  catalogById: Map<string, YoutubeCandidate>,
+  excludeVideoIds?: Set<string>,
+): string | null {
+  const n = episode.episodeNumber;
+  if (n === undefined || !Number.isFinite(n)) return null;
+  const hits: { id: string; dateScore: number }[] = [];
+  for (const videoId of candidateIds) {
+    if (excludeVideoIds?.has(videoId)) continue;
+    const candidate = catalogById.get(videoId);
+    if (!candidate?.title) continue;
+    if (episodeNumberFromYoutubeTitle(candidate.title) !== n) continue;
+    hits.push({
+      id: videoId,
+      dateScore: dateProximityScore(episode.publishedAt, candidate.publishedAt),
+    });
+  }
+  if (hits.length === 0) return null;
+  hits.sort((a, b) => b.dateScore - a.dateScore);
+  return hits[0]!.id;
+}
+
+/**
+ * True when this video cannot belong to the RSS episode: wrong Eggs number in the
+ * YouTube title, or a different guest in the YouTube title.
+ */
+export function youtubeAssignmentConflicts(
+  episode: Episode,
+  candidate: YoutubeCandidate | undefined,
+): string | undefined {
+  if (!candidate?.title && !candidate?.description) return undefined;
+
+  const ytNum = episodeNumberFromYoutubeTitle(candidate.title);
+  if (
+    episode.episodeNumber !== undefined &&
+    ytNum !== undefined &&
+    ytNum !== episode.episodeNumber
+  ) {
+    return `YouTube title is Eggs ${ytNum}, RSS is episode ${episode.episodeNumber}`;
+  }
+
+  const guest = episode.guest?.trim() || extractGuestFromTitle(episode.title);
+  if (!guest) return undefined;
+
+  const overlap = Math.max(
+    guestNameOverlapInText(guest, candidate.title),
+    guestNameOverlapInText(guest, candidate.description),
+  );
+  if (overlap >= MIN_GUEST_OVERLAP_FOR_IDENTITY) return undefined;
+
+  const ytGuest = extractGuestFromTitle(candidate.title ?? '');
+  if (ytGuest && guestNameOverlapInText(guest, ytGuest) < MIN_GUEST_OVERLAP_FOR_IDENTITY) {
+    return `YouTube guest “${ytGuest}” does not match RSS guest “${guest}”`;
+  }
+  return undefined;
+}
+
 /**
  * Pick the best YouTube match for this RSS episode: watch link, video id, poster URL, and
  * YouTube title when we know it (from the playlist feed).
@@ -400,13 +482,17 @@ export function resolveYouTubeForEpisode(
   episode: Episode,
   youtubeCatalog: YoutubeCandidate[],
   lockedVideoId?: string,
+  excludeVideoIds?: Set<string>,
 ): ResolvedYouTube {
   const catalogById = new Map(youtubeCatalog.map((c) => [c.videoId, c]));
 
   const pinned =
     lockedVideoId?.trim() || MANUAL_EPISODE_SLUG_TO_YOUTUBE_VIDEO_ID[episode.slug]?.trim();
-  if (pinned && pinned.length === 11) {
-    return resolvedYouTubeFromCandidate(catalogById, pinned);
+  if (pinned && pinned.length === 11 && !excludeVideoIds?.has(pinned)) {
+    const pinnedCandidate = catalogById.get(pinned);
+    if (!youtubeAssignmentConflicts(episode, pinnedCandidate ?? { videoId: pinned, title: '' })) {
+      return resolvedYouTubeFromCandidate(catalogById, pinned);
+    }
   }
 
   const idsInHtml = extractAllYouTubeVideoIdsFromHtml(episode.descriptionHtml);
@@ -419,7 +505,7 @@ export function resolveYouTubeForEpisode(
   if (candidateIds.size === 0) {
     const fallbackUrl = extractYouTubeUrl(episode.descriptionHtml);
     const vid = videoIdFromYouTubeWatchUrl(fallbackUrl);
-    if (fallbackUrl && vid) {
+    if (fallbackUrl && vid && !excludeVideoIds?.has(vid)) {
       const c = catalogById.get(vid);
       return {
         watchUrl: fallbackUrl,
@@ -431,7 +517,12 @@ export function resolveYouTubeForEpisode(
     return {};
   }
 
-  const byGuestAndDate = resolveByGuestAndDate(episode, candidateIds, catalogById);
+  const byNumber = resolveByEpisodeNumber(episode, candidateIds, catalogById, excludeVideoIds);
+  if (byNumber) {
+    return resolvedYouTubeFromCandidate(catalogById, byNumber);
+  }
+
+  const byGuestAndDate = resolveByGuestAndDate(episode, candidateIds, catalogById, excludeVideoIds);
   if (byGuestAndDate) {
     return resolvedYouTubeFromCandidate(catalogById, byGuestAndDate);
   }
@@ -440,12 +531,14 @@ export function resolveYouTubeForEpisode(
   let bestScore = -1;
 
   for (const videoId of candidateIds) {
+    if (excludeVideoIds?.has(videoId)) continue;
     const fromCatalog = catalogById.get(videoId);
     const candidate: YoutubeCandidate = fromCatalog ?? {
       videoId,
       title: '',
       publishedAt: undefined,
     };
+    if (youtubeAssignmentConflicts(episode, candidate)) continue;
 
     const score = scoreEpisodeAgainstCandidate(episode, candidate, linkedSet);
     if (score > bestScore) {
@@ -456,12 +549,15 @@ export function resolveYouTubeForEpisode(
 
   if (bestId && bestScore >= MIN_SCORE_TO_ACCEPT_MATCH) {
     const publicId = preferPublicYoutubeVersion(episode, bestId, candidateIds, catalogById);
-    return resolvedYouTubeFromCandidate(catalogById, publicId);
+    if (!excludeVideoIds?.has(publicId)) {
+      return resolvedYouTubeFromCandidate(catalogById, publicId);
+    }
+    return resolvedYouTubeFromCandidate(catalogById, bestId);
   }
 
   const fallbackUrl = extractYouTubeUrl(episode.descriptionHtml);
   const vid = videoIdFromYouTubeWatchUrl(fallbackUrl);
-  if (fallbackUrl && vid) {
+  if (fallbackUrl && vid && !excludeVideoIds?.has(vid)) {
     const c = catalogById.get(vid);
     return {
       watchUrl: fallbackUrl,

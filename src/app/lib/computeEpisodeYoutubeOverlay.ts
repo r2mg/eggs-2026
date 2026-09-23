@@ -55,16 +55,18 @@ export function computeEpisodeYoutubeOverlay(
   data: YouTubeChannelData,
   catalog: YoutubeCandidate[],
   lockedVideoId?: string,
+  excludeVideoIds?: Set<string>,
 ): YoutubeEpisodeOverlay | null {
   const titleById = new Map(data.playlists.map((p) => [p.id, p.title]));
   const { featuredId, startHereId } = resolveEditorialPlaylistIds(data.playlists);
   const uploadsId = data.uploadsPlaylistId;
   const blocked = data.blockedVideoIds;
 
-  const resolved = resolveYouTubeForEpisode(ep, catalog, lockedVideoId);
+  const resolved = resolveYouTubeForEpisode(ep, catalog, lockedVideoId, excludeVideoIds);
   if (!resolved.videoId || !resolved.watchUrl || blocked.has(resolved.videoId)) {
     return null;
   }
+  if (excludeVideoIds?.has(resolved.videoId)) return null;
 
   const yv = data.videosById.get(resolved.videoId);
   const thumb =
